@@ -1,0 +1,13 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2159A2" />
+      <stop offset="100%" stop-color="#0E3F7A" />
+    </linearGradient>
+  </defs>
+  <rect width="320" height="120" rx="28" fill="url(#bg)" />
+  <path d="M56 84L92 46L112 66L134 44L160 84" stroke="#FFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M160 84L194 54L218 86L246 48" stroke="#FFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M72 57C82 52 96 46 119 45C141 43 152 49 161 56" stroke="#FFF" stroke-width="6" stroke-linecap="round" />
+  <text x="42" y="106" fill="#FFF" font-family="Verdana, sans-serif" font-size="32" font-weight="700">alpina</text>
+</svg>
