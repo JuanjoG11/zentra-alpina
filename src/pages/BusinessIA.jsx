@@ -3,6 +3,7 @@ import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
+import alpinaLogo from '../assets/alpina-logo.svg';
 import {
   BIScatterPlot,
   BIDonutChart,
@@ -142,8 +143,10 @@ const BusinessIA = () => {
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border border-slate-950 animate-ping"></div>
             </div>
             <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-white">IA Empresarial Alpina</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
+                <div className="h-6 w-[1px] bg-slate-800"></div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-white">IA Empresarial</h1>
                 <span className="text-[10px] bg-purple-500/20 text-purple-300 font-semibold px-2 py-0.5 rounded-full border border-purple-500/30">Motor Predictivo Activo</span>
               </div>
               <p className="text-slate-300 text-sm mt-1">

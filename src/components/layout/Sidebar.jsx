@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useStore from '../../store/useStore';
+import alpinaLogo from '../../assets/alpina-logo.svg';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -40,9 +41,7 @@ const Sidebar = () => {
       {/* Brand Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80">
         <div className="flex items-center gap-2 overflow-hidden">
-          <div className="p-2 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shrink-0 shadow-lg shadow-blue-500/20">
-            <Database className="h-5 w-5" />
-          </div>
+          <img src={alpinaLogo} alt="Alpina" className="h-8 w-auto shrink-0" loading="lazy" />
           {sidebarOpen && (
             <span className="font-bold text-lg bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
               Alpina BI
