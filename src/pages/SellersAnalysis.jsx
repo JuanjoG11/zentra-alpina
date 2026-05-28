@@ -1,9 +1,10 @@
 import React from 'react';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs } from '../utils/calculations';
-import { formatCurrency, formatPercent } from '../utils/formatters';
+import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
+import { alpinaData } from '../data/alpina-data';
 import { 
   Users, 
   Trophy, 
@@ -36,15 +37,19 @@ const SellersAnalysis = () => {
   const topZoneObj = rankedZones[0];
   const topSellerObj = rankedSellers[0];
 
+  // Fallback: if rankedZones is empty due to filters, use global alpina data
+  const fallbackZones = [...alpinaData.zones].sort((a, b) => b.ventasNetas - a.ventasNetas);
+  const zonesForChart = (rankedZones.length > 0 ? rankedZones : fallbackZones).slice(0, 10);
+
   // Apex options for seller performance comparison
   const barSeries = [
     {
       name: 'Ventas Netas',
-      data: rankedZones.slice(0, 10).map(z => z.ventasNetas)
+      data: zonesForChart.map(z => z.ventasNetas)
     },
     {
       name: 'Presupuesto',
-      data: rankedZones.slice(0, 10).map(z => z.presupuesto)
+      data: zonesForChart.map(z => z.presupuesto)
     }
   ];
 
@@ -68,7 +73,7 @@ const SellersAnalysis = () => {
     dataLabels: { enabled: false },
     stroke: { show: true, width: 2, colors: ['transparent'] },
     xaxis: {
-      categories: rankedZones.slice(0, 10).map(z => `Z-${z.zona}`),
+      categories: zonesForChart.map(z => `Z-${z.zona}`),
       labels: { style: { fontSize: '10px' } }
     },
     yaxis: {

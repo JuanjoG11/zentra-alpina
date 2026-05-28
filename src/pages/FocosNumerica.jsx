@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import useStore from '../store/useStore';
 import { getFilteredData } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency, formatNumber } from '../utils/formatters';
@@ -6,6 +6,7 @@ import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
 import { BarChart3, CircleDollarSign, Sparkles } from 'lucide-react';
 import alpinaLogo from '../assets/alpina-logo.svg';
+import { alpinaData } from '../data/alpina-data';
 
 const FocosNumerica = () => {
   const filters = useStore();
@@ -18,6 +19,8 @@ const FocosNumerica = () => {
     return 'OTRO';
   };
 
+  const [selectedCity, setSelectedCity] = useState('ALL');
+
   const numericFocus = filteredData.zones.map((z) => ({
     ...z,
     city: zoneCity(z.zona),
@@ -26,9 +29,14 @@ const FocosNumerica = () => {
     variance: z.porcentajeProyectado - 1
   }));
 
-  const totalFocusFacturas = numericFocus.reduce((sum, z) => sum + z.facturas, 0);
-  const totalNetSales = numericFocus.reduce((sum, z) => sum + z.ventasNetas, 0);
-  const totalBudget = numericFocus.reduce((sum, z) => sum + z.presupuesto, 0);
+  const filteredByCity = useMemo(() => {
+    if (selectedCity === 'ALL') return numericFocus;
+    return numericFocus.filter((z) => z.city === selectedCity);
+  }, [numericFocus, selectedCity]);
+
+  const totalFocusFacturas = filteredByCity.reduce((sum, z) => sum + z.facturas, 0);
+  const totalNetSales = filteredByCity.reduce((sum, z) => sum + z.ventasNetas, 0);
+  const totalBudget = filteredByCity.reduce((sum, z) => sum + z.presupuesto, 0);
   const averageCoverage = numericFocus.length > 0
     ? numericFocus.reduce((sum, z) => sum + z.coverage, 0) / numericFocus.length
     : 0;
@@ -39,7 +47,7 @@ const FocosNumerica = () => {
   const worstZone = numericFocus.reduce((worst, z) => z.coverage < (worst?.coverage ?? Infinity) ? z : worst, null);
   const topEfficiencyZone = numericFocus.reduce((best, z) => z.efficiency > (best?.efficiency ?? -Infinity) ? z : best, null);
 
-  const citySummary = Object.values(numericFocus.reduce((acc, z) => {
+  const citySummary = Object.values(filteredByCity.reduce((acc, z) => {
     const key = z.city;
     if (!acc[key]) {
       acc[key] = { city: key, presupuesto: 0, ventasNetas: 0, facturas: 0 };
@@ -72,15 +80,15 @@ const FocosNumerica = () => {
 
   const coverageSeries = [{
     name: 'Cobertura %',
-    data: numericFocus.map((z) => Math.round(z.coverage * 100))
+    data: filteredByCity.map((z) => Math.round(z.coverage * 100))
   }];
 
   const coverageOptions = {
-    chart: { type: 'bar', background: 'transparent', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+    chart: { type: 'bar', background: 'transparent', toolbar: { tools: { zoom: true, pan: true, reset: true }, autoSelected: 'zoom' }, zoom: { enabled: true }, fontFamily: 'Inter, sans-serif' },
     colors: ['#38bdf8'],
     plotOptions: { bar: { borderRadius: 10, columnWidth: '55%' } },
     dataLabels: { enabled: false },
-    xaxis: { categories: numericFocus.map((z) => z.zona), labels: { rotate: -30, style: { fontSize: '10px' }, hideOverlappingLabels: true } },
+    xaxis: { categories: filteredByCity.map((z) => z.zona), labels: { rotate: -30, style: { fontSize: '10px' }, hideOverlappingLabels: true } },
     yaxis: { labels: { formatter: (val) => `${Math.round(val)}%` }, min: 0, max: 140 },
     tooltip: { theme: 'dark', y: { formatter: (val) => `${Math.round(val)}%` } },
     grid: { borderColor: '#1e293b' }
@@ -92,7 +100,7 @@ const FocosNumerica = () => {
   }];
 
   const efficiencyOptions = {
-    chart: { type: 'line', background: 'transparent', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+    chart: { type: 'line', background: 'transparent', toolbar: { tools: { zoom: true, pan: true, reset: true }, autoSelected: 'zoom' }, zoom: { enabled: true }, fontFamily: 'Inter, sans-serif' },
     colors: ['#f59e0b'],
     stroke: { curve: 'smooth', width: 3 },
     markers: { size: 4, colors: ['#f59e0b'] },
@@ -102,6 +110,40 @@ const FocosNumerica = () => {
     tooltip: { theme: 'dark', y: { formatter: (val) => formatCurrency(val) } },
     grid: { borderColor: '#1e293b' }
   };
+
+  // Build a simple linear forecast for sales using salesDaily
+  const salesTimeseries = useMemo(() => {
+    const rows = (alpinaData.salesDaily || []).map((r) => ({
+      date: new Date(r.fecha),
+      total: r.total
+    })).sort((a, b) => a.date - b.date);
+
+    if (rows.length < 3) return { actual: rows.map(r => ({ x: r.date.toISOString().slice(0,10), y: r.total })), forecast: [] };
+
+    // simple linear regression on index -> total
+    const xs = rows.map((_, i) => i);
+    const ys = rows.map(r => r.total);
+    const n = xs.length;
+    const sumX = xs.reduce((a,b) => a+b,0);
+    const sumY = ys.reduce((a,b) => a+b,0);
+    const sumXY = xs.reduce((s, xi, i) => s + xi * ys[i], 0);
+    const sumXX = xs.reduce((s, xi) => s + xi * xi, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX || 1);
+    const intercept = (sumY - slope * sumX) / n;
+
+    const actual = rows.map((r, i) => ({ x: r.date.toISOString().slice(0,10), y: r.total }));
+    const forecast = [];
+    const lastIndex = xs.length - 1;
+    for (let k = 1; k <= 7; k++) {
+      const idx = lastIndex + k;
+      const date = new Date(rows[rows.length - 1].date);
+      date.setDate(date.getDate() + k);
+      const predicted = intercept + slope * idx;
+      forecast.push({ x: date.toISOString().slice(0,10), y: Math.max(0, Math.round(predicted)) });
+    }
+
+    return { actual, forecast };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -116,17 +158,27 @@ const FocosNumerica = () => {
             <p className="text-slate-300 text-sm mt-1">
               Panel exclusivo de análisis de focos, cobertura y eficiencia por zona. Todo el insight financiero y operativo en un solo lugar.
             </p>
+            <div className="mt-3">
+              <label className="text-xs text-slate-400 mr-2">Filtrar ciudad:</label>
+              <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="bg-slate-900 text-slate-200 text-sm rounded px-2 py-1 border border-slate-800">
+                <option value="ALL">Todas</option>
+                <option value="ARMENIA">ARMENIA</option>
+                <option value="MANIZALES">MANIZALES</option>
+                <option value="PEREIRA">PEREIRA</option>
+                <option value="OTRO">OTRO</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <GlassCard hoverable={false} className="bg-slate-950/70 border border-sky-500/20 p-6 shadow-[0_25px_80px_-45px_rgba(56,189,248,0.6)]">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Insight clave</p>
-              <h2 className="text-xl font-bold text-white mt-1">Cobertura promedio de foco: {formatPercent(averageCoverage)}</h2>
-              <p className="text-slate-400 text-sm mt-2 max-w-2xl">
-                Esta sección destaca las zonas más críticas y las oportunidades de eficiencia con datos Alpina 100% filtrados. Faltan {formatNumber(estimatedClientsToGoal)} clientes de ticket promedio para cerrar la meta de presupuesto.
-              </p>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <p className="text-slate-400 text-sm mt-2 max-w-2xl">
+                  Esta sección destaca las zonas más críticas y las oportunidades de eficiencia con datos Alpina 100% filtrados. Faltan {formatNumber(estimatedClientsToGoal)} clientes de ticket promedio para cerrar la meta de presupuesto.
+                </p>
+              </div>
             </div>
             <div className="rounded-3xl bg-slate-950/60 border border-slate-800 p-4 flex items-center gap-3">
               <Sparkles className="h-6 w-6 text-amber-300" />
@@ -204,6 +256,7 @@ const FocosNumerica = () => {
             </table>
           </div>
         </GlassCard>
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
@@ -228,6 +281,30 @@ const FocosNumerica = () => {
           <Chart options={efficiencyOptions} series={efficiencySeries} type="line" height={320} />
         </GlassCard>
       </div>
+
+      <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-bold text-white">Ventas diarias y pronóstico</h3>
+            <p className="text-xs text-slate-400 mt-1">Series histórica y predicción lineal simple (7 días).</p>
+          </div>
+        </div>
+        <Chart
+          options={{
+            chart: { id: 'sales-forecast', zoom: { enabled: true }, toolbar: { tools: { zoom: true, pan: true, download: true, reset: true }, autoSelected: 'zoom' } },
+            xaxis: { type: 'category' },
+            stroke: { curve: 'smooth' },
+            tooltip: { theme: 'dark' },
+            colors: ['#60a5fa', '#34d399']
+          }}
+          series={[
+            { name: 'Actual', data: salesTimeseries.actual },
+            { name: 'Pronóstico', data: salesTimeseries.forecast }
+          ]}
+          type="line"
+          height={320}
+        />
+      </GlassCard>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <GlassCard hoverable={false} className="col-span-1 bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
@@ -267,7 +344,6 @@ const FocosNumerica = () => {
         </GlassCard>
       </div>
     </div>
-  </div>
   );
 };
 
