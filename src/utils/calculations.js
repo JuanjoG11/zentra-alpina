@@ -4,7 +4,7 @@ import useStore from '../store/useStore';
 export const getFilteredData = (arg1, arg2) => {
   let dbData;
   let filters;
-  
+
   if (arg2 === undefined) {
     // Backwards compatibility for getFilteredData(filters) calls
     filters = arg1;
@@ -17,23 +17,14 @@ export const getFilteredData = (arg1, arg2) => {
 
   const baseData = dbData || alpinaData;
   if (!filters) filters = {};
-const { selectedProvider = 'Todas', selectedZone = 'Todas', selectedSeller = 'Todas' } = filters;
-let providers = [...(baseData.providers || [])];
-let salesDaily = [...(baseData.salesDaily || [])];
-let zones = [...(baseData.zones || [])];
-let returnsSellers = [...(baseData.returnsSellers || [])];
-let returnsConcepts = [...(baseData.returnsConcepts || [])];
-let returnsDaily = [...(baseData.returnsDaily || [])];
-let clientReturns = [...(baseData.clientReturns || [])];
-  
-  // Duplicate variable declarations removed – using the earlier ones.
-// let providers = [...(baseData.providers || [])];
-// let salesDaily = [...(baseData.salesDaily || [])];
-// let zones = [...(baseData.zones || [])];
-// let returnsSellers = [...(baseData.returnsSellers || [])];
-// let returnsConcepts = [...(baseData.returnsConcepts || [])];
-// let returnsDaily = [...(baseData.returnsDaily || [])];
-// let clientReturns = [...(baseData.clientReturns || [])];
+  const { selectedProvider = 'Todas', selectedZone = 'Todas', selectedSeller = 'Todas' } = filters;
+  let providers = [...(baseData.providers || [])];
+  let salesDaily = [...(baseData.salesDaily || [])];
+  let zones = [...(baseData.zones || [])];
+  let returnsSellers = [...(baseData.returnsSellers || [])];
+  let returnsConcepts = [...(baseData.returnsConcepts || [])];
+  let returnsDaily = [...(baseData.returnsDaily || [])];
+  let clientReturns = [...(baseData.clientReturns || [])];
 
   // Keep only Alpina brands across the application
   providers = providers.filter(p => p.proveedor.toUpperCase().includes('ALPINA'));
@@ -75,7 +66,7 @@ export const calculateKPIs = (filteredData) => {
 
   // 2. Presupuesto (Budget): sum of budget in zones
   // If zones is empty because we filtered by a specific provider, fallback to totalSales / 0.973
-  const totalBudget = zones.length > 0 
+  const totalBudget = zones.length > 0
     ? zones.reduce((sum, z) => sum + z.presupuesto, 0)
     : totalSales / 0.973;
 

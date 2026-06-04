@@ -62,10 +62,16 @@ const FocosNumerica = () => {
     facturasShare: totalFocusFacturas > 0 ? city.facturas / totalFocusFacturas : 0
   }));
 
+  const cityClients = dbData.cityClients || {
+    'ARMENIA': 3072,
+    'MANIZALES': 3767,
+    'PEREIRA': 8355
+  };
+
   const cityGoalData = [
-    { city: 'ARMENIA', universeClients: 8885, metaClients: 4354, impactedClients: 3072 },
-    { city: 'MANIZALES', universeClients: 10555, metaClients: 5172, impactedClients: 3767 },
-    { city: 'PEREIRA', universeClients: 19825, metaClients: 9714, impactedClients: 8355 }
+    { city: 'ARMENIA', universeClients: 8885, metaClients: 4354, impactedClients: cityClients['ARMENIA'] || 0 },
+    { city: 'MANIZALES', universeClients: 10555, metaClients: 5172, impactedClients: cityClients['MANIZALES'] || 0 },
+    { city: 'PEREIRA', universeClients: 19825, metaClients: 9714, impactedClients: cityClients['PEREIRA'] || 0 }
   ].map((item) => ({
     ...item,
     numericalCoverage: item.metaClients > 0 ? item.impactedClients / item.metaClients : 0,

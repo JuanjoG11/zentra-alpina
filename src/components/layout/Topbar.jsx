@@ -23,6 +23,34 @@ const Topbar = () => {
 
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
 
+  // Extract unique periods from salesDaily
+  const getPeriodsList = () => {
+    const list = new Set();
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    if (dbData.salesDaily) {
+      dbData.salesDaily
+        .filter(d => d.fecha && d.fecha !== 'general')
+        .forEach(d => {
+          const dt = new Date(d.fecha);
+          if (!isNaN(dt.getTime())) {
+            const key = `${monthNames[dt.getMonth()].toLowerCase()}-${dt.getFullYear()}`;
+            const label = `${monthNames[dt.getMonth()]} ${dt.getFullYear()}`;
+            list.add(JSON.stringify({ key, label }));
+          }
+        });
+    }
+    
+    if (list.size === 0) {
+      list.add(JSON.stringify({ key: 'abril-2026', label: 'Abril 2026' }));
+    }
+    
+    return Array.from(list).map(item => JSON.parse(item));
+  };
+
   // Extract unique filter values from real data
   const zonesList = ['Todas', ...new Set((dbData.zones || []).map(z => z.zona))].filter(Boolean);
   const providersList = ['Todas', ...new Set((dbData.providers || [])
@@ -51,7 +79,9 @@ const Topbar = () => {
             onChange={(e) => setPeriod(e.target.value)}
             className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300 font-medium focus:outline-none focus:border-blue-500 transition-colors"
           >
-            <option value="abril-2026">Abril 2026</option>
+            {getPeriodsList().map(p => (
+              <option key={p.key} value={p.key}>{p.label}</option>
+            ))}
           </select>
         </div>
 

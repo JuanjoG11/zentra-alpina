@@ -25,6 +25,13 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
   const conceptsAggr = {};
   const returnsDailyAggr = {};
   const clientReturnsAggr = {};
+  
+  const clientsPerCity = {
+    'ARMENIA': new Set(),
+    'MANIZALES': new Set(),
+    'PEREIRA': new Set(),
+    'OTRO': new Set()
+  };
 
   const budgetMap = {
     'E7001': 15718970, 'M9450': 52875518, 'M9451': 60284852, 'M9453': 122322227,
@@ -224,11 +231,29 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
           }
           clientReturnsAggr[clientKey].valor += absVal;
         }
+
+        // 6. Clients per City numerical coverage count
+        if (valTotal > 0 && clientName) {
+          const uCity = String(getRowValue(row, cityKeys) || '').toUpperCase();
+          let cityKey = 'OTRO';
+          if (uCity.includes('ARMENIA') || uCity.includes('CALARCA') || uCity.includes('CIRCASIA') || uCity.includes('TEBAIDA') || uCity.includes('MONTENEGRO') || uCity.includes('QUIMBAYA') || uCity.includes('FILANDIA')) {
+            cityKey = 'ARMENIA';
+          } else if (uCity.includes('MANIZALES') || uCity.includes('CHINCHINA') || uCity.includes('VILLAMARIA') || uCity.includes('NEIRA') || uCity.includes('ARANZAZU') || uCity.includes('RIOSUCIO')) {
+            cityKey = 'MANIZALES';
+          } else if (uCity.includes('PEREIRA') || uCity.includes('DOSQUEBRADAS') || uCity.includes('SANTA ROSA') || uCity.includes('LA VIRGINIA') || uCity.includes('CARTAGO')) {
+            cityKey = 'PEREIRA';
+          }
+          clientsPerCity[cityKey].add(clientName);
+        }
       }
     }
   }
 
   if (processedRowsCount === 0) return null;
+
+  // Calculate projection factor based on 22 business days
+  const elapsedDays = Object.keys(salesDailyAggr).length || 1;
+  const projectionFactor = 22 / elapsedDays;
 
   // Format aggregates
   const providers = Object.entries(providersAggr).map(([brandName, data]) => {
@@ -240,7 +265,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
       proyectado2025: v25,
       margen2025: 15,
       ventas2026: v26,
-      proyectado2026: v26,
+      proyectado2026: Math.round(v26 * projectionFactor),
       margen2026: 15,
       crecimiento: 0.2179
     };
@@ -260,13 +285,14 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
   const zones = Object.entries(zonesAggr).map(([zoneCode, data]) => {
     const net = Math.round(data.ventasNetas);
     const budget = budgetMap[zoneCode] || Math.round(net / 0.95);
+    const projectedNet = Math.round(net * projectionFactor);
     return {
       zona: zoneCode,
       vendedor: data.vendedor,
       presupuesto: budget,
       ventasNetas: net,
-      proyectado: net,
-      porcentajeProyectado: budget > 0 ? Number((net / budget).toFixed(4)) : 1.0,
+      proyectado: projectedNet,
+      porcentajeProyectado: budget > 0 ? Number((projectedNet / budget).toFixed(4)) : 1.0,
       cambiosPorc: 0.015,
       facturas: data.facturas.size
     };
@@ -308,6 +334,13 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
     };
   }).sort((a, b) => b.valor - a.valor);
 
+  const cityClients = {
+    'ARMENIA': clientsPerCity['ARMENIA'].size,
+    'MANIZALES': clientsPerCity['MANIZALES'].size,
+    'PEREIRA': clientsPerCity['PEREIRA'].size,
+    'OTRO': clientsPerCity['OTRO'].size
+  };
+
   return {
     providers,
     salesDaily,
@@ -315,7 +348,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
     returnsSellers,
     returnsConcepts,
     returnsDaily,
-    clientReturns
+    clientReturns,
+    cityClients
   };
 };
 
@@ -374,8 +408,29 @@ const UploadExcel = () => {
       setUploadStep(4);
       await new Promise(resolve => setTimeout(resolve, 800));
 
+      // Find latest period in the processed data
+      let latestPeriod = 'abril-2026';
+      if (processedData.salesDaily && processedData.salesDaily.length > 0) {
+        const validDates = processedData.salesDaily
+          .filter(d => d.fecha && d.fecha !== 'general')
+          .map(d => new Date(d.fecha))
+          .filter(d => !isNaN(d.getTime()));
+        if (validDates.length > 0) {
+          validDates.sort((a, b) => b - a);
+          const latest = validDates[0];
+          const monthNames = [
+            'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+          ];
+          latestPeriod = `${monthNames[latest.getMonth()]}-${latest.getFullYear()}`;
+        }
+      }
+
       // Update state in store
-      useStore.setState({ dbData: processedData });
+      useStore.setState({ 
+        dbData: processedData,
+        selectedPeriod: latestPeriod
+      });
 
       // Background ETL server ping (fails silently if offline)
       try {

@@ -35,11 +35,33 @@ const ExecutiveDashboard = () => {
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
+  const getPeriodLabel = () => {
+    if (filteredData.salesDaily && filteredData.salesDaily.length > 0) {
+      const validDates = filteredData.salesDaily
+        .filter(d => d.fecha && d.fecha !== 'general')
+        .map(d => new Date(d.fecha))
+        .filter(d => !isNaN(d.getTime()));
+      
+      if (validDates.length > 0) {
+        validDates.sort((a, b) => b - a);
+        const latest = validDates[0];
+        const monthNames = [
+          'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        return `${monthNames[latest.getMonth()]} ${latest.getFullYear()}`;
+      }
+    }
+    return 'Abril 2026';
+  };
+  
+  const activePeriodLabel = getPeriodLabel();
+
   const kpiCards = [
     {
       title: 'Ventas Totales (Brutas)',
       value: formatCurrency(kpis.totalSales),
-      subtitle: 'Cierre de Abril 2026',
+      subtitle: `Cierre de ${activePeriodLabel}`,
       icon: DollarSign,
       color: 'from-blue-500/20 to-cyan-500/20',
       iconColor: 'text-blue-400',
@@ -95,7 +117,7 @@ const ExecutiveDashboard = () => {
         {/* Dynamic Badges based on Filters */}
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 font-medium">
-            Periodo: {filters.selectedPeriod === 'abril-2026' ? 'Abril 2026' : filters.selectedPeriod}
+            Periodo: {activePeriodLabel}
           </span>
           <span className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 font-medium">
             Sede: {filters.selectedCity}

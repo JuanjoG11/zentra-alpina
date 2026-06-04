@@ -64,12 +64,21 @@ const SalesAnalysis = () => {
       type: 'historial'
     }));
 
-    // Add 5 forecasted days
+    // Add 5 forecasted days starting from the last date
+    const lastDateStr = dailyTotal[n - 1].fecha;
+    const lastDate = new Date(lastDateStr);
     for (let i = 1; i <= 5; i++) {
       const nextIdx = n + i;
       const forecastVal = Math.max(0, m * nextIdx + c);
+      
+      const nextDate = new Date(lastDate);
+      nextDate.setDate(nextDate.getDate() + i);
+      const day = String(nextDate.getDate());
+      const month = String(nextDate.getMonth() + 1);
+      const year = String(nextDate.getFullYear());
+      
       forecastData.push({
-        fecha: `0${i}/05/26 (P)`,
+        fecha: `${month}/${day}/${year} (P)`,
         total: forecastVal,
         type: 'pronostico'
       });
@@ -78,10 +87,38 @@ const SalesAnalysis = () => {
     forecastData = dailyTotal;
   }
 
-  // Credit vs Cash aggregates
-  const creditTotal = filteredData.salesDaily.find(d => d.fecha === 'general')?.credito || 587897284;
-  const cashTotal = filteredData.salesDaily.find(d => d.fecha === 'general')?.contado || 4759532351;
-  const creditPercentage = creditTotal / (creditTotal + cashTotal);
+  // Credit vs Cash aggregates: sum dynamically from all valid salesDaily records
+  const creditTotal = dailyTotal.reduce((sum, d) => sum + (Number(d.credito) || 0), 0) || 587897284;
+  const cashTotal = dailyTotal.reduce((sum, d) => sum + (Number(d.contado) || 0), 0) || 4759532351;
+  const creditPercentage = creditTotal / (creditTotal + cashTotal || 1);
+
+  // Dynamic forecast labels based on first/last dates
+  const getForecastLabels = () => {
+    if (dailyTotal.length === 0) return { history: 'Historial (Abril)', forecast: 'Pronóstico (Mayo)' };
+    
+    const firstDate = new Date(dailyTotal[0].fecha);
+    const lastDate = new Date(dailyTotal[dailyTotal.length - 1].fecha);
+    
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    const historyMonth = !isNaN(firstDate.getTime()) ? monthNames[firstDate.getMonth()] : 'Abril';
+    
+    const forecastDate = new Date(lastDate);
+    if (!isNaN(forecastDate.getTime())) {
+      forecastDate.setDate(forecastDate.getDate() + 1);
+    }
+    const forecastMonth = !isNaN(forecastDate.getTime()) ? monthNames[forecastDate.getMonth()] : 'Mayo';
+    
+    return {
+      history: `Historial (${historyMonth})`,
+      forecast: `Pronóstico Lineal (${forecastMonth})`
+    };
+  };
+  
+  const forecastLabels = getForecastLabels();
 
   return (
     <div className="space-y-6">
@@ -141,11 +178,11 @@ const SalesAnalysis = () => {
           <div className="flex justify-center gap-4 text-xs mt-3 text-slate-500">
             <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-blue-500" />
-              <span>Historial (Abril)</span>
+              <span>{forecastLabels.history}</span>
             </div>
             <div className="flex items-center gap-1.5 font-semibold text-blue-400">
               <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
-              <span>Pronóstico Lineal (Mayo)</span>
+              <span>{forecastLabels.forecast}</span>
             </div>
           </div>
         </GlassCard>
