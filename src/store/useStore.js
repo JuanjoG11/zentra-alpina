@@ -1,11 +1,8 @@
 import { create } from 'zustand';
 import { alpinaData } from '../data/alpina-data';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../services/supabaseClient';
 
-const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const hasSupabase = !!VITE_SUPABASE_URL && !!VITE_SUPABASE_ANON_KEY;
-const supabase = hasSupabase ? createClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) : null;
+const hasSupabase = !!supabase; // supabase is null if not configured
 
 const useStore = create((set, get) => ({
   // Filtros globales

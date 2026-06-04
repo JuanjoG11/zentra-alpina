@@ -7,13 +7,15 @@
     "dev": "vite",
     "process-server": "node scripts/process_upload_server.js",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "etl-server": "node src/etl_server.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run etl-server\""
   },
   "devDependencies": {
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
-    "typescript": "~6.0.2",
+    "concurrently": "^8.2.2",
     "vite": "^8.0.12"
   },
   "dependencies": {

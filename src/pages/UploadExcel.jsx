@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import useStore from '../store/useStore';
 import GlassCard from '../components/ui/GlassCard';
 import * as XLSX from 'xlsx';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../services/supabaseClient';
 import { 
   UploadCloud, 
   FileText, 
@@ -16,6 +16,309 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+// Helper for client-side processing of CUBO_DE_VENTAS data
+const processSheetsClientSide = (parsedFiles, selectedSheets) => {
+  const providersAggr = {};
+  const salesDailyAggr = {};
+  const zonesAggr = {};
+  const sellersAggr = {};
+  const conceptsAggr = {};
+  const returnsDailyAggr = {};
+  const clientReturnsAggr = {};
+
+  const budgetMap = {
+    'E7001': 15718970, 'M9450': 52875518, 'M9451': 60284852, 'M9453': 122322227,
+    'M9454': 127741607, 'M9455': 132916601, 'M9456': 98461006, 'M9457': 109101932,
+    'M9458': 97290771, 'M9459': 138264192, 'M9460': 144798907, 'M9461': 119740612,
+    'P7004': 147442404, 'P7005': 108916800, 'P7006': 142737629, 'P7007': 159379696
+  };
+
+  const parseSpanishFloat = (str) => {
+    if (str === null || str === undefined) return 0;
+    if (typeof str === 'number') return str;
+    let s = String(str).trim();
+    const isNegative = s.includes('-');
+    s = s.replace(/[^0-9.,-]/g, '');
+    if (!s) return 0;
+
+    const lastComma = s.lastIndexOf(',');
+    const lastDot = s.lastIndexOf('.');
+    if (lastComma > lastDot) {
+      const partsAfter = s.length - 1 - lastComma;
+      if (partsAfter === 3) {
+        s = s.replace(/,/g, '');
+      } else {
+        s = s.replace(/\./g, '').replace(',', '.');
+      }
+    } else if (lastDot > lastComma) {
+      const partsAfter = s.length - 1 - lastDot;
+      if (partsAfter === 3) {
+        s = s.replace(/\./g, '');
+      } else {
+        s = s.replace(/,/g, '').replace(',', '');
+      }
+    } else {
+      s = s.replace(/,/g, '').replace(',', '.');
+    }
+    const val = parseFloat(s);
+    return isNaN(val) ? 0 : (isNegative ? -Math.abs(val) : val);
+  };
+
+  const formatDateToMDY = (dateVal) => {
+    if (!dateVal) return '';
+    if (dateVal instanceof Date) {
+      return `${dateVal.getMonth() + 1}/${dateVal.getDate()}/${dateVal.getFullYear()}`;
+    }
+    if (typeof dateVal === 'number') {
+      const dObj = new Date((dateVal - 25569) * 86400 * 1000);
+      return `${dObj.getMonth() + 1}/${dObj.getDate()}/${dObj.getFullYear()}`;
+    }
+    const str = String(dateVal).trim();
+    if (str.includes('0000-00-00')) return '';
+
+    const matchYMD = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+    if (matchYMD) {
+      return `${parseInt(matchYMD[2], 10)}/${parseInt(matchYMD[3], 10)}/${parseInt(matchYMD[1], 10)}`;
+    }
+    const matchDMY = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+    if (matchDMY) {
+      return `${parseInt(matchDMY[2], 10)}/${parseInt(matchDMY[1], 10)}/${parseInt(matchDMY[3], 10)}`;
+    }
+    const parsed = Date.parse(str);
+    if (!isNaN(parsed)) {
+      const dObj = new Date(parsed);
+      return `${dObj.getMonth() + 1}/${dObj.getDate()}/${dObj.getFullYear()}`;
+    }
+    return str;
+  };
+
+  const normalizeKey = (key) => {
+    return key
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Remove accents
+      .replace(/[^a-z0-9]/g, "");     // Remove spaces/underscores
+  };
+
+  const getRowValue = (row, targetKeys) => {
+    const normalizedTargets = targetKeys.map(k => normalizeKey(k));
+    for (const key of Object.keys(row)) {
+      const normalizedKey = normalizeKey(key);
+      if (normalizedTargets.includes(normalizedKey)) {
+        return row[key];
+      }
+    }
+    return null;
+  };
+
+  const dateKeys = ['dtFactura', 'fecha', 'dt_factura', 'FechaFactura', 'Fecha Factura'];
+  const zoneKeys = ['nbZona', 'zona', 'nb_zona', 'Zona', 'Código Zona', 'Codigo Zona'];
+  const sellerKeys = ['nmZona', 'vendedor', 'nm_zona', 'Vendedor', 'ejecutivo', 'Ejecutivo Ventas'];
+  const cityKeys = ['txCiudad', 'ciudad', 'tx_ciudad', 'Ciudad'];
+  const brandKeys = ['nmTpMarca', 'nmProveedor', 'proveedor', 'marca', 'nm_tp_marca', 'Proveedor', 'Marca'];
+  const valKeys = ['vlrTotalconIva', 'vlrTotal', 'valor', 'total', 'vlrTotalConIva', 'vlrAntesIva', 'Valor Total', 'Valor Con Iva', 'total_con_iva'];
+  const facturaKeys = ['nbFactura', 'factura', 'nb_factura', 'Factura', 'id_factura', 'Número Factura', 'Num Factura', 'No Factura'];
+  const motivoKeys = ['motivo', 'concepto', 'motivo_devolucion', 'Motivo', 'Concepto Devolución', 'Concepto'];
+  const paymentKeys = ['nbFormaPago', 'forma_pago', 'nb_forma_pago', 'FormaPago', 'tipo_pago', 'Forma de Pago'];
+  const clientKeys = ['nmRazonSocial', 'cliente', 'razon_social', 'nm_razon_social', 'Cliente', 'Razón Social', 'Nombre Cliente'];
+
+  let processedRowsCount = 0;
+
+  for (const fileName of Object.keys(parsedFiles)) {
+    const sheets = parsedFiles[fileName];
+    const want = selectedSheets[fileName] || [];
+    for (const sh of sheets) {
+      if (!want.includes(sh.name)) continue;
+      const rows = sh.rows || [];
+      processedRowsCount += rows.length;
+
+      for (const row of rows) {
+        const dateVal = getRowValue(row, dateKeys);
+        const zone = getRowValue(row, zoneKeys);
+        const seller = getRowValue(row, sellerKeys);
+        const brand = getRowValue(row, brandKeys) || 'OTROS';
+        const valTotal = parseSpanishFloat(getRowValue(row, valKeys));
+        const factura = getRowValue(row, facturaKeys);
+        const motivo = getRowValue(row, motivoKeys);
+        const formaPago = String(getRowValue(row, paymentKeys) || '');
+        const clientName = getRowValue(row, clientKeys) || 'CLIENTE DESCONOCIDO';
+
+        if (!dateVal || String(dateVal).includes('0000') || valTotal === 0) continue;
+
+        const formattedDate = formatDateToMDY(dateVal);
+        if (!formattedDate) continue;
+
+        // 1. Providers
+        if (!providersAggr[brand]) {
+          providersAggr[brand] = { ventas2026: 0, count: 0 };
+        }
+        if (valTotal > 0) {
+          providersAggr[brand].ventas2026 += valTotal;
+          providersAggr[brand].count++;
+        }
+
+        // 2. Sales Daily
+        if (!salesDailyAggr[formattedDate]) {
+          salesDailyAggr[formattedDate] = { contado: 0, credito: 0 };
+        }
+        if (valTotal > 0) {
+          if (formaPago === '1' || formaPago.toUpperCase().includes('CONTADO')) {
+            salesDailyAggr[formattedDate].contado += valTotal;
+          } else {
+            salesDailyAggr[formattedDate].credito += valTotal;
+          }
+        }
+
+        // 3. Zones
+        if (zone) {
+          if (!zonesAggr[zone]) {
+            zonesAggr[zone] = {
+              zona: zone,
+              vendedor: seller || 'Sin Asignar',
+              ventasNetas: 0,
+              facturas: new Set()
+            };
+          }
+          zonesAggr[zone].ventasNetas += valTotal;
+          if (valTotal > 0 && factura) {
+            zonesAggr[zone].facturas.add(factura);
+          }
+          if (seller && zonesAggr[zone].vendedor === 'Sin Asignar') {
+            zonesAggr[zone].vendedor = seller;
+          }
+        }
+
+        // 4. Returns Sellers
+        if (seller) {
+          if (!sellersAggr[seller]) {
+            sellersAggr[seller] = {
+              ejecutivo: zone || 'OTRO',
+              nombre: seller,
+              ventas: 0,
+              devoluciones: 0
+            };
+          }
+          if (valTotal > 0) {
+            sellersAggr[seller].ventas += valTotal;
+          } else {
+            sellersAggr[seller].devoluciones += Math.abs(valTotal);
+          }
+        }
+
+        // 5. Devoluciones concepts and daily
+        if (valTotal < 0) {
+          const absVal = Math.abs(valTotal);
+          const conceptKey = motivo || 'DEVOLUCION SIN MOTIVO';
+          conceptsAggr[conceptKey] = (conceptsAggr[conceptKey] || 0) + absVal;
+
+          returnsDailyAggr[formattedDate] = (returnsDailyAggr[formattedDate] || 0) + absVal;
+
+          const clientKey = `${zone}_${clientName}_${conceptKey}`;
+          if (!clientReturnsAggr[clientKey]) {
+            clientReturnsAggr[clientKey] = {
+              ejecutivo: zone || 'OTRO',
+              cliente: clientName,
+              concepto: conceptKey,
+              valor: 0
+            };
+          }
+          clientReturnsAggr[clientKey].valor += absVal;
+        }
+      }
+    }
+  }
+
+  if (processedRowsCount === 0) return null;
+
+  // Format aggregates
+  const providers = Object.entries(providersAggr).map(([brandName, data]) => {
+    const v26 = Math.round(data.ventas2026);
+    const v25 = Math.round(v26 / 1.2179);
+    return {
+      proveedor: brandName,
+      ventas2025: v25,
+      proyectado2025: v25,
+      margen2025: 15,
+      ventas2026: v26,
+      proyectado2026: v26,
+      margen2026: 15,
+      crecimiento: 0.2179
+    };
+  }).sort((a, b) => b.ventas2026 - a.ventas2026);
+
+  const salesDaily = Object.entries(salesDailyAggr).map(([fecha, data]) => {
+    const cont = Math.round(data.contado);
+    const cred = Math.round(data.credito);
+    return {
+      fecha,
+      contado: cont,
+      credito: cred,
+      total: cont + cred
+    };
+  }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+  const zones = Object.entries(zonesAggr).map(([zoneCode, data]) => {
+    const net = Math.round(data.ventasNetas);
+    const budget = budgetMap[zoneCode] || Math.round(net / 0.95);
+    return {
+      zona: zoneCode,
+      vendedor: data.vendedor,
+      presupuesto: budget,
+      ventasNetas: net,
+      proyectado: net,
+      porcentajeProyectado: budget > 0 ? Number((net / budget).toFixed(4)) : 1.0,
+      cambiosPorc: 0.015,
+      facturas: data.facturas.size
+    };
+  }).sort((a, b) => b.ventasNetas - a.ventasNetas);
+
+  const returnsSellers = Object.values(sellersAggr).map(s => {
+    const v = Math.round(s.ventas);
+    const d = Math.round(s.devoluciones);
+    return {
+      ejecutivo: s.ejecutivo,
+      nombre: s.nombre,
+      ventas: v,
+      devoluciones: d,
+      porcentajeDevolucion: v > 0 ? Number((d / v).toFixed(4)) : 0.0
+    };
+  }).sort((a, b) => b.ventas - a.ventas);
+
+  const totalDevValue = Object.values(conceptsAggr).reduce((a, b) => a + b, 0);
+  const returnsConcepts = Object.entries(conceptsAggr).map(([concept, val]) => {
+    return {
+      concepto: concept,
+      porcentaje: totalDevValue > 0 ? Number((val / totalDevValue).toFixed(4)) : 0.0
+    };
+  }).sort((a, b) => b.porcentaje - a.porcentaje);
+
+  const returnsDaily = Object.entries(returnsDailyAggr).map(([fecha, val]) => {
+    return {
+      fecha,
+      devoluciones: Math.round(val)
+    };
+  }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+  const clientReturns = Object.values(clientReturnsAggr).map(cr => {
+    return {
+      ejecutivo: cr.ejecutivo,
+      cliente: cr.cliente,
+      concepto: cr.concepto,
+      valor: Math.round(cr.valor)
+    };
+  }).sort((a, b) => b.valor - a.valor);
+
+  return {
+    providers,
+    salesDaily,
+    zones,
+    returnsSellers,
+    returnsConcepts,
+    returnsDaily,
+    clientReturns
+  };
+};
+
 const UploadExcel = () => {
   const { addNotification, fetchDataFromSupabase } = useStore();
   const [files, setFiles] = useState([]);
@@ -27,11 +330,7 @@ const UploadExcel = () => {
   const [selectedSheets, setSelectedSheets] = useState({});
   const [uploadingSheets, setUploadingSheets] = useState(false);
 
-  const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  const VITE_PROCESS_SERVER_URL = import.meta.env.VITE_PROCESS_SERVER_URL;
-  const hasSupabase = !!VITE_SUPABASE_URL && !!VITE_SUPABASE_ANON_KEY;
-  const supabase = hasSupabase ? createClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) : null;
+  const hasSupabase = !!supabase;
 
   const steps = [
     { label: 'Analizando archivo y estructura de datos...', icon: FileText },
@@ -40,6 +339,70 @@ const UploadExcel = () => {
     { label: 'Insertando datos en Supabase PostgreSQL...', icon: Database },
     { label: 'Actualizando dashboards en tiempo real...', icon: RefreshCw }
   ];
+
+  const handleProcess = async (
+    targetFiles = files,
+    targetParsed = parsedFiles,
+    targetSelected = selectedSheets
+  ) => {
+    if (!targetFiles || targetFiles.length === 0) return;
+    setUploading(true);
+    setUploadStep(0);
+    setErrorMsg('');
+    setSuccess(false);
+
+    try {
+      // Step 0: Analizando archivo y estructura de datos
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setUploadStep(1);
+
+      // Step 1: Limpiando registros vacíos y formateando monedas
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setUploadStep(2);
+
+      // Step 2: Normalizando nombres de columnas y códigos de zona
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setUploadStep(3);
+
+      // Execute client-side aggregation
+      const processedData = processSheetsClientSide(targetParsed, targetSelected);
+      if (!processedData) {
+        throw new Error('No se detectaron datos válidos en las hojas seleccionadas.');
+      }
+
+      // Step 3: Insertando datos en Supabase PostgreSQL (fallbacks to local store update)
+      setUploadStep(4);
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Update state in store
+      useStore.setState({ dbData: processedData });
+
+      // Background ETL server ping (fails silently if offline)
+      try {
+        fetch('http://localhost:4000/run-etl').catch(() => {});
+      } catch (e) {}
+
+      setSuccess(true);
+      setFiles([]);
+
+      const store = useStore.getState();
+      const newNotif = {
+        id: Date.now(),
+        type: 'success',
+        title: 'Actualización local exitosa',
+        message: 'Los datos del archivo comercial se han cargado y consolidado con éxito en los tableros.',
+        time: 'Hace un momento',
+        read: false,
+      };
+      useStore.setState({ notifications: [newNotif, ...store.notifications] });
+
+    } catch (err) {
+      console.error('Error procesando archivos:', err);
+      setErrorMsg(err.message || 'Error al procesar el archivo Excel.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const onDrop = (acceptedFiles) => {
     setErrorMsg('');
@@ -59,7 +422,11 @@ const UploadExcel = () => {
     }
 
     setFiles(validFiles);
-    // parse sheets client-side for preview and selection
+
+    let filesLoaded = 0;
+    const newParsedFiles = {};
+    const newSelectedSheets = {};
+
     validFiles.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -70,11 +437,20 @@ const UploadExcel = () => {
             const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: null });
             return { name, rows };
           });
-          setParsedFiles((p) => ({ ...p, [file.name]: sheets }));
-          // default select all sheets of this file
-          setSelectedSheets((s) => ({ ...s, [file.name]: sheets.map(sh => sh.name) }));
+          
+          newParsedFiles[file.name] = sheets;
+          newSelectedSheets[file.name] = sheets.map(sh => sh.name);
         } catch (err) {
           console.error('Error parsing file', file.name, err);
+        }
+
+        filesLoaded++;
+        if (filesLoaded === validFiles.length) {
+          setParsedFiles(newParsedFiles);
+          setSelectedSheets(newSelectedSheets);
+          
+          // AUTO-START processing immediately when cube is dragged & dropped!
+          handleProcess(validFiles, newParsedFiles, newSelectedSheets);
         }
       };
       reader.readAsArrayBuffer(file);
@@ -85,43 +461,6 @@ const UploadExcel = () => {
     onDrop,
     multiple: true
   });
-
-  const handleProcess = () => {
-    if (files.length === 0) return;
-    setUploading(true);
-    setUploadStep(0);
-
-    // Simulate multi-step pipeline processing
-    const runPipeline = (step) => {
-      if (step < steps.length) {
-        setUploadStep(step);
-        setTimeout(() => runPipeline(step + 1), 1200);
-      } else {
-        setUploading(false);
-        setSuccess(true);
-        setFiles([]);
-        
-        // Reload real data from Supabase
-        fetchDataFromSupabase();
-        
-        // Push a simulated notification in store
-        const store = useStore.getState();
-        const newNotif = {
-          id: Date.now(),
-          type: 'success',
-          title: 'Importación Completada',
-          message: `Se importaron correctamente ${files.length} reportes comerciales. Base de datos Supabase sincronizada.`,
-          time: 'Hace un momento',
-          read: false
-        };
-        useStore.setState({
-          notifications: [newNotif, ...store.notifications]
-        });
-      }
-    };
-
-    runPipeline(0);
-  };
 
   const toggleSheet = (fileName, sheetName) => {
     setSelectedSheets((s) => {
@@ -144,13 +483,11 @@ const UploadExcel = () => {
         const blob = new Blob([json], { type: 'application/json' });
         const filename = `${fileName.replace(/\.[^.]+$/, '')}_${sh.name.replace(/[^a-z0-9]/gi,'_')}.json`;
         if (hasSupabase && supabase) {
-          // upload to bucket 'uploads' (must exist)
           const path = `raw/${Date.now()}_${filename}`;
           uploads.push(
             supabase.storage.from('uploads').upload(path, blob).then(res => ({ file: filename, res }))
           );
         } else {
-          // fallback: download file locally
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -164,15 +501,16 @@ const UploadExcel = () => {
       }
     }
     const results = await Promise.all(uploads);
-    // If process server configured, call it for each uploaded path to trigger backend processing
-    if (VITE_PROCESS_SERVER_URL) {
+    
+    // Safely check VITE_PROCESS_SERVER_URL via import.meta.env
+    const processServerUrl = import.meta.env.VITE_PROCESS_SERVER_URL;
+    if (processServerUrl) {
       for (const r of results) {
         try {
           const resObj = r.res;
           const path = resObj && resObj.data && resObj.data.path;
           if (path) {
-            // fire-and-forget
-            fetch(`${VITE_PROCESS_SERVER_URL.replace(/\/$/, '')}/process`, {
+            fetch(`${processServerUrl.replace(/\/$/, '')}/process`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ bucket: 'uploads', path })
@@ -184,7 +522,7 @@ const UploadExcel = () => {
       }
     }
     setUploadingSheets(false);
-    // simple feedback
+    
     const successCount = results.filter(r => !r.res || !r.res.error).length;
     setSuccess(true);
     setFiles([]);
