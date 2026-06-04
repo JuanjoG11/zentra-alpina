@@ -17,7 +17,8 @@ import {
 
 const ReturnsAnalysis = () => {
   const filters = useStore();
-  const filteredData = getFilteredData(filters);
+  const dbData = useStore(state => state.dbData);
+  const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
   // Group returns by client to find critical ones

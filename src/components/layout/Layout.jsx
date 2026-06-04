@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import useStore from '../../store/useStore';
 
 const Layout = () => {
-  const { sidebarOpen } = useStore();
+  const { sidebarOpen, fetchDataFromSupabase } = useStore();
+
+  useEffect(() => {
+    fetchDataFromSupabase();
+  }, [fetchDataFromSupabase]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans overflow-x-hidden selection:bg-blue-500/30 selection:text-blue-200">

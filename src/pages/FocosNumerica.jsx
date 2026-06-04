@@ -6,11 +6,11 @@ import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
 import { BarChart3, CircleDollarSign, Sparkles } from 'lucide-react';
 import alpinaLogo from '../assets/alpina-logo.svg';
-import { alpinaData } from '../data/alpina-data';
 
 const FocosNumerica = () => {
   const filters = useStore();
-  const filteredData = getFilteredData(filters);
+  const dbData = useStore(state => state.dbData);
+  const filteredData = getFilteredData(dbData, filters);
 
   const zoneCity = (zona) => {
     if (zona.startsWith('E')) return 'ARMENIA';
@@ -113,7 +113,7 @@ const FocosNumerica = () => {
 
   // Build a simple linear forecast for sales using salesDaily
   const salesTimeseries = useMemo(() => {
-    const rows = (alpinaData.salesDaily || []).map((r) => ({
+    const rows = (dbData.salesDaily || []).map((r) => ({
       date: new Date(r.fecha),
       total: r.total
     })).sort((a, b) => a.date - b.date);
@@ -143,7 +143,7 @@ const FocosNumerica = () => {
     }
 
     return { actual, forecast };
-  }, []);
+  }, [dbData.salesDaily]);
 
   return (
     <div className="space-y-6">

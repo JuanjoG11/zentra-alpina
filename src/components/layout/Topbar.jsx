@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import useStore from '../../store/useStore';
-import { alpinaData } from '../../data/alpina-data';
 import { 
   Bell, 
   Sun, 
@@ -18,19 +17,20 @@ const Topbar = () => {
     selectedProvider, setProvider,
     selectedSeller, setSeller,
     darkMode, toggleDarkMode,
-    notifications, markAsRead, unreadCount
+    notifications, markAsRead, unreadCount,
+    dbData
   } = useStore();
 
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
 
   // Extract unique filter values from real data
-  const zonesList = ['Todas', ...new Set(alpinaData.zones.map(z => z.zona))].filter(Boolean);
-  const providersList = ['Todas', ...new Set(alpinaData.providers
+  const zonesList = ['Todas', ...new Set((dbData.zones || []).map(z => z.zona))].filter(Boolean);
+  const providersList = ['Todas', ...new Set((dbData.providers || [])
     .filter(p => p.proveedor.toUpperCase().includes('ALPINA'))
     .map(p => p.proveedor))].filter(Boolean);
   const sellersList = [
     'Todas', 
-    ...new Set(alpinaData.returnsSellers.map(s => s.nombre).filter(n => n && n !== 'CLIENTE' && n !== 'SERVICIO  CLIENTE'))
+    ...new Set((dbData.returnsSellers || []).map(s => s.nombre).filter(n => n && n !== 'CLIENTE' && n !== 'SERVICIO  CLIENTE'))
   ];
 
   return (

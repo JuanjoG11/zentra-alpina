@@ -25,6 +25,7 @@ const Sidebar = () => {
     { name: 'Dashboard Ejecutivo', path: '/', icon: BarChart3 },
     { name: 'Análisis de Ventas', path: '/ventas', icon: TrendingUp },
     { name: 'Devoluciones', path: '/devoluciones', icon: RefreshCw },
+    { name: 'Perfil Indicadores', path: '/indicadores', icon: Database },
     { name: 'Focos Numérica', path: '/focos', icon: Sparkles },
     { name: 'Proveedores', path: '/proveedores', icon: Truck },
     { name: 'Vendedores', path: '/vendedores', icon: Users },

@@ -4,7 +4,6 @@ import { getFilteredData, calculateKPIs } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
-import { alpinaData } from '../data/alpina-data';
 import { 
   Users, 
   Trophy, 
@@ -17,14 +16,15 @@ import {
 
 const SellersAnalysis = () => {
   const filters = useStore();
-  const filteredData = getFilteredData(filters);
+  const dbData = useStore(state => state.dbData);
+  const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
   // Pereira Zone commercial rankings
   const rankedZones = [...filteredData.zones]
     .sort((a, b) => b.ventasNetas - a.ventasNetas);
 
-  // Manizales Sellers quality / returns rankings
+  // M9450/Sellers quality / returns rankings
   const rankedSellers = [...filteredData.returnsSellers]
     .sort((a, b) => b.ventas - a.ventas);
 
@@ -37,8 +37,8 @@ const SellersAnalysis = () => {
   const topZoneObj = rankedZones[0];
   const topSellerObj = rankedSellers[0];
 
-  // Fallback: if rankedZones is empty due to filters, use global alpina data
-  const fallbackZones = [...alpinaData.zones].sort((a, b) => b.ventasNetas - a.ventasNetas);
+  // Fallback: if rankedZones is empty due to filters, use global db data
+  const fallbackZones = [...(dbData.zones || [])].sort((a, b) => b.ventasNetas - a.ventasNetas);
   const zonesForChart = (rankedZones.length > 0 ? rankedZones : fallbackZones).slice(0, 10);
 
   // Apex options for seller performance comparison

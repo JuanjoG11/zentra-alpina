@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import useStore from '../store/useStore';
 import GlassCard from '../components/ui/GlassCard';
+import * as XLSX from 'xlsx';
+import { createClient } from '@supabase/supabase-js';
 import { 
   UploadCloud, 
   FileText, 
@@ -15,12 +17,21 @@ import {
 } from 'lucide-react';
 
 const UploadExcel = () => {
-  const { addNotification } = useStore();
+  const { addNotification, fetchDataFromSupabase } = useStore();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadStep, setUploadStep] = useState(0);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [parsedFiles, setParsedFiles] = useState({});
+  const [selectedSheets, setSelectedSheets] = useState({});
+  const [uploadingSheets, setUploadingSheets] = useState(false);
+
+  const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const VITE_PROCESS_SERVER_URL = import.meta.env.VITE_PROCESS_SERVER_URL;
+  const hasSupabase = !!VITE_SUPABASE_URL && !!VITE_SUPABASE_ANON_KEY;
+  const supabase = hasSupabase ? createClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) : null;
 
   const steps = [
     { label: 'Analizando archivo y estructura de datos...', icon: FileText },
@@ -48,6 +59,26 @@ const UploadExcel = () => {
     }
 
     setFiles(validFiles);
+    // parse sheets client-side for preview and selection
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const sheets = wb.SheetNames.map((name) => {
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: null });
+            return { name, rows };
+          });
+          setParsedFiles((p) => ({ ...p, [file.name]: sheets }));
+          // default select all sheets of this file
+          setSelectedSheets((s) => ({ ...s, [file.name]: sheets.map(sh => sh.name) }));
+        } catch (err) {
+          console.error('Error parsing file', file.name, err);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
@@ -70,6 +101,9 @@ const UploadExcel = () => {
         setSuccess(true);
         setFiles([]);
         
+        // Reload real data from Supabase
+        fetchDataFromSupabase();
+        
         // Push a simulated notification in store
         const store = useStore.getState();
         const newNotif = {
@@ -87,6 +121,85 @@ const UploadExcel = () => {
     };
 
     runPipeline(0);
+  };
+
+  const toggleSheet = (fileName, sheetName) => {
+    setSelectedSheets((s) => {
+      const list = new Set(s[fileName] || []);
+      if (list.has(sheetName)) list.delete(sheetName);
+      else list.add(sheetName);
+      return { ...s, [fileName]: Array.from(list) };
+    });
+  };
+
+  const uploadSelectedSheets = async () => {
+    setUploadingSheets(true);
+    const uploads = [];
+    for (const fileName of Object.keys(parsedFiles)) {
+      const sheets = parsedFiles[fileName];
+      const want = new Set(selectedSheets[fileName] || []);
+      for (const sh of sheets) {
+        if (!want.has(sh.name)) continue;
+        const json = JSON.stringify(sh.rows, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const filename = `${fileName.replace(/\.[^.]+$/, '')}_${sh.name.replace(/[^a-z0-9]/gi,'_')}.json`;
+        if (hasSupabase && supabase) {
+          // upload to bucket 'uploads' (must exist)
+          const path = `raw/${Date.now()}_${filename}`;
+          uploads.push(
+            supabase.storage.from('uploads').upload(path, blob).then(res => ({ file: filename, res }))
+          );
+        } else {
+          // fallback: download file locally
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          uploads.push(Promise.resolve({ file: filename, res: null }));
+        }
+      }
+    }
+    const results = await Promise.all(uploads);
+    // If process server configured, call it for each uploaded path to trigger backend processing
+    if (VITE_PROCESS_SERVER_URL) {
+      for (const r of results) {
+        try {
+          const resObj = r.res;
+          const path = resObj && resObj.data && resObj.data.path;
+          if (path) {
+            // fire-and-forget
+            fetch(`${VITE_PROCESS_SERVER_URL.replace(/\/$/, '')}/process`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ bucket: 'uploads', path })
+            }).catch(err => console.error('Error calling process server', err));
+          }
+        } catch (e) {
+          console.warn('No process call for result', e.message || e);
+        }
+      }
+    }
+    setUploadingSheets(false);
+    // simple feedback
+    const successCount = results.filter(r => !r.res || !r.res.error).length;
+    setSuccess(true);
+    setFiles([]);
+    setParsedFiles({});
+    setSelectedSheets({});
+    const store = useStore.getState();
+    const newNotif = {
+      id: Date.now(),
+      type: 'success',
+      title: 'Hojas cargadas',
+      message: `Se procesaron ${successCount} hojas seleccionadas.`,
+      time: 'Hace un momento',
+      read: false
+    };
+    useStore.setState({ notifications: [newNotif, ...store.notifications] });
   };
 
   return (
@@ -223,13 +336,49 @@ const UploadExcel = () => {
                     </div>
                   ))}
                 </div>
-                <button 
-                  onClick={handleProcess}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
-                >
-                  <span>Procesar en Pipeline ETL</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
+
+                {/* Parsed sheets preview + selection */}
+                {Object.keys(parsedFiles).length > 0 && (
+                  <div className="mt-4 border-t border-slate-800/60 pt-4 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hojas detectadas</h4>
+                    <div className="space-y-2">
+                      {Object.entries(parsedFiles).map(([fName, sheets]) => (
+                        <div key={fName} className="p-3 rounded-lg bg-slate-900/40 border border-slate-800 text-xs">
+                          <div className="font-semibold text-slate-200 truncate">{fName}</div>
+                          <div className="mt-2 grid grid-cols-1 gap-2">
+                            {sheets.map((sh) => (
+                              <label key={sh.name} className="flex items-center gap-2 text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={(selectedSheets[fName] || []).includes(sh.name)}
+                                  onChange={() => toggleSheet(fName, sh.name)}
+                                  className="accent-blue-500"
+                                />
+                                <span className="text-sm font-medium">{sh.name}</span>
+                                <span className="ml-2 text-xs text-slate-500">{sh.rows.length} filas</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={uploadSelectedSheets}
+                        disabled={uploadingSheets}
+                        className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-semibold"
+                      >
+                        {hasSupabase ? 'Subir hojas seleccionadas a Storage' : 'Descargar hojas seleccionadas'}
+                      </button>
+                      <button onClick={handleProcess} className="py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded text-xs font-semibold">Procesar en Pipeline ETL</button>
+                    </div>
+                    {uploadingSheets && <div className="text-xs text-slate-400">Subiendo hojas...</div>}
+                    {!hasSupabase && (
+                      <div className="text-xs text-slate-500 mt-2">No configurado Supabase en entorno. Las hojas se descargarán localmente como JSON.</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </GlassCard>
@@ -274,10 +423,19 @@ const UploadExcel = () => {
             </div>
           </GlassCard>
 
-          <GlassCard hoverable={false}>
-            <h3 className="text-sm font-bold text-white mb-2">Supabase Sincronización</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              La base de datos PostgreSQL está protegida con RLS. Al procesar los archivos, los datos se almacenan en tablas normalizadas, disparando webhooks automáticos para actualizar el dashboard de supervisores y vendedores en tiempo real.
+          <GlassCard hoverable={false} className="border-amber-500/20 bg-amber-500/[0.01]">
+            <h3 className="text-sm font-bold text-amber-400 mb-2 flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4" />
+              Importador del Cubo de Ventas (CLI)
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed mb-3">
+              Para procesar el archivo completo del <strong>Cubo de Ventas</strong> (archivos de más de 20MB o 300,000 registros), se recomienda utilizar el importador de consola optimizado por streaming:
+            </p>
+            <div className="bg-slate-950 rounded-lg p-2.5 font-mono text-[10px] text-slate-300 border border-slate-900 select-all overflow-x-auto">
+              node scripts/import_cubo.cjs C:\Ruta\Al\Cubo.csv
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+              Esto procesará, agrupará la información y la sincronizará directamente en Supabase y el archivo local de la plataforma.
             </p>
           </GlassCard>
         </div>

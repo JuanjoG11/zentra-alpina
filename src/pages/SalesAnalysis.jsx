@@ -18,7 +18,8 @@ import {
 
 const SalesAnalysis = () => {
   const filters = useStore();
-  const filteredData = getFilteredData(filters);
+  const dbData = useStore(state => state.dbData);
+  const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
   // Pareto 80/20 Analysis - Sort zones by net sales

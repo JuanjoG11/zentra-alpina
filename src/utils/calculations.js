@@ -1,15 +1,39 @@
 import { alpinaData } from '../data/alpina-data';
+import useStore from '../store/useStore';
 
-export const getFilteredData = (filters) => {
-  const { selectedPeriod, selectedCity, selectedZone, selectedProvider, selectedSeller } = filters;
+export const getFilteredData = (arg1, arg2) => {
+  let dbData;
+  let filters;
   
-  let providers = [...alpinaData.providers];
-  let salesDaily = [...alpinaData.salesDaily];
-  let zones = [...alpinaData.zones];
-  let returnsSellers = [...alpinaData.returnsSellers];
-  let returnsConcepts = [...alpinaData.returnsConcepts];
-  let returnsDaily = [...alpinaData.returnsDaily];
-  let clientReturns = [...alpinaData.clientReturns];
+  if (arg2 === undefined) {
+    // Backwards compatibility for getFilteredData(filters) calls
+    filters = arg1;
+    dbData = useStore.getState().dbData;
+  } else {
+    // Two-argument call: getFilteredData(dbData, filters)
+    dbData = arg1;
+    filters = arg2;
+  }
+
+  const baseData = dbData || alpinaData;
+  if (!filters) filters = {};
+const { selectedProvider = 'Todas', selectedZone = 'Todas', selectedSeller = 'Todas' } = filters;
+let providers = [...(baseData.providers || [])];
+let salesDaily = [...(baseData.salesDaily || [])];
+let zones = [...(baseData.zones || [])];
+let returnsSellers = [...(baseData.returnsSellers || [])];
+let returnsConcepts = [...(baseData.returnsConcepts || [])];
+let returnsDaily = [...(baseData.returnsDaily || [])];
+let clientReturns = [...(baseData.clientReturns || [])];
+  
+  // Duplicate variable declarations removed – using the earlier ones.
+// let providers = [...(baseData.providers || [])];
+// let salesDaily = [...(baseData.salesDaily || [])];
+// let zones = [...(baseData.zones || [])];
+// let returnsSellers = [...(baseData.returnsSellers || [])];
+// let returnsConcepts = [...(baseData.returnsConcepts || [])];
+// let returnsDaily = [...(baseData.returnsDaily || [])];
+// let clientReturns = [...(baseData.clientReturns || [])];
 
   // Keep only Alpina brands across the application
   providers = providers.filter(p => p.proveedor.toUpperCase().includes('ALPINA'));

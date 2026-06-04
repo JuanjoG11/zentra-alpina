@@ -17,7 +17,8 @@ import alpinaLogo from '../assets/alpina-logo.svg';
 
 const ProvidersAnalysis = () => {
   const filters = useStore();
-  const filteredData = getFilteredData(filters);
+  const dbData = useStore(state => state.dbData);
+  const filteredData = getFilteredData(dbData, filters);
 
   // Sorting providers by sales volume 2026
   const sortedProviders = [...filteredData.providers]

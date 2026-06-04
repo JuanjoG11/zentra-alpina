@@ -9,12 +9,13 @@ from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv()
-
+print('DEBUG: SUPABASE_SERVICE_ROLE_KEY =', os.getenv('SUPABASE_SERVICE_ROLE_KEY'))
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") # Requires service role key to bypass RLS for inserts
-
+# Retrieve and strip the service role key to avoid hidden whitespace issues
+raw_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_KEY = raw_key.strip() if raw_key else None
 if not SUPABASE_URL or not SUPABASE_KEY:
-    print("Warning: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set in environment. ETL running in test mode.")
+    print("Warning: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set or empty in environment. ETL running in test mode.")
     supabase = None
 else:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -61,7 +62,7 @@ def clean_integer(val):
 
 def etl_ventas_proveedor():
     print("Processing: ventas_proveedor.csv...")
-    df = pd.read_csv("data/ventas_proveedor.csv", skiprows=8) # Skips summary lines
+    df = pd.read_csv("data/ventas_proveedor.csv", skiprows=8, encoding='latin-1')
     
     records = []
     for _, row in df.iterrows():
@@ -91,7 +92,7 @@ def etl_ventas_proveedor():
 def etl_ventas_credito_contado():
     print("Processing: ventas_credito_contado.csv...")
     # Read CSV and locate the daily section
-    df = pd.read_csv("data/ventas_credito_contado.csv")
+    df = pd.read_csv("data/ventas_credito_contado.csv", encoding='latin-1')
     
     # Find row index where daily data starts
     start_idx = None
@@ -104,7 +105,7 @@ def etl_ventas_credito_contado():
         print("Error: Could not locate daily sales header.")
         return
         
-    df_daily = pd.read_csv("data/ventas_credito_contado.csv", skiprows=start_idx + 1)
+    df_daily = pd.read_csv("data/ventas_credito_contado.csv", skiprows=start_idx + 1, encoding='latin-1')
     
     sales_rows = []
     for _, row in df_daily.iterrows():
@@ -156,7 +157,7 @@ def etl_ventas_credito_contado():
 
 def etl_devoluciones():
     print("Processing: devoluciones.csv...")
-    df = pd.read_csv("data/devoluciones.csv")
+    df = pd.read_csv("data/devoluciones.csv", encoding='latin-1')
     
     # Extract client returns section starting with 'EJECUTIVO,NOMCLIENTE'
     start_idx = None
@@ -169,7 +170,7 @@ def etl_devoluciones():
         print("Error: Could not locate client returns section.")
         return
         
-    df_clients = pd.read_csv("data/devoluciones.csv", skiprows=start_idx + 1)
+    df_clients = pd.read_csv("data/devoluciones.csv", skiprows=start_idx + 1, encoding='latin-1')
     
     return_rows = []
     for _, row in df_clients.iterrows():
