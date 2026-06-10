@@ -237,9 +237,9 @@ rl.on('line', (line) => {
     clientReturnsAggr[clientKey].valor += absVal;
   }
 
-  // 6. Detailed sales_daily rows for Supabase
+  // 6. Detailed sales_daily rows for Supabase (grouped to match unique index)
   if (zone && seller) {
-    const dbKey = `${date}_${brand}_${seller}_${zone}`;
+    const dbKey = `${date}_${brand}_${seller}`;
     if (!salesDailyDbAggr[dbKey]) {
       salesDailyDbAggr[dbKey] = {
         fecha: date,
@@ -249,6 +249,10 @@ rl.on('line', (line) => {
         ventas: 0,
         unidades: 0
       };
+    } else {
+      if (salesDailyDbAggr[dbKey].zona !== zone && !salesDailyDbAggr[dbKey].zona.includes(zone)) {
+        salesDailyDbAggr[dbKey].zona += ', ' + zone;
+      }
     }
     salesDailyDbAggr[dbKey].ventas += valTotal;
     salesDailyDbAggr[dbKey].unidades += (valTotal > 0 ? 1 : 0);
@@ -382,8 +386,9 @@ rl.on('close', async () => {
         margen2026: p.margen2026,
         meta: p.proyectado2026
       }));
-      const { error: errProv } = await supabase.from('providers').upsert(providersDb, { onConflict: 'lower(proveedor)' });
-      if (errProv) console.error('Error upserting providers:', errProv.message);
+      await supabase.from('providers').delete().neq('id', 0);
+      const { error: errProv } = await supabase.from('providers').insert(providersDb);
+      if (errProv) console.error('Error inserting providers:', errProv.message);
       else console.log('- Sincronizados proveedores.');
 
       // 2. Zones
@@ -391,10 +396,11 @@ rl.on('close', async () => {
         zona: z.zona,
         presupuesto: z.presupuesto,
         facturas: z.facturas,
-        ventasNetas: z.ventasNetas
+        ventasnetas: z.ventasNetas
       }));
-      const { error: errZones } = await supabase.from('zones').upsert(zonesDb, { onConflict: 'lower(zona)' });
-      if (errZones) console.error('Error upserting zones:', errZones.message);
+      await supabase.from('zones').delete().neq('id', 0);
+      const { error: errZones } = await supabase.from('zones').insert(zonesDb);
+      if (errZones) console.error('Error inserting zones:', errZones.message);
       else console.log('- Sincronizadas zonas.');
 
       // 3. Returns Sellers
@@ -404,8 +410,9 @@ rl.on('close', async () => {
         ventas: s.ventas,
         devoluciones: s.devoluciones
       }));
-      const { error: errSellers } = await supabase.from('returns_sellers').upsert(returnsSellersDb, { onConflict: 'lower(nombre),lower(ejecutivo)' });
-      if (errSellers) console.error('Error upserting returns_sellers:', errSellers.message);
+      await supabase.from('returns_sellers').delete().neq('id', 0);
+      const { error: errSellers } = await supabase.from('returns_sellers').insert(returnsSellersDb);
+      if (errSellers) console.error('Error inserting returns_sellers:', errSellers.message);
       else console.log('- Sincronizados vendedores y devoluciones.');
 
       // 4. Sales Daily
@@ -418,15 +425,14 @@ rl.on('close', async () => {
         unidades: sd.unidades
       }));
       
+      await supabase.from('sales_daily').delete().neq('id', 0);
       const chunkSize = 500;
-      console.log(`- Upserting ${salesDailyDb.length} rows to sales_daily in chunks of ${chunkSize}...`);
+      console.log(`- Inserting ${salesDailyDb.length} rows to sales_daily in chunks of ${chunkSize}...`);
       for (let i = 0; i < salesDailyDb.length; i += chunkSize) {
         const chunk = salesDailyDb.slice(i, i + chunkSize);
-        const { error: errSales } = await supabase.from('sales_daily').upsert(chunk, { 
-          onConflict: 'fecha,lower(proveedor),lower(vendedor)' 
-        });
+        const { error: errSales } = await supabase.from('sales_daily').insert(chunk);
         if (errSales) {
-          console.error(`Error upserting sales_daily chunk starting at index ${i}:`, errSales.message);
+          console.error(`Error inserting sales_daily chunk starting at index ${i}:`, errSales.message);
           break;
         }
       }

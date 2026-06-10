@@ -59,24 +59,25 @@ export const getFilteredData = (arg1, arg2) => {
 };
 
 export const calculateKPIs = (filteredData) => {
-  const { providers, salesDaily, zones, returnsSellers } = filteredData;
+  const { providers, salesDaily, zones, returnsSellers, returnsDaily } = filteredData;
 
-  // 1. Ventas Totales: sum of 2026 sales in providers
-  const totalSales = providers.reduce((sum, p) => sum + p.ventas2026, 0);
+  // 1. Ventas Totales: si hay datos diarios (salesDaily) usamos la suma de "total", sino usamos los proveedores
+  const hasDailySales = Array.isArray(salesDaily) && salesDaily.length > 0 && salesDaily.some(d => d.total && d.total > 0);
+  const totalSales = hasDailySales
+    ? salesDaily.reduce((sum, d) => sum + (d.total || 0), 0)
+    : providers.reduce((sum, p) => sum + p.ventas2026, 0);
 
-  // 2. Presupuesto (Budget): sum of budget in zones
-  // If zones is empty because we filtered by a specific provider, fallback to totalSales / 0.973
+  // 2. Presupuesto (Budget): sum of budget in zones (fallback unchanged)
   const totalBudget = zones.length > 0
     ? zones.reduce((sum, z) => sum + z.presupuesto, 0)
     : totalSales / 0.973;
 
-  // 3. Devoluciones
-  // If returnsSellers is empty because of filters, we can estimate or sum what's left
-  const totalReturns = returnsSellers.length > 0
-    ? returnsSellers.reduce((sum, s) => sum + s.devoluciones, 0)
-    : totalSales * 0.031; // Estimate 3.1% if missing
+  // 3. Devoluciones: preferimos datos diarios, si no hay usamos devoluciones por vendedor, o estimación
+  const dailyReturnsSum = Array.isArray(returnsDaily) ? returnsDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
+  const sellersReturnsSum = Array.isArray(returnsSellers) ? returnsSellers.reduce((sum, s) => sum + (s.devoluciones || 0), 0) : 0;
+  const totalReturns = dailyReturnsSum > 0 ? dailyReturnsSum : (sellersReturnsSum > 0 ? sellersReturnsSum : totalSales * 0.031);
 
-  // 4. Ventas Netas: totalSales minus total returns
+  // 4. Ventas Netas: totalSales menos total returns
   const netSales = totalSales - totalReturns;
 
   // 5. Cumplimiento %: sales / budget

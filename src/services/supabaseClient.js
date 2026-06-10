@@ -17,8 +17,8 @@ const SUPABASE_SERVICE_ROLE_KEY =
   import.meta?.env?.VITE_SUPABASE_SERVICE_ROLE_KEY ||
   (typeof process !== 'undefined' ? process.env.SUPABASE_SERVICE_ROLE_KEY : undefined);
 
-// Seleccionamos la clave activa: anón primero, si no, Service Role.
-const ACTIVE_KEY = SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY;
+// Seleccionamos la clave activa: preferimos Service Role para bypass de RLS en esta plataforma local, si no, Anon.
+const ACTIVE_KEY = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 
 // Exportamos una única instancia del cliente (o null si faltan credenciales)
 export const supabase = SUPABASE_URL && ACTIVE_KEY ? createClient(SUPABASE_URL, ACTIVE_KEY) : null;

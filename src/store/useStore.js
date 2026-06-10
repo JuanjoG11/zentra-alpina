@@ -2,11 +2,33 @@ import { create } from 'zustand';
 import { alpinaData } from '../data/alpina-data';
 import { supabase } from '../services/supabaseClient';
 
+const STORAGE_KEY = 'zentra_alpina_dbData';
+const PERIOD_KEY  = 'zentra_alpina_period';
+
+// Load persisted cube data from localStorage (survives page refresh)
+const loadPersistedData = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* ignore parse errors */ }
+  return null;
+};
+
+const saveToStorage = (dbData, period) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dbData));
+    if (period) localStorage.setItem(PERIOD_KEY, period);
+  } catch (e) { /* ignore quota errors */ }
+};
+
+const persistedData   = loadPersistedData();
+const persistedPeriod = localStorage.getItem(PERIOD_KEY) || 'junio-2026';
+
 const hasSupabase = !!supabase; // supabase is null if not configured
 
 const useStore = create((set, get) => ({
   // Filtros globales
-  selectedPeriod: 'abril-2026',
+  selectedPeriod: persistedPeriod,
   selectedCity: 'PEREIRA',
   selectedZone: 'Todas',
   selectedProvider: 'Todas',
@@ -14,8 +36,8 @@ const useStore = create((set, get) => ({
   sidebarOpen: true,
   darkMode: true,
 
-  // Datos de negocio (inicializados con el archivo estático)
-  dbData: alpinaData,
+  // Datos de negocio — se usan datos persistidos si existen, si no el archivo estático
+  dbData: persistedData || alpinaData,
   isLoadingData: false,
   dataError: null,
 
@@ -27,23 +49,32 @@ const useStore = create((set, get) => ({
   setSeller: (seller) => set({ selectedSeller: seller }),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
-  setDbData: (newData) => set({ dbData: newData }),
+  setDbData: (newData, period) => {
+    saveToStorage(newData, period);
+    set({ dbData: newData, ...(period ? { selectedPeriod: period } : {}) });
+  },
 
   // Carga de datos desde Supabase
   fetchDataFromSupabase: async () => {
     if (!supabase) {
-      console.log('Supabase no está configurado en las variables de entorno. Usando datos locales.');
+      // Sin Supabase: si ya hay datos persistidos en localStorage, usarlos.
+      if (persistedData) {
+        console.log('Supabase no configurado. Cargando datos del último cubo guardado.');
+      } else {
+        console.log('Supabase no configurado y sin datos guardados. Usando datos estáticos.');
+      }
       return;
     }
 
     set({ isLoadingData: true, dataError: null });
     try {
       // Fetch core tables in parallel
-      const [provRes, zonesRes, sellersRes, salesRes] = await Promise.all([
+      const [provRes, zonesRes, sellersRes, salesRes, returnsDailyRes] = await Promise.all([
         supabase.from('providers').select('*'),
         supabase.from('zones').select('*'),
         supabase.from('returns_sellers').select('*'),
-        supabase.from('sales_daily').select('*')
+        supabase.from('sales_daily').select('*'),
+        supabase.from('returns_daily').select('*')
       ]);
 
       if (provRes.error) throw provRes.error;
@@ -55,6 +86,7 @@ const useStore = create((set, get) => ({
       const dbZones = zonesRes.data || [];
       const dbSellers = sellersRes.data || [];
       const dbSales = salesRes.data || [];
+      const dbReturnsDaily = returnsDailyRes.data || [];
 
       if (dbProviders.length === 0 && dbZones.length === 0) {
         console.log('Las tablas de Supabase están vacías. Manteniendo datos de fallback locales.');
@@ -78,9 +110,9 @@ const useStore = create((set, get) => ({
         zona: z.zona,
         vendedor: z.vendedor || 'Sin Asignar',
         presupuesto: Number(z.presupuesto) || 0,
-        ventasNetas: Number(z.ventasNetas) || 0,
-        proyectado: Number(z.ventasNetas) || 0,
-        porcentajeProyectado: z.presupuesto > 0 ? Number(z.ventasNetas) / Number(z.presupuesto) : 1.0,
+        ventasNetas: Number(z.ventasnetas) || Number(z.ventasNetas) || 0,
+        proyectado: Number(z.ventasnetas) || Number(z.ventasNetas) || 0,
+        porcentajeProyectado: z.presupuesto > 0 ? (Number(z.ventasnetas) || Number(z.ventasNetas) || 0) / Number(z.presupuesto) : 1.0,
         cambiosPorc: 0.015,
         facturas: Number(z.facturas) || 0
       }));
@@ -93,12 +125,17 @@ const useStore = create((set, get) => ({
         porcentajeDevolucion: s.ventas > 0 ? Number(s.devoluciones) / Number(s.ventas) : 0.0
       }));
 
-      // Aggregate salesDaily from dbSales
+      // Aggregate salesDaily from dbSales — only sum POSITIVE ventas (gross sales).
+      // Rows with negative ventas are returns that leaked from old ETL runs; we ignore them here
+      // because returns are already tracked correctly in returns_daily / returns_sellers.
       const dailySalesMap = {};
       dbSales.forEach(s => {
         const rawDate = s.fecha;
         if (!rawDate) return;
-        
+        const ventas = Number(s.ventas) || 0;
+        // Skip negative rows (returns that shouldn't be in sales_daily)
+        if (ventas <= 0) return;
+
         // Format to M/D/YYYY
         const dObj = new Date(rawDate + 'T00:00:00');
         const formattedDate = `${dObj.getMonth() + 1}/${dObj.getDate()}/${dObj.getFullYear()}`;
@@ -106,7 +143,7 @@ const useStore = create((set, get) => ({
         if (!dailySalesMap[formattedDate]) {
           dailySalesMap[formattedDate] = 0;
         }
-        dailySalesMap[formattedDate] += Number(s.ventas) || 0;
+        dailySalesMap[formattedDate] += ventas;
       });
 
       const salesDaily = Object.entries(dailySalesMap).map(([fecha, total]) => {
@@ -121,27 +158,47 @@ const useStore = create((set, get) => ({
         };
       }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-      // Build returnsDaily and returnsConcepts dynamically from database returns
-      const totalDev = returnsSellers.reduce((sum, s) => sum + s.devoluciones, 0);
-      
-      // Fallback: merge with original clientReturns, returnsConcepts if not in DB to prevent blanks
+      // Use returns_daily from DB if available (populated by ETL upload).
+      // Fall back to returns_sellers sum if returns_daily is empty (old DB state).
       const returnsConcepts = alpinaData.returnsConcepts;
-      const returnsDaily = alpinaData.returnsDaily;
       const clientReturns = alpinaData.clientReturns;
 
-      set({
-        dbData: {
-          providers,
-          salesDaily,
-          zones,
-          returnsSellers,
-          returnsConcepts,
-          returnsDaily,
-          clientReturns
-        },
-        isLoadingData: false
-      });
-      console.log('Datos de Supabase sincronizados en la UI con éxito.');
+      // returnsDaily: prefer DB table, else build from sellers aggregates
+      let returnsDaily;
+      if (dbReturnsDaily && dbReturnsDaily.length > 0) {
+        returnsDaily = dbReturnsDaily.map(rd => ({ fecha: rd.fecha, devoluciones: Number(rd.devoluciones) || 0 }));
+      } else {
+        // Fallback: spread seller total returns evenly across the observed sales days
+        const totalDevSellers = dbSellers.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0);
+        const salesDays = Object.keys(dailySalesMap);
+        const perDay = salesDays.length > 0 ? Math.round(totalDevSellers / salesDays.length) : 0;
+        returnsDaily = salesDays.map(fecha => ({ fecha, devoluciones: perDay }));
+      }
+
+    // Determine the most recent period from salesDaily and update selectedPeriod
+    const latestDate = dbSales.reduce((max, row) => {
+      const date = new Date(row.fecha);
+      return date > max ? date : max;
+    }, new Date(0));
+    const latestPeriod = latestDate.toISOString().substring(0, 7); // YYYY-MM
+    // Update store with fetched data and latest period
+    const newDbData = {
+      providers,
+      salesDaily,
+      zones,
+      returnsSellers,
+      returnsConcepts,
+      clientReturns,
+      returnsDaily
+    };
+    saveToStorage(newDbData, latestPeriod);
+    set({
+      dbData: newDbData,
+      selectedPeriod: latestPeriod,
+      isLoadingData: false
+    });
+    console.log('Datos de Supabase sincronizados. Ventas brutas:', salesDaily.reduce((s, d) => s + d.total, 0));
+    console.log('Devoluciones totales:', returnsDaily.reduce((s, d) => s + d.devoluciones, 0));
     } catch (err) {
       console.error('Error al sincronizar datos con Supabase:', err);
       set({ dataError: err.message, isLoadingData: false });

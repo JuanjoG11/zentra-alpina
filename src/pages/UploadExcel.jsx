@@ -25,6 +25,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
   const conceptsAggr = {};
   const returnsDailyAggr = {};
   const clientReturnsAggr = {};
+  const salesDailyDbAggr = {};
   
   const clientsPerCity = {
     'ARMENIA': new Set(),
@@ -44,7 +45,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
     if (str === null || str === undefined) return 0;
     if (typeof str === 'number') return str;
     let s = String(str).trim();
-    const isNegative = s.includes('-');
+    // Detect negative sign either via dash or parentheses
+    const isNegative = s.includes('-') || (s.includes('(') && s.includes(')'));
+    // Remove any non-numeric characters except commas and dots
     s = s.replace(/[^0-9.,-]/g, '');
     if (!s) return 0;
 
@@ -99,6 +102,38 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
     return str;
   };
 
+  const formatDateToYMD = (dateVal) => {
+    if (!dateVal) return '';
+    let dObj = null;
+    if (dateVal instanceof Date) {
+      dObj = dateVal;
+    } else if (typeof dateVal === 'number') {
+      dObj = new Date((dateVal - 25569) * 86400 * 1000);
+    } else {
+      const str = String(dateVal).trim();
+      if (str.includes('0000-00-00')) return '';
+      const matchYMD = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+      if (matchYMD) {
+        dObj = new Date(parseInt(matchYMD[1], 10), parseInt(matchYMD[2], 10) - 1, parseInt(matchYMD[3], 10));
+      } else {
+        const matchDMY = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+        if (matchDMY) {
+          dObj = new Date(parseInt(matchDMY[3], 10), parseInt(matchDMY[2], 10) - 1, parseInt(matchDMY[1], 10));
+        } else {
+          const parsed = Date.parse(str);
+          if (!isNaN(parsed)) dObj = new Date(parsed);
+        }
+      }
+    }
+    if (dObj && !isNaN(dObj.getTime())) {
+      const y = dObj.getFullYear();
+      const m = String(dObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return '';
+  };
+
   const normalizeKey = (key) => {
     return key
       .toLowerCase()
@@ -139,18 +174,59 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
       const rows = sh.rows || [];
       processedRowsCount += rows.length;
 
+      // Detect if this sheet is a DEVOLUCIONES sheet by name
+      const sheetNameLower = sh.name.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove accents
+      const isReturnsSheet = sheetNameLower.includes('devoluci') ||
+                             sheetNameLower.includes('return') ||
+                             sheetNameLower === 'dev' ||
+                             sheetNameLower === 'devoluciones';
+
       for (const row of rows) {
         const dateVal = getRowValue(row, dateKeys);
         const zone = getRowValue(row, zoneKeys);
         const seller = getRowValue(row, sellerKeys);
         const brand = getRowValue(row, brandKeys) || 'OTROS';
-        const valTotal = parseSpanishFloat(getRowValue(row, valKeys));
-        const factura = getRowValue(row, facturaKeys);
+        const boAfectaVenta = getRowValue(row, ['boAfectaVenta', 'bo_afecta_venta', 'boAfectaVenta']) ?? true;
+        
+        // Extract fields needed for sign determination
         const motivo = getRowValue(row, motivoKeys);
+        const rawVal = parseSpanishFloat(getRowValue(row, valKeys));
+        
+        // Determine sign based on motivo, returns sheet, or boAfectaVenta.
+        let sign = 1;
+        if (motivo && String(motivo).trim() !== '') {
+          sign = -1; // Devolución por motivo
+        } else if (isReturnsSheet) {
+          sign = -1; // Hoja de devoluciones
+        } else {
+          const boAfecta = String(boAfectaVenta).toLowerCase().trim();
+          if (['false', '0', 'no', 'n'].includes(boAfecta)) {
+            sign = -1; // Devolución explícita
+          }
+        }
+        // Preserve original sign if rawVal already negative; otherwise apply calculated sign.
+        const valTotal = rawVal < 0 ? rawVal : rawVal * sign;
+        // Debug: log return rows
+        if (valTotal < 0) {
+          console.log('Return row detected:', {
+            motivo,
+            boAfectaVenta,
+            isReturnsSheet,
+            rawVal,
+            sign,
+            valTotal,
+            rowIndex: rows.indexOf(row)
+          });
+        }
+        
+        const factura = getRowValue(row, facturaKeys);
         const formaPago = String(getRowValue(row, paymentKeys) || '');
         const clientName = getRowValue(row, clientKeys) || 'CLIENTE DESCONOCIDO';
 
         if (!dateVal || String(dateVal).includes('0000') || valTotal === 0) continue;
+        
+
 
         const formattedDate = formatDateToMDY(dateVal);
         if (!formattedDate) continue;
@@ -164,11 +240,11 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
           providersAggr[brand].count++;
         }
 
-        // 2. Sales Daily
-        if (!salesDailyAggr[formattedDate]) {
-          salesDailyAggr[formattedDate] = { contado: 0, credito: 0 };
-        }
+        // 2. Sales Daily (solo ventas positivas = brutas)
         if (valTotal > 0) {
+          if (!salesDailyAggr[formattedDate]) {
+            salesDailyAggr[formattedDate] = { contado: 0, credito: 0 };
+          }
           if (formaPago === '1' || formaPago.toUpperCase().includes('CONTADO')) {
             salesDailyAggr[formattedDate].contado += valTotal;
           } else {
@@ -245,6 +321,29 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
           }
           clientsPerCity[cityKey].add(clientName);
         }
+
+        // 7. Detailed sales_daily rows for Supabase (grouped to match unique index)
+        // IMPORTANT: Only accumulate POSITIVE sales here. Returns are tracked in
+        // returnsDailyAggr separately to avoid double-counting when computing netSales.
+        if (zone && seller && valTotal > 0) {
+          const ymdDate = formatDateToYMD(dateVal);
+          if (ymdDate) {
+            // Include zone in the key to avoid over‑aggregation across zones
+            const dbKey = `${ymdDate}_${brand}_${zone}_${seller}`;
+            if (!salesDailyDbAggr[dbKey]) {
+              salesDailyDbAggr[dbKey] = {
+                fecha: ymdDate,
+                proveedor: brand,
+                zona: zone,
+                vendedor: seller,
+                ventas: 0,
+                unidades: 0
+              };
+            }
+            salesDailyDbAggr[dbKey].ventas += valTotal;
+            salesDailyDbAggr[dbKey].unidades += 1;
+          }
+        }
       }
     }
   }
@@ -253,7 +352,11 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
 
   // Calculate projection factor based on 22 business days
   const elapsedDays = Object.keys(salesDailyAggr).length || 1;
-  const projectionFactor = 22 / elapsedDays;
+// If we have data for less than 15 days, avoid aggressive projection to prevent over‑inflated numbers.
+let projectionFactor = 1;
+if (elapsedDays >= 15) {
+  projectionFactor = 22 / elapsedDays;
+}
 
   // Format aggregates
   const providers = Object.entries(providersAggr).map(([brandName, data]) => {
@@ -341,6 +444,38 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
     'OTRO': clientsPerCity['OTRO'].size
   };
 
+  const salesDailyDb = Object.values(salesDailyDbAggr).map(sd => ({
+    fecha: sd.fecha,
+    proveedor: sd.proveedor,
+    zona: sd.zona,
+    vendedor: sd.vendedor,
+    ventas: Math.round(sd.ventas),
+    unidades: sd.unidades
+  }));
+
+  // ============================================================
+  // DIAGNÓSTICO — abre la consola del navegador (F12) para ver
+  // ============================================================
+  const totalVentasBrutas = Object.values(salesDailyAggr).reduce((s, d) => s + d.contado + d.credito, 0);
+  const totalDevoluciones = Object.values(returnsDailyAggr).reduce((s, v) => s + v, 0);
+  const totalProveedores   = Object.values(providersAggr).reduce((s, p) => s + p.ventas2026, 0);
+  console.group('=== DIAGNÓSTICO CUBO ===');
+  console.log('Filas procesadas:', processedRowsCount);
+  console.log('Ventas brutas (suma positivos)  :', totalVentasBrutas.toLocaleString('es-CO'));
+  console.log('Devoluciones (suma negativos)   :', totalDevoluciones.toLocaleString('es-CO'));
+  console.log('Ventas netas esperadas          :', (totalVentasBrutas - totalDevoluciones).toLocaleString('es-CO'));
+  console.log('Suma proveedores                :', totalProveedores.toLocaleString('es-CO'));
+  console.log('Marcas detectadas               :', Object.keys(providersAggr));
+  console.log('Días con ventas                 :', Object.keys(salesDailyAggr).length);
+  console.log('Días con devoluciones           :', Object.keys(returnsDailyAggr).length);
+  console.groupEnd();
+  // ============================================================
+
+  // DEBUG SUMMARY: totals after processing
+  const debugPos = Object.values(salesDailyAggr).reduce((s,d)=>s+d.contado+d.credito,0);
+  const debugNeg = Object.values(returnsDailyAggr).reduce((s,v)=>s+v,0);
+  console.log('DEBUG SUMMARY - Positive sales:', debugPos, 'Total returns:', debugNeg);
+        
   return {
     providers,
     salesDaily,
@@ -349,7 +484,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
     returnsConcepts,
     returnsDaily,
     clientReturns,
-    cityClients
+    cityClients,
+    salesDailyDb
   };
 };
 
@@ -404,10 +540,6 @@ const UploadExcel = () => {
         throw new Error('No se detectaron datos válidos en las hojas seleccionadas.');
       }
 
-      // Step 3: Insertando datos en Supabase PostgreSQL (fallbacks to local store update)
-      setUploadStep(4);
-      await new Promise(resolve => setTimeout(resolve, 800));
-
       // Find latest period in the processed data
       let latestPeriod = 'abril-2026';
       if (processedData.salesDaily && processedData.salesDaily.length > 0) {
@@ -426,11 +558,84 @@ const UploadExcel = () => {
         }
       }
 
-      // Update state in store
-      useStore.setState({ 
-        dbData: processedData,
-        selectedPeriod: latestPeriod
-      });
+      // Step 3: Insertando datos en Supabase PostgreSQL (fallbacks to local store update)
+      setUploadStep(4);
+
+      let isDbUpload = false;
+      if (hasSupabase && supabase) {
+        console.log('Sincronizando con Supabase PostgreSQL...');
+        try {
+          // 1. Providers
+          const providersDb = processedData.providers.map(p => ({
+            proveedor: p.proveedor,
+            ventas2026: p.ventas2026,
+            ventas2025: p.ventas2025,
+            margen2026: p.margen2026,
+            meta: p.proyectado2026
+          }));
+          await supabase.from('providers').delete().neq('id', 0);
+          const { error: errProv } = await supabase.from('providers').insert(providersDb);
+          if (errProv) throw new Error('Error al cargar proveedores: ' + errProv.message);
+
+          // 2. Zones
+          const zonesDb = processedData.zones.map(z => ({
+            zona: z.zona,
+            presupuesto: z.presupuesto,
+            facturas: z.facturas,
+            ventasnetas: z.ventasNetas // lowercase column in Postgres
+          }));
+          await supabase.from('zones').delete().neq('id', 0);
+          const { error: errZones } = await supabase.from('zones').insert(zonesDb);
+          if (errZones) throw new Error('Error al cargar zonas: ' + errZones.message);
+
+          // 3. Returns Sellers
+          const returnsSellersDb = processedData.returnsSellers.map(s => ({
+            nombre: s.nombre,
+            ejecutivo: s.ejecutivo,
+            ventas: s.ventas,
+            devoluciones: s.devoluciones
+          }));
+          await supabase.from('returns_sellers').delete().neq('id', 0);
+          const { error: errSellers } = await supabase.from('returns_sellers').insert(returnsSellersDb);
+          if (errSellers) throw new Error('Error al cargar vendedores: ' + errSellers.message);
+
+          // 4. Sales Daily (Chunked upload to prevent size limit errors)
+          await supabase.from('sales_daily').delete().neq('id', 0);
+          if (processedData.salesDailyDb && processedData.salesDailyDb.length > 0) {
+            const chunkSize = 500;
+            for (let i = 0; i < processedData.salesDailyDb.length; i += chunkSize) {
+              const chunk = processedData.salesDailyDb.slice(i, i + chunkSize);
+              const { error: errSales } = await supabase.from('sales_daily').insert(chunk);
+              if (errSales) throw new Error('Error al cargar ventas diarias: ' + errSales.message);
+            }
+          }
+
+          // 5. Returns Daily (insert aggregated returns)
+          await supabase.from('returns_daily').delete().neq('id', 0);
+          if (processedData.returnsDaily && processedData.returnsDaily.length > 0) {
+            const chunkSize = 500;
+            for (let i = 0; i < processedData.returnsDaily.length; i += chunkSize) {
+              const chunk = processedData.returnsDaily.slice(i, i + chunkSize);
+              const { error: errReturns } = await supabase.from('returns_daily').insert(chunk);
+              if (errReturns) throw new Error('Error al cargar devoluciones diarias: ' + errReturns.message);
+            }
+          }
+          
+          console.log('Sincronización con base de datos completada con éxito.');
+          isDbUpload = true;
+
+          // Sincronizar store local con los datos reales leídos de la DB
+          await fetchDataFromSupabase();
+        } catch (dbErr) {
+          console.error('Database Sync Error:', dbErr);
+          throw new Error('Error al sincronizar con la base de datos: ' + dbErr.message);
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        // Fallback: persiste en localStorage usando setDbData para sobrevivir al refresh
+        const { setDbData } = useStore.getState();
+        setDbData(processedData, latestPeriod);
+      }
 
       // Background ETL server ping (fails silently if offline)
       try {
@@ -444,8 +649,10 @@ const UploadExcel = () => {
       const newNotif = {
         id: Date.now(),
         type: 'success',
-        title: 'Actualización local exitosa',
-        message: 'Los datos del archivo comercial se han cargado y consolidado con éxito en los tableros.',
+        title: isDbUpload ? 'Sincronización exitosa' : 'Actualización local exitosa',
+        message: isDbUpload 
+          ? 'Los datos comerciales se han cargado y sincronizado con éxito en Supabase PostgreSQL.'
+          : 'Los datos del archivo comercial se han cargado localmente en los tableros.',
         time: 'Hace un momento',
         read: false,
       };
@@ -488,8 +695,28 @@ const UploadExcel = () => {
         try {
           const data = new Uint8Array(e.target.result);
           const wb = XLSX.read(data, { type: 'array' });
+          
+          // DIAGNÓSTICO: nombres de hojas
+          console.group('=== HOJAS DEL ARCHIVO ===');
+          console.log('Hojas encontradas:', wb.SheetNames);
+          console.groupEnd();
+
           const sheets = wb.SheetNames.map((name) => {
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: null });
+            const ws = wb.Sheets[name];
+            const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
+            
+            // DIAGNÓSTICO: columnas de la primera fila de cada hoja
+            if (rows.length > 0) {
+              console.group(`Hoja: "${name}" → ${rows.length} filas`);
+              console.log('Columnas:', Object.keys(rows[0]));
+              // Show first row to understand data structure
+              const firstRow = rows[0];
+              const valCols = ['vlrTotalconIva','vlrTotal','valor','total','vlrTotalConIva','vlrAntesIva','Valor Total','Valor Con Iva','total_con_iva'];
+              const foundValCol = valCols.find(k => Object.keys(firstRow).some(rk => rk.toLowerCase().replace(/[^a-z0-9]/g,'') === k.toLowerCase().replace(/[^a-z0-9]/g,'')));
+              console.log('Columna de valor detectada:', foundValCol || 'NINGUNA — revisar nombres de columnas');
+              console.groupEnd();
+            }
+            
             return { name, rows };
           });
           
