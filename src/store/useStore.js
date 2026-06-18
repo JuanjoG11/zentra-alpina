@@ -24,7 +24,7 @@ const saveToStorage = (dbData, period) => {
 const persistedData   = loadPersistedData();
 const persistedPeriod = localStorage.getItem(PERIOD_KEY) || 'junio-2026';
 
-const hasSupabase = !!supabase; // supabase is null if not configured
+const hasSupabase = true; // supabase siempre configurado
 
 const useStore = create((set, get) => ({
   // Filtros globales
@@ -58,12 +58,7 @@ const useStore = create((set, get) => ({
   // Carga de datos desde Supabase
   fetchDataFromSupabase: async () => {
     if (!supabase) {
-      // Sin Supabase: si ya hay datos persistidos en localStorage, usarlos.
-      if (persistedData) {
-        console.log('Supabase no configurado. Cargando datos del último cubo guardado.');
-      } else {
-        console.log('Supabase no configurado y sin datos guardados. Usando datos estáticos.');
-      }
+      console.log('Supabase no disponible. Usando datos locales.');
       return;
     }
 
