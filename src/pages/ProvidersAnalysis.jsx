@@ -1,19 +1,19 @@
 import React from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData } from '../utils/calculations';
+import { getFilteredData, ZONA_CIUDAD_MAP } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency, formatNumber } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import { BITreemapChart, BIDonutChart } from '../components/charts/BICharts';
 import Chart from 'react-apexcharts';
-import { 
-  Truck, 
-  Percent, 
-  ArrowUpRight, 
-  ArrowDownRight,
-  BarChart3,
-  CircleDollarSign
-} from 'lucide-react';
+import { Truck, Percent, ArrowUpRight, ArrowDownRight, BarChart3, CircleDollarSign, MapPin } from 'lucide-react';
 import alpinaLogo from '../assets/alpina-logo.svg';
+
+const CITY_META = {
+  PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
+  MANIZALES: { label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
+  ARMENIA:   { label: 'Eje Quindío',  bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+  OTRO:      { label: 'Otro',         bg: 'bg-slate-500/10',   text: 'text-slate-400',   border: 'border-slate-700'      },
+};
 
 const ProvidersAnalysis = () => {
   const filters = useStore();
@@ -50,12 +50,16 @@ const ProvidersAnalysis = () => {
     ? (totalSales2026 - totalSales2025) / totalSales2025
     : 0;
 
-  const zoneCity = (zona) => {
-    if (zona.startsWith('E')) return 'ARMENIA';
-    if (zona.startsWith('M')) return 'MANIZALES';
-    if (zona.startsWith('P')) return 'PEREIRA';
-    return 'OTRO';
-  };
+  // Ventas reales por eje usando el mapa de zonas
+  const ventasPorEje = React.useMemo(() => {
+    const map = { PEREIRA: 0, MANIZALES: 0, ARMENIA: 0 };
+    (filteredData.zones || []).forEach(z => {
+      const city = ZONA_CIUDAD_MAP[z.zona] || 'OTRO';
+      if (map[city] !== undefined) map[city] += z.ventasNetas;
+    });
+    return map;
+  }, [filteredData.zones]);
+  const totalEjes = Object.values(ventasPorEje).reduce((s, v) => s + v, 0) || 1;
 
   // Apex comparison chart data (2025 vs 2026 sales)
   const comparisonSeries = [
@@ -147,6 +151,32 @@ const ProvidersAnalysis = () => {
             </div>
           </div>
         </GlassCard>
+      </div>
+
+      {/* ── Desglose por eje comercial ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {Object.entries(ventasPorEje).map(([city, v]) => {
+          const m = CITY_META[city] || CITY_META.OTRO;
+          const share = v / totalEjes;
+          return (
+            <GlassCard key={city} hoverable={false} className={`border ${m.border} relative overflow-hidden`}>
+              <div className={`absolute inset-0 ${m.bg} opacity-20 pointer-events-none rounded-2xl`} />
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${m.text}`}>{m.label}</p>
+                  <p className="text-2xl font-extrabold text-white mt-1">{formatShortCurrency(v)}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-24 h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${m.text.replace('text-', 'bg-')}`} style={{ width: `${Math.min(share * 100, 100)}%` }} />
+                    </div>
+                    <span className={`text-[10px] font-bold ${m.text}`}>{formatPercent(share)} del total</span>
+                  </div>
+                </div>
+                <MapPin className={`h-9 w-9 opacity-[0.08] ${m.text}`} />
+              </div>
+            </GlassCard>
+          );
+        })}
       </div>
 
       {/* Main Stats */}

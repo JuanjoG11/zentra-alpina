@@ -1,19 +1,27 @@
 import React from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs } from '../utils/calculations';
-import { formatCurrency, formatPercent } from '../utils/formatters';
+import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP } from '../utils/calculations';
+import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
-import { 
-  BIHeatmapChart, 
-  BIRadarChart,
-  BIFunnelChart
-} from '../components/charts/BICharts';
-import { 
-  AlertOctagon, 
-  TrendingDown, 
-  Users, 
-  ShieldAlert
-} from 'lucide-react';
+import { BIHeatmapChart, BIRadarChart, BIFunnelChart } from '../components/charts/BICharts';
+import { AlertOctagon, TrendingDown, Users, ShieldAlert, MapPin } from 'lucide-react';
+
+const CITY_META = {
+  PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400'    },
+  MANIZALES: { label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400'  },
+  ARMENIA:   { label: 'Eje Quindío',  bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+  OTRO:      { label: 'Otro',         bg: 'bg-slate-500/10',   text: 'text-slate-400'   },
+};
+
+const CityBadge = ({ zona }) => {
+  const city = ZONA_CIUDAD_MAP[zona] || 'OTRO';
+  const meta = CITY_META[city] || CITY_META.OTRO;
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${meta.bg} ${meta.text}`}>
+      <MapPin className="h-2.5 w-2.5" />{meta.label}
+    </span>
+  );
+};
 
 const ReturnsAnalysis = () => {
   const filters = useStore();
@@ -33,7 +41,7 @@ const ReturnsAnalysis = () => {
 
   const criticalClients = Object.values(clientAgg)
     .sort((a, b) => b.totalReturn - a.totalReturn)
-    .slice(0, 5); // Top 5 critical clients
+    .slice(0, 10);
 
   // Calculate concept summary and total
   const sortedConcepts = [...filteredData.returnsConcepts]
@@ -126,17 +134,19 @@ const ReturnsAnalysis = () => {
                 <tr className="border-b border-slate-850 text-slate-500 font-semibold">
                   <th className="pb-3">Cliente</th>
                   <th className="pb-3 text-center">Ejecutivo</th>
+                  <th className="pb-3 text-center">Eje</th>
                   <th className="pb-3 text-right">Devuelto sin IVA</th>
-                  <th className="pb-3 text-right">No. Registros</th>
+                  <th className="pb-3 text-right">Registros</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/60">
                 {criticalClients.map((client, idx) => (
                   <tr key={idx} className="hover:bg-slate-900/10 transition-colors">
-                    <td className="py-3 font-semibold text-slate-200 truncate max-w-[200px]" title={client.cliente}>
+                    <td className="py-3 font-semibold text-slate-200 truncate max-w-[180px]" title={client.cliente}>
                       {client.cliente}
                     </td>
-                    <td className="py-3 text-center text-slate-400 font-mono">{client.ejecutivo}</td>
+                    <td className="py-3 text-center text-slate-400 font-mono text-[10px]">{client.ejecutivo}</td>
+                    <td className="py-3 text-center"><CityBadge zona={client.ejecutivo} /></td>
                     <td className="py-3 text-right font-bold text-rose-400">{formatCurrency(client.totalReturn)}</td>
                     <td className="py-3 text-right text-slate-300 pr-4">{client.count}</td>
                   </tr>

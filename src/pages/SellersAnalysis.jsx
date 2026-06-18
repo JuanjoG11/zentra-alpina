@@ -1,215 +1,291 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
-import { 
-  Users, 
-  Trophy, 
-  ShieldAlert, 
-  ArrowUpRight, 
-  ArrowDownRight,
-  TrendingUp,
-  FileSpreadsheet
+import {
+  Users, Trophy, ShieldAlert, ArrowUpRight, ArrowDownRight,
+  TrendingUp, MapPin, CheckCircle2, XCircle, AlertCircle
 } from 'lucide-react';
+
+// Ciudad de una zona usando el mapa real del cubo
+const ciudadDeZona = (zona) => ZONA_CIUDAD_MAP[zona] || 'OTRO';
+
+const CITY_META = {
+  PEREIRA:   { label: 'Eje Pereira',   color: 'blue',    bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
+  MANIZALES: { label: 'Eje Caldas',    color: 'indigo',  bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
+  ARMENIA:   { label: 'Eje Quindío',   color: 'emerald', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+  OTRO:      { label: 'Otro',          color: 'slate',   bg: 'bg-slate-500/10',   text: 'text-slate-400',   border: 'border-slate-700'      },
+};
+
+const CityBadge = ({ zona }) => {
+  const city = ciudadDeZona(zona);
+  const meta = CITY_META[city] || CITY_META.OTRO;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${meta.bg} ${meta.text} ${meta.border}`}>
+      <MapPin className="h-2.5 w-2.5" />
+      {meta.label}
+    </span>
+  );
+};
+
+const complianceMeta = (rate) => {
+  if (rate >= 1.0)  return { Icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
+  if (rate >= 0.80) return { Icon: AlertCircle,  color: 'text-amber-400',   bg: 'bg-amber-500/10'   };
+  return               { Icon: XCircle,       color: 'text-rose-400',    bg: 'bg-rose-500/10'    };
+};
 
 const SellersAnalysis = () => {
   const filters = useStore();
-  const dbData = useStore(state => state.dbData);
+  const dbData  = useStore(state => state.dbData);
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
-  // Pereira Zone commercial rankings
-  const rankedZones = [...filteredData.zones]
-    .sort((a, b) => b.ventasNetas - a.ventasNetas);
+  const selectedCity = filters.selectedCity || 'Todas';
 
-  // M9450/Sellers quality / returns rankings
-  const rankedSellers = [...filteredData.returnsSellers]
-    .sort((a, b) => b.ventas - a.ventas);
+  // Zonas enriquecidas con ciudad
+  const rankedZones = useMemo(() =>
+    [...filteredData.zones]
+      .map(z => ({ ...z, ciudad: ciudadDeZona(z.zona) }))
+      .sort((a, b) => b.ventasNetas - a.ventasNetas),
+    [filteredData.zones]
+  );
 
-  // Alerts: Vendedores con devoluciones críticas (> 5%)
-  const criticalSellersAlerts = filteredData.returnsSellers
-    .filter(s => s.porcentajeDevolucion > 0.05)
-    .sort((a, b) => b.porcentajeDevolucion - a.porcentajeDevolucion);
+  // Vendedores enriquecidos con ciudad
+  const rankedSellers = useMemo(() =>
+    [...filteredData.returnsSellers]
+      .map(s => ({ ...s, ciudad: ciudadDeZona(s.ejecutivo) }))
+      .sort((a, b) => b.ventas - a.ventas),
+    [filteredData.returnsSellers]
+  );
 
-  // Top Zone & Top Seller names
-  const topZoneObj = rankedZones[0];
-  const topSellerObj = rankedSellers[0];
+  // Alertas: tasa devolución > 5%
+  const criticalAlerts = rankedSellers.filter(s => s.porcentajeDevolucion > 0.05);
 
-  // Fallback: if rankedZones is empty due to filters, use global db data
-  const fallbackZones = [...(dbData.zones || [])].sort((a, b) => b.ventasNetas - a.ventasNetas);
-  const zonesForChart = (rankedZones.length > 0 ? rankedZones : fallbackZones).slice(0, 10);
+  // Agrupado por eje para resumen
+  const byCity = useMemo(() => {
+    const map = { PEREIRA: [], MANIZALES: [], ARMENIA: [] };
+    rankedZones.forEach(z => { if (map[z.ciudad]) map[z.ciudad].push(z); });
+    return map;
+  }, [rankedZones]);
 
-  // Apex options for seller performance comparison
+  const cityTotals = useMemo(() =>
+    Object.entries(byCity).map(([city, zones]) => ({
+      city,
+      ventas: zones.reduce((s, z) => s + z.ventasNetas, 0),
+      presupuesto: zones.reduce((s, z) => s + z.presupuesto, 0),
+      zonas: zones.length,
+      meta: CITY_META[city]
+    })).sort((a, b) => b.ventas - a.ventas),
+    [byCity]
+  );
+
+  // Chart zonas top
+  const chartZones = rankedZones.slice(0, 12);
   const barSeries = [
-    {
-      name: 'Ventas Netas',
-      data: zonesForChart.map(z => z.ventasNetas)
-    },
-    {
-      name: 'Presupuesto',
-      data: zonesForChart.map(z => z.presupuesto)
-    }
+    { name: 'Ventas Netas',  data: chartZones.map(z => z.ventasNetas)  },
+    { name: 'Presupuesto',   data: chartZones.map(z => z.presupuesto)  },
   ];
-
   const barOptions = {
-    chart: {
-      type: 'bar',
-      background: 'transparent',
-      foreColor: '#94a3b8',
-      toolbar: { show: false },
-      fontFamily: 'Inter, sans-serif'
-    },
-    colors: ['#3b82f6', '#334155'], // blue-500, slate-700
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: '55%',
-        endingShape: 'rounded',
-        borderRadius: 4
-      }
-    },
+    chart: { type: 'bar', background: 'transparent', foreColor: '#94a3b8', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+    colors: ['#3b82f6', '#1e293b'],
+    plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 } },
     dataLabels: { enabled: false },
     stroke: { show: true, width: 2, colors: ['transparent'] },
     xaxis: {
-      categories: zonesForChart.map(z => `Z-${z.zona}`),
+      categories: chartZones.map(z => z.zona),
       labels: { style: { fontSize: '10px' } }
     },
-    yaxis: {
-      labels: { formatter: (val) => formatShortCurrency(val) }
-    },
+    yaxis: { labels: { formatter: v => formatShortCurrency(v) } },
     grid: { borderColor: '#1e293b' },
-    fill: { opacity: 1 },
-    tooltip: {
-      theme: 'dark',
-      y: { formatter: (val) => formatCurrency(val) }
-    },
-    legend: { position: 'top' }
+    tooltip: { theme: 'dark', y: { formatter: v => formatCurrency(v) } },
+    legend: { position: 'top' },
+    annotations: {
+      xaxis: chartZones.map((z, i) => ({
+        x: z.zona,
+        borderColor: 'transparent',
+        label: {
+          text: ciudadDeZona(z.zona) === 'PEREIRA'   ? 'P' :
+                ciudadDeZona(z.zona) === 'MANIZALES' ? 'M' : 'Q',
+          style: {
+            color: ciudadDeZona(z.zona) === 'PEREIRA'   ? '#60a5fa' :
+                   ciudadDeZona(z.zona) === 'MANIZALES' ? '#818cf8' : '#34d399',
+            fontSize: '9px', fontWeight: 700,
+            background: 'transparent', border: 'none', padding: { top: 2 }
+          },
+          orientation: 'horizontal',
+          offsetY: -4
+        }
+      }))
+    }
   };
+
+  const topZone   = rankedZones[0];
+  const topSeller = rankedSellers[0];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-white">Rendimiento de Vendedores</h1>
         <p className="text-slate-400 text-sm mt-1">
-          Analice las metas de cumplimiento de las zonas comerciales y la tasa de calidad logística de los vendedores.
+          Zonas y ejecutivos agrupados por eje comercial — Pereira · Caldas · Quindío
         </p>
       </div>
 
-      {/* Performers Highlights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <GlassCard hoverable={false} className="flex items-center gap-4 bg-slate-900/20 border-slate-800">
-          <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
-            <Trophy className="h-6 w-6" />
+      {/* ── Resumen por eje ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {cityTotals.map(({ city, ventas, presupuesto, zonas, meta }) => {
+          const rate = presupuesto > 0 ? ventas / presupuesto : 0;
+          const cm = complianceMeta(rate);
+          const CmIcon = cm.Icon;
+          return (
+            <GlassCard key={city} hoverable={false} className={`border ${meta.border} relative overflow-hidden`}>
+              <div className={`absolute inset-0 ${meta.bg} opacity-30 pointer-events-none rounded-2xl`} />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`text-xs font-bold uppercase tracking-widest ${meta.text}`}>{meta.label}</span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${meta.bg} ${meta.text} ${meta.border}`}>
+                    {zonas} zonas
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-white">{formatShortCurrency(ventas)}</p>
+                <p className="text-[10px] text-slate-400 mt-1">Presupuesto: {formatShortCurrency(presupuesto)}</p>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        rate >= 1 ? 'bg-emerald-500' : rate >= 0.8 ? 'bg-amber-500' : 'bg-rose-500'
+                      }`}
+                      style={{ width: `${Math.min(rate * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className={`text-xs font-bold ${cm.color}`}>{formatPercent(rate)}</span>
+                </div>
+              </div>
+            </GlassCard>
+          );
+        })}
+      </div>
+
+      {/* ── Highlights ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <GlassCard hoverable={false} className="flex items-center gap-4">
+          <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl shrink-0">
+            <Trophy className="h-5 w-5" />
           </div>
-          <div>
-            <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">Top Zona (Pereira)</p>
-            <h4 className="text-lg font-bold text-white mt-0.5">
-              {topZoneObj ? `Zona ${topZoneObj.zona}` : 'N/A'}
+          <div className="min-w-0">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Zona Líder</p>
+            <h4 className="text-base font-bold text-white mt-0.5 truncate">
+              {topZone ? topZone.zona : 'N/A'}
             </h4>
-            <p className="text-[10px] text-slate-500 mt-0.5">
-              {topZoneObj ? formatCurrency(topZoneObj.ventasNetas) : '$ 0'} netos
-            </p>
+            {topZone && <CityBadge zona={topZone.zona} />}
           </div>
         </GlassCard>
 
-        <GlassCard hoverable={false} className="flex items-center gap-4 bg-slate-900/20 border-slate-800">
-          <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
-            <Users className="h-6 w-6" />
+        <GlassCard hoverable={false} className="flex items-center gap-4">
+          <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl shrink-0">
+            <Users className="h-5 w-5" />
           </div>
-          <div>
-            <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">Top Vendedor (Manizales)</p>
-            <h4 className="text-lg font-bold text-white mt-0.5">
-              {topSellerObj ? topSellerObj.nombre : 'N/A'}
+          <div className="min-w-0">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Mejor Ejecutivo</p>
+            <h4 className="text-sm font-bold text-white mt-0.5 truncate">
+              {topSeller ? topSeller.nombre : 'N/A'}
             </h4>
-            <p className="text-[10px] text-slate-500 mt-0.5">
-              Tasa Dev: {topSellerObj ? formatPercent(topSellerObj.porcentajeDevolucion) : '0%'}
-            </p>
+            {topSeller && <CityBadge zona={topSeller.ejecutivo} />}
           </div>
         </GlassCard>
 
-        <GlassCard hoverable={false} className="flex items-center gap-4 bg-rose-500/[0.03] border-rose-950/40">
-          <div className="p-3 bg-rose-500/10 text-rose-500 rounded-xl">
-            <ShieldAlert className="h-6 w-6 animate-pulse" />
+        <GlassCard hoverable={false} className="flex items-center gap-4 border-rose-950/40 bg-rose-500/[0.02]">
+          <div className="p-3 bg-rose-500/10 text-rose-500 rounded-xl shrink-0">
+            <ShieldAlert className="h-5 w-5 animate-pulse" />
           </div>
           <div>
-            <p className="text-rose-500/80 text-[10px] font-semibold uppercase tracking-wider">Alertas Críticas (&gt;5% Dev)</p>
-            <h4 className="text-lg font-bold text-slate-100 mt-0.5">
-              {criticalSellersAlerts.length} Ejecutivos
-            </h4>
-            <p className="text-[10px] text-rose-400 mt-0.5">Requieren atención inmediata</p>
+            <p className="text-rose-500/80 text-[10px] font-bold uppercase tracking-wider">Alertas &gt;5% Dev</p>
+            <h4 className="text-xl font-bold text-white mt-0.5">{criticalAlerts.length} ejecutivos</h4>
+            <p className="text-[10px] text-rose-400">Requieren atención</p>
           </div>
         </GlassCard>
       </div>
 
-      {/* Visual Bar Comparison */}
+      {/* ── Chart ventas vs presupuesto ── */}
       <GlassCard hoverable={false}>
-        <h3 className="text-base font-bold text-white mb-4">Meta vs Ventas Netas por Zona Comercial (Top 10)</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-white">Ventas Netas vs Presupuesto por Zona</h3>
+          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+            <span className="flex items-center gap-1"><span className="font-bold text-blue-400">P</span> Eje Pereira</span>
+            <span className="flex items-center gap-1"><span className="font-bold text-indigo-400">M</span> Eje Caldas</span>
+            <span className="flex items-center gap-1"><span className="font-bold text-emerald-400">Q</span> Eje Quindío</span>
+          </div>
+        </div>
         <Chart options={barOptions} series={barSeries} type="bar" height={300} />
       </GlassCard>
 
+      {/* ── Tabla zonas + Alertas ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Critical Sellers Panel */}
-        <GlassCard hoverable={false} className="col-span-1 border-rose-950/30 bg-rose-950/[0.01]">
+        {/* Alertas */}
+        <GlassCard hoverable={false} className="border-rose-950/30">
           <div className="flex items-center gap-2 mb-4">
-            <ShieldAlert className="h-4.5 w-4.5 text-rose-500" />
-            <h3 className="text-sm font-bold text-white">Alertas de Devoluciones</h3>
+            <ShieldAlert className="h-4 w-4 text-rose-500" />
+            <h3 className="text-sm font-bold text-white">Alertas Devoluciones</h3>
           </div>
-          <div className="space-y-3 max-h-[340px] overflow-y-auto pr-2">
-            {criticalSellersAlerts.map((item, idx) => (
-              <div key={idx} className="p-3 rounded-xl bg-slate-900/40 border border-rose-500/10 flex justify-between items-center">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-200">{item.nombre}</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Ejecutivo: {item.ejecutivo}</p>
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            {criticalAlerts.map((item, i) => (
+              <div key={i} className="p-3 rounded-xl bg-slate-900/40 border border-rose-500/10 flex justify-between items-center gap-2">
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-slate-200 truncate">{item.nombre}</h4>
+                  <CityBadge zona={item.ejecutivo} />
                 </div>
-                <div className="text-right">
-                  <span className="text-xs font-bold text-rose-400">{formatPercent(item.porcentajeDevolucion)}</span>
-                  <p className="text-[9px] text-slate-400 mt-0.5">Dev: {formatCurrency(item.devoluciones)}</p>
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-bold text-rose-400">{formatPercent(item.porcentajeDevolucion)}</span>
+                  <p className="text-[9px] text-slate-500 mt-0.5">{formatShortCurrency(item.devoluciones)}</p>
                 </div>
               </div>
             ))}
-            {criticalSellersAlerts.length === 0 && (
-              <p className="text-xs text-slate-500 italic text-center py-8">No hay alertas activas de devolución.</p>
+            {criticalAlerts.length === 0 && (
+              <p className="text-xs text-slate-500 italic text-center py-8">Sin alertas activas.</p>
             )}
           </div>
         </GlassCard>
 
-        {/* Dynamic Zone Table */}
+        {/* Tabla zonas */}
         <GlassCard hoverable={false} className="col-span-1 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-white">Desempeño General de Zonas</h3>
-            <span className="text-[10px] bg-blue-500/10 text-blue-400 font-semibold px-2 py-0.5 rounded-full">
-              Pereira
-            </span>
-          </div>
-          <div className="overflow-x-auto max-h-[340px] overflow-y-auto pr-2">
+          <h3 className="text-sm font-bold text-white mb-4">Desempeño por Zona</h3>
+          <div className="overflow-auto max-h-80">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-850 text-slate-500 font-semibold sticky top-0 bg-slate-950/90 backdrop-blur-sm z-10">
+                <tr className="border-b border-slate-800 text-slate-500 font-semibold sticky top-0 bg-slate-950/90 backdrop-blur-sm">
                   <th className="pb-3 pl-2">Zona</th>
-                  <th className="pb-3 text-right">Ventas Netas</th>
-                  <th className="pb-3 text-right">Presupuesto</th>
-                  <th className="pb-3 text-right">Cumplimiento</th>
+                  <th className="pb-3">Eje</th>
+                  <th className="pb-3">Vendedor</th>
+                  <th className="pb-3 text-right">Ventas</th>
+                  <th className="pb-3 text-right">Cumpl.</th>
                   <th className="pb-3 text-right pr-2">Facturas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/60">
-                {rankedZones.map((item, idx) => {
-                  const complianceRate = item.ventasNetas / item.presupuesto;
+                {rankedZones.map((z, i) => {
+                  const rate = z.presupuesto > 0 ? z.ventasNetas / z.presupuesto : 0;
+                  const cm = complianceMeta(rate);
+                  const CmIcon = cm.Icon;
+                  const meta = CITY_META[z.ciudad] || CITY_META.OTRO;
                   return (
-                    <tr key={idx} className="hover:bg-slate-900/10 transition-colors">
-                      <td className="py-2.5 pl-2 font-bold text-slate-200">Zona {item.zona}</td>
-                      <td className="py-2.5 text-right font-semibold text-slate-100">{formatCurrency(item.ventasNetas)}</td>
-                      <td className="py-2.5 text-right text-slate-400">{formatCurrency(item.presupuesto)}</td>
-                      <td className="py-2.5 text-right">
-                        <span className={`font-semibold ${
-                          complianceRate >= 1.0 ? 'text-emerald-400' : complianceRate >= 0.8 ? 'text-blue-400' : 'text-slate-400'
-                        }`}>
-                          {formatPercent(complianceRate)}
+                    <tr key={i} className="hover:bg-slate-900/20 transition-colors">
+                      <td className="py-2.5 pl-2 font-bold text-slate-200">{z.zona}</td>
+                      <td className="py-2.5">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.text}`}>
+                          {meta.label}
                         </span>
                       </td>
-                      <td className="py-2.5 text-right pr-2 text-slate-300 font-mono">{item.facturas.toLocaleString()}</td>
+                      <td className="py-2.5 text-slate-400 text-[11px] max-w-[140px] truncate">{z.vendedor}</td>
+                      <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(z.ventasNetas)}</td>
+                      <td className="py-2.5 text-right">
+                        <span className={`flex items-center justify-end gap-1 font-bold ${cm.color}`}>
+                          <CmIcon className="h-3 w-3" />
+                          {formatPercent(rate)}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right pr-2 font-mono text-slate-400">{z.facturas.toLocaleString('es-CO')}</td>
                     </tr>
                   );
                 })}
@@ -219,43 +295,56 @@ const SellersAnalysis = () => {
         </GlassCard>
       </div>
 
-      {/* Sellers List Detail (Manizales) */}
+      {/* ── Tabla vendedores con ciudad ── */}
       <GlassCard hoverable={false}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-white">Desempeño de Vendedores (Logística y Calidad)</h3>
-          <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-semibold px-2 py-0.5 rounded-full">
-            Manizales
-          </span>
-        </div>
+        <h3 className="text-sm font-bold text-white mb-4">Ejecutivos Comerciales · Ventas y Calidad de Entrega</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-850 text-slate-500 font-semibold">
+              <tr className="border-b border-slate-800 text-slate-500 font-semibold">
                 <th className="pb-3 pl-2">Ejecutivo</th>
-                <th className="pb-3">Nombre Completo</th>
-                <th className="pb-3 text-right">Venta Bruta</th>
+                <th className="pb-3">Eje</th>
+                <th className="pb-3 text-right">Ventas</th>
                 <th className="pb-3 text-right">Devoluciones</th>
-                <th className="pb-3 text-right">Tasa Devolución</th>
-                <th className="pb-3 text-right pr-2">Calidad de Entrega</th>
+                <th className="pb-3 text-right">Tasa Dev.</th>
+                <th className="pb-3 text-right pr-2">Calidad</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/60">
-              {rankedSellers.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-900/10 transition-colors">
-                  <td className="py-2.5 pl-2 font-mono text-slate-400">{item.ejecutivo}</td>
-                  <td className="py-2.5 font-bold text-slate-200">{item.nombre}</td>
-                  <td className="py-2.5 text-right text-slate-300 font-semibold">{formatCurrency(item.ventas)}</td>
-                  <td className="py-2.5 text-right font-semibold text-rose-400">{formatCurrency(item.devoluciones)}</td>
-                  <td className="py-2.5 text-right text-slate-400">{formatPercent(item.porcentajeDevolucion)}</td>
-                  <td className="py-2.5 text-right pr-2">
-                    <span className={`inline-flex items-center gap-1 font-bold ${
-                      item.porcentajeDevolucion <= 0.02 ? 'text-emerald-400' : item.porcentajeDevolucion <= 0.05 ? 'text-blue-400' : 'text-rose-400'
-                    }`}>
-                      {formatPercent(1 - item.porcentajeDevolucion)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {rankedSellers.map((s, i) => {
+                const meta = CITY_META[s.ciudad] || CITY_META.OTRO;
+                const isAlert = s.porcentajeDevolucion > 0.05;
+                return (
+                  <tr key={i} className={`hover:bg-slate-900/20 transition-colors ${isAlert ? 'bg-rose-950/10' : ''}`}>
+                    <td className="py-2.5 pl-2 font-bold text-slate-200 max-w-[180px] truncate">{s.nombre}</td>
+                    <td className="py-2.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.text}`}>
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(s.ventas)}</td>
+                    <td className="py-2.5 text-right text-rose-400 font-semibold">{formatShortCurrency(s.devoluciones)}</td>
+                    <td className="py-2.5 text-right">
+                      <span className={`font-bold ${isAlert ? 'text-rose-400' : s.porcentajeDevolucion <= 0.02 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {formatPercent(s.porcentajeDevolucion)}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-right pr-2">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${s.porcentajeDevolucion <= 0.02 ? 'bg-emerald-500' : s.porcentajeDevolucion <= 0.05 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                            style={{ width: `${Math.max(0, (1 - s.porcentajeDevolucion) * 100)}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-bold ${s.porcentajeDevolucion <= 0.02 ? 'text-emerald-400' : s.porcentajeDevolucion <= 0.05 ? 'text-amber-400' : 'text-rose-400'}`}>
+                          {formatPercent(1 - s.porcentajeDevolucion)}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

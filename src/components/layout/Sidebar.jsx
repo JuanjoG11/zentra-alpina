@@ -12,7 +12,6 @@ import {
   Upload, 
   ChevronLeft, 
   ChevronRight,
-  Database,
   Sparkles
 } from 'lucide-react';
 
@@ -21,16 +20,30 @@ const Sidebar = () => {
   const location = useLocation();
   const { sidebarOpen, toggleSidebar } = useStore();
 
-  const menuItems = [
-    { name: 'Dashboard Ejecutivo', path: '/', icon: BarChart3 },
-    { name: 'Análisis de Ventas', path: '/ventas', icon: TrendingUp },
-    { name: 'Devoluciones', path: '/devoluciones', icon: RefreshCw },
-    { name: 'Perfil Indicadores', path: '/indicadores', icon: Database },
-    { name: 'Focos Numérica', path: '/focos', icon: Sparkles },
-    { name: 'Proveedores', path: '/proveedores', icon: Truck },
-    { name: 'Vendedores', path: '/vendedores', icon: Users },
-    { name: 'IA Empresarial', path: '/ia', icon: Brain },
-    { name: 'Cargar Archivos', path: '/upload', icon: Upload }
+  const menuSections = [
+    {
+      label: 'Analítica',
+      items: [
+        { name: 'Dashboard Ejecutivo', path: '/', icon: BarChart3 },
+        { name: 'Análisis de Ventas',  path: '/ventas',      icon: TrendingUp },
+        { name: 'Devoluciones',        path: '/devoluciones', icon: RefreshCw },
+        { name: 'Focos Numérica',      path: '/focos',        icon: Sparkles },
+      ]
+    },
+    {
+      label: 'Comercial',
+      items: [
+        { name: 'Proveedores', path: '/proveedores', icon: Truck },
+        { name: 'Vendedores',  path: '/vendedores',  icon: Users },
+      ]
+    },
+    {
+      label: 'Inteligencia',
+      items: [
+        { name: 'IA Empresarial', path: '/ia',     icon: Brain },
+        { name: 'Cargar Archivos',path: '/upload', icon: Upload },
+      ]
+    }
   ];
 
   return (
@@ -57,50 +70,55 @@ const Sidebar = () => {
         </button>
       </div>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          const Icon = item.icon;
-
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-3.5 rounded-xl transition-all duration-200 group relative ${
-                isActive 
-                  ? 'bg-blue-600/10 text-blue-400 font-medium border border-blue-500/20' 
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
-              }`}
-            >
-              {/* Active Indicator Bar */}
-              {isActive && (
-                <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-blue-500 rounded-r" />
-              )}
-              
-              <Icon className={`h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-slate-200'
-              }`} />
-              
-              {sidebarOpen && (
-                <span className="text-sm tracking-wide transition-opacity duration-300">
-                  {item.name}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
+        {menuSections.map((section) => (
+          <div key={section.label}>
+            {sidebarOpen && (
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-600 px-3 mb-1.5">
+                {section.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const isActive = location.pathname === item.path;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative ${
+                      isActive
+                        ? 'bg-blue-600/10 text-blue-400 font-medium border border-blue-500/20'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute left-0 top-1/4 bottom-1/4 w-0.5 bg-blue-500 rounded-r" />
+                    )}
+                    <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                      isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-300'
+                    }`} />
+                    {sidebarOpen && (
+                      <span className="text-[13px] tracking-wide">{item.name}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Footer Info */}
+      {/* Footer */}
       <div className="p-4 border-t border-slate-800/80 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-slate-700 to-slate-600 flex items-center justify-center font-bold text-sm text-white shrink-0">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-lg shadow-blue-900/30">
           JJ
         </div>
         {sidebarOpen && (
           <div className="overflow-hidden">
             <h4 className="text-xs font-semibold text-slate-200 truncate">Juan José</h4>
-            <p className="text-[10px] text-slate-500 truncate">Administrador</p>
+            <p className="text-[10px] text-slate-500 truncate">Gerente Comercial</p>
           </div>
         )}
       </div>

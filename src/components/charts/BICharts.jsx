@@ -546,3 +546,89 @@ export const BIFunnelChart = ({ data = [] }) => {
 
   return <Chart options={options} series={series} type="bar" height={320} />;
 };
+
+// 12. ZONE RANKING CHART - Horizontal bars with compliance % and budget
+export const BIZoneRankingChart = ({ zones = [] }) => {
+  const top = [...zones]
+    .sort((a, b) => b.ventasNetas - a.ventasNetas)
+    .slice(0, 8);
+
+  const compliance = top.map(z =>
+    z.presupuesto > 0 ? Math.round((z.ventasNetas / z.presupuesto) * 100) : 0
+  );
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params) => {
+        const z = top[params[0].dataIndex];
+        const pct = compliance[params[0].dataIndex];
+        return `
+          <div style="font-size:12px;line-height:1.8">
+            <b>${z.zona}</b><br/>
+            Vendedor: ${z.vendedor}<br/>
+            Ventas: ${formatShortCurrency(z.ventasNetas)}<br/>
+            Presupuesto: ${formatShortCurrency(z.presupuesto)}<br/>
+            Cumplimiento: <b style="color:${pct>=100?'#10b981':pct>=80?'#f59e0b':'#ef4444'}">${pct}%</b>
+          </div>`;
+      }
+    },
+    grid: { left: '2%', right: '6%', top: '4%', bottom: '4%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: '#64748b', formatter: v => formatShortCurrency(v) },
+      splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: top.map(z => z.zona).reverse(),
+      axisLabel: { color: '#94a3b8', fontSize: 11, fontWeight: 600 }
+    },
+    series: [
+      {
+        name: 'Presupuesto',
+        type: 'bar',
+        data: top.map(z => z.presupuesto).reverse(),
+        barMaxWidth: 14,
+        itemStyle: { color: '#1e293b', borderRadius: [0,4,4,0] },
+        z: 1
+      },
+      {
+        name: 'Ventas Netas',
+        type: 'bar',
+        data: top.map((z, i) => ({
+          value: z.ventasNetas,
+          itemStyle: {
+            color: compliance[i] >= 100
+              ? new echarts.graphic.LinearGradient(0,0,1,0,[
+                  { offset:0, color:'#059669' },{ offset:1, color:'#10b981' }])
+              : compliance[i] >= 80
+              ? new echarts.graphic.LinearGradient(0,0,1,0,[
+                  { offset:0, color:'#d97706' },{ offset:1, color:'#f59e0b' }])
+              : new echarts.graphic.LinearGradient(0,0,1,0,[
+                  { offset:0, color:'#dc2626' },{ offset:1, color:'#f87171' }]),
+            borderRadius: [0,6,6,0]
+          }
+        })).reverse(),
+        barMaxWidth: 14,
+        label: {
+          show: true,
+          position: 'right',
+          formatter: (p) => {
+            const origIdx = top.length - 1 - p.dataIndex;
+            const pct = compliance[origIdx];
+            return `{pct|${pct}%}`;
+          },
+          rich: {
+            pct: { fontSize: 10, fontWeight: 700, color: '#e2e8f0' }
+          }
+        },
+        z: 2
+      }
+    ]
+  };
+
+  return <ReactECharts option={option} style={{ height: '320px', width: '100%' }} />;
+};

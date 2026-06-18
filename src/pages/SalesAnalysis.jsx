@@ -1,20 +1,27 @@
 import React from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
-import { 
-  BIAreaChart, 
-  BIStackedBarChart,
-  BILineChart
-} from '../components/charts/BICharts';
-import { 
-  TrendingUp, 
-  CreditCard, 
-  DollarSign, 
-  Layers,
-  ArrowUpRight
-} from 'lucide-react';
+import { BIAreaChart, BIStackedBarChart, BILineChart } from '../components/charts/BICharts';
+import { TrendingUp, CreditCard, DollarSign, Layers, ArrowUpRight, MapPin } from 'lucide-react';
+
+const CITY_META = {
+  PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400'    },
+  MANIZALES: { label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400'  },
+  ARMENIA:   { label: 'Eje Quindío',  bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+  OTRO:      { label: 'Otro',         bg: 'bg-slate-500/10',   text: 'text-slate-400'   },
+};
+
+const CityBadge = ({ zona }) => {
+  const city = ZONA_CIUDAD_MAP[zona] || 'OTRO';
+  const m = CITY_META[city] || CITY_META.OTRO;
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${m.bg} ${m.text}`}>
+      <MapPin className="h-2.5 w-2.5" />{m.label}
+    </span>
+  );
+};
 
 const SalesAnalysis = () => {
   const filters = useStore();
@@ -87,7 +94,17 @@ const SalesAnalysis = () => {
     forecastData = dailyTotal;
   }
 
-  // Credit vs Cash aggregates: sum dynamically from all valid salesDaily records
+  // Totales por eje comercial
+  const ejeTotals = React.useMemo(() => {
+    const map = { PEREIRA: 0, MANIZALES: 0, ARMENIA: 0 };
+    filteredData.zones.forEach(z => {
+      const city = ZONA_CIUDAD_MAP[z.zona] || 'OTRO';
+      if (map[city] !== undefined) map[city] += z.ventasNetas;
+    });
+    return map;
+  }, [filteredData.zones]);
+
+  const totalEjes = Object.values(ejeTotals).reduce((s, v) => s + v, 0) || 1;
   const creditTotal = dailyTotal.reduce((sum, d) => sum + (Number(d.credito) || 0), 0) || 587897284;
   const cashTotal = dailyTotal.reduce((sum, d) => sum + (Number(d.contado) || 0), 0) || 4759532351;
   const creditPercentage = creditTotal / (creditTotal + cashTotal || 1);
@@ -127,6 +144,36 @@ const SalesAnalysis = () => {
         <p className="text-slate-400 text-sm mt-1">
           Profundice en el comportamiento de facturación comercial, métodos de pago, forecast y rankings de zona.
         </p>
+      </div>
+
+      {/* ── Resumen por eje comercial ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { city: 'PEREIRA',   label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
+          { city: 'MANIZALES', label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
+          { city: 'ARMENIA',   label: 'Eje Quindío',  bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+        ].map(({ city, label, bg, text, border }) => {
+          const v = ejeTotals[city] || 0;
+          const share = v / totalEjes;
+          return (
+            <GlassCard key={city} hoverable={false} className={`border ${border} relative overflow-hidden`}>
+              <div className={`absolute inset-0 ${bg} opacity-25 pointer-events-none rounded-2xl`} />
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${text}`}>{label}</p>
+                  <p className="text-xl font-extrabold text-white mt-1">{formatShortCurrency(v)}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-20 h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${text.replace('text-', 'bg-')}`} style={{ width: `${share * 100}%` }} />
+                    </div>
+                    <span className={`text-[10px] font-bold ${text}`}>{formatPercent(share)}</span>
+                  </div>
+                </div>
+                <MapPin className={`h-8 w-8 opacity-10 ${text}`} />
+              </div>
+            </GlassCard>
+          );
+        })}
       </div>
 
       {/* Credit & Cash Cards */}
@@ -208,6 +255,8 @@ const SalesAnalysis = () => {
             <thead>
               <tr className="border-b border-slate-850 text-slate-500 font-semibold">
                 <th className="pb-3 pl-2">Zona</th>
+                <th className="pb-3">Eje</th>
+                <th className="pb-3">Vendedor</th>
                 <th className="pb-3 text-right">Ventas Netas</th>
                 <th className="pb-3 text-right">Presupuesto</th>
                 <th className="pb-3 text-right">Cumplimiento</th>
@@ -217,36 +266,40 @@ const SalesAnalysis = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/60">
-              {paretoData.map((item, idx) => (
-                <tr 
-                  key={idx} 
-                  className={`hover:bg-slate-900/20 transition-colors ${
-                    item.isCore ? 'bg-blue-600/[0.02]' : ''
-                  }`}
-                >
-                  <td className="py-3 pl-2 font-bold text-slate-200">Zona {item.zona}</td>
-                  <td className="py-3 text-right font-semibold text-slate-100">{formatCurrency(item.ventasNetas)}</td>
-                  <td className="py-3 text-right text-slate-400">{formatCurrency(item.presupuesto)}</td>
-                  <td className="py-3 text-right">
-                    <span className={`font-semibold ${
-                      item.ventasNetas >= item.presupuesto ? 'text-emerald-400' : 'text-slate-400'
-                    }`}>
-                      {formatPercent(item.ventasNetas / item.presupuesto)}
-                    </span>
-                  </td>
-                  <td className="py-3 text-right text-slate-300">{formatPercent(item.share)}</td>
-                  <td className="py-3 text-right text-slate-400">{formatPercent(item.accumShare)}</td>
-                  <td className="py-3 pr-2 text-center">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                      item.isCore 
-                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                        : 'bg-slate-800/80 text-slate-500'
-                    }`}>
-                      {item.isCore ? 'ZONA CORE (A)' : 'ZONA B/C'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {paretoData.map((item, idx) => {
+                const complianceRate = item.presupuesto > 0 ? item.ventasNetas / item.presupuesto : 0;
+                return (
+                  <tr
+                    key={idx}
+                    className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}
+                  >
+                    <td className="py-3 pl-2 font-bold text-slate-200">{item.zona}</td>
+                    <td className="py-3"><CityBadge zona={item.zona} /></td>
+                    <td className="py-3 text-slate-400 text-[11px] max-w-[130px] truncate">{item.vendedor}</td>
+                    <td className="py-3 text-right font-semibold text-slate-100">{formatCurrency(item.ventasNetas)}</td>
+                    <td className="py-3 text-right text-slate-400">{formatCurrency(item.presupuesto)}</td>
+                    <td className="py-3 text-right">
+                      <span className={`font-bold ${
+                        complianceRate >= 1.0 ? 'text-emerald-400' :
+                        complianceRate >= 0.8 ? 'text-amber-400'   : 'text-rose-400'
+                      }`}>
+                        {formatPercent(complianceRate)}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right text-slate-300">{formatPercent(item.share)}</td>
+                    <td className="py-3 text-right text-slate-400">{formatPercent(item.accumShare)}</td>
+                    <td className="py-3 pr-2 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                        item.isCore
+                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          : 'bg-slate-800/80 text-slate-500'
+                      }`}>
+                        {item.isCore ? 'CORE (A)' : 'B/C'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

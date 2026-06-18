@@ -1,31 +1,91 @@
 import { alpinaData } from '../data/alpina-data';
 import useStore from '../store/useStore';
 
+// ─── Mapa oficial de zonas por ciudad (fuente: CUBO_DE_VENTAS) ─────────────
+// MACRO_1 = Eje Armenia  |  MACRO_2 = Eje Manizales  |  MACRO_3 = Eje Pereira
+export const ZONA_CIUDAD_MAP = {
+  // ARMENIA
+  M9601: 'ARMENIA', M9602: 'ARMENIA', M9603: 'ARMENIA',
+  P7008: 'ARMENIA', P7009: 'ARMENIA',
+  M9604: 'ARMENIA', // MONTENEGRO
+  M9606: 'ARMENIA', // CALARCA
+  M9605: 'ARMENIA', // GENOVA
+  P7010: 'ARMENIA', // LA TEBAIDA
+  M9600: 'ARMENIA', // SALENTO
+
+  // MANIZALES
+  E7000: 'MANIZALES',
+  M9550: 'MANIZALES', M9552: 'MANIZALES', M9555: 'MANIZALES',
+  M9556: 'MANIZALES', P7000: 'MANIZALES',
+  M9559: 'MANIZALES', P7002: 'MANIZALES', // CHINCHINA
+  M9553: 'MANIZALES', P7001: 'MANIZALES', // VILLAMARIA
+  M9554: 'MANIZALES',                      // NEIRA
+  M9557: 'MANIZALES',                      // RIOSUCIO
+  M9558: 'MANIZALES',                      // SALAMINA
+  M9560: 'MANIZALES',                      // SUPIA
+
+  // PEREIRA
+  M9453: 'PEREIRA', M9455: 'PEREIRA', M9456: 'PEREIRA',
+  M9457: 'PEREIRA', M9459: 'PEREIRA', M9460: 'PEREIRA',
+  P7004: 'PEREIRA',
+  E7001: 'PEREIRA',                        // DOSQUEBRADAS - Servicio al cliente
+  M9454: 'PEREIRA', M9458: 'PEREIRA',      // DOSQUEBRADAS
+  M9450: 'PEREIRA', P7006: 'PEREIRA',      // LA VIRGINIA
+  M9461: 'PEREIRA',                        // CARTAGO
+  M9451: 'PEREIRA', P7007: 'PEREIRA',      // BELEN DE UMBRIA
+  P7005: 'PEREIRA',                        // ANSERMANUEVO
+};
+
+// Zonas que pertenecen a cada ciudad (para filtrado rápido)
+export const ZONAS_POR_CIUDAD = {
+  ARMENIA:   Object.entries(ZONA_CIUDAD_MAP).filter(([,c]) => c === 'ARMENIA').map(([z]) => z),
+  MANIZALES: Object.entries(ZONA_CIUDAD_MAP).filter(([,c]) => c === 'MANIZALES').map(([z]) => z),
+  PEREIRA:   Object.entries(ZONA_CIUDAD_MAP).filter(([,c]) => c === 'PEREIRA').map(([z]) => z),
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const getFilteredData = (arg1, arg2) => {
   let dbData;
   let filters;
 
   if (arg2 === undefined) {
-    // Backwards compatibility for getFilteredData(filters) calls
     filters = arg1;
     dbData = useStore.getState().dbData;
   } else {
-    // Two-argument call: getFilteredData(dbData, filters)
     dbData = arg1;
     filters = arg2;
   }
 
   const baseData = dbData || alpinaData;
   if (!filters) filters = {};
-  const { selectedProvider = 'Todas', selectedZone = 'Todas', selectedSeller = 'Todas' } = filters;
-  let providers = [...(baseData.providers || [])];
-  let salesDaily = [...(baseData.salesDaily || [])];
-  let zones = [...(baseData.zones || [])];
-  let returnsSellers = [...(baseData.returnsSellers || [])];
-  let returnsConcepts = [...(baseData.returnsConcepts || [])];
-  let returnsDaily = [...(baseData.returnsDaily || [])];
-  let clientReturns = [...(baseData.clientReturns || [])];
+  const {
+    selectedProvider = 'Todas',
+    selectedZone     = 'Todas',
+    selectedSeller   = 'Todas',
+    selectedCity     = 'Todas'
+  } = filters;
 
+  let providers      = [...(baseData.providers      || [])];
+  let salesDaily     = [...(baseData.salesDaily     || [])];
+  let zones          = [...(baseData.zones          || [])];
+  let returnsSellers = [...(baseData.returnsSellers || [])];
+  let returnsConcepts= [...(baseData.returnsConcepts|| [])];
+  let returnsDaily   = [...(baseData.returnsDaily   || [])];
+  let clientReturns  = [...(baseData.clientReturns  || [])];
+
+  // ── Filtro por CIUDAD (usando el mapa real de zonas del cubo) ──────────────
+  if (selectedCity && selectedCity !== 'Todas') {
+    const zonasPermitidas = new Set(ZONAS_POR_CIUDAD[selectedCity] || []);
+    if (zonasPermitidas.size > 0) {
+      zones          = zones.filter(z => zonasPermitidas.has(z.zona));
+      returnsSellers = returnsSellers.filter(s => zonasPermitidas.has(s.ejecutivo));
+      clientReturns  = clientReturns.filter(c => zonasPermitidas.has(c.ejecutivo));
+      // salesDaily no tiene zona directamente — se deja sin filtrar por ciudad
+      // (el total viene de todos, el filtro de zona lo acota si se necesita más granularidad)
+    }
+  }
+
+  // ── Filtro de proveedores Alpina ───────────────────────────────────────────
   // Los proveedores ya vienen filtrados del cubo (todos son ALPINA SA).
   // Mantener el filtro flexible por si hay otros cubos con más proveedores.
   providers = providers.filter(p =>
@@ -37,33 +97,33 @@ export const getFilteredData = (arg1, arg2) => {
     (p.proveedorReal && p.proveedorReal.toUpperCase().includes('ALPINA'))
   );
 
-  // Filter providers by selected provider if set
+  // ── Filtro por proveedor seleccionado ─────────────────────────────────────
   if (selectedProvider !== 'Todas') {
-    providers = providers.filter(p => p.proveedor.toLowerCase().includes(selectedProvider.toLowerCase()) || selectedProvider.toLowerCase().includes(p.proveedor.toLowerCase()));
+    providers = providers.filter(p =>
+      p.proveedor.toLowerCase().includes(selectedProvider.toLowerCase()) ||
+      selectedProvider.toLowerCase().includes(p.proveedor.toLowerCase())
+    );
   }
 
-  // Filter zones
+  // ── Filtro por zona ───────────────────────────────────────────────────────
   if (selectedZone !== 'Todas') {
     zones = zones.filter(z => z.zona === selectedZone);
   }
 
-  // Filter seller
+  // ── Filtro por vendedor ───────────────────────────────────────────────────
   if (selectedSeller !== 'Todas') {
-    // If the seller name is selected, filter matching vendedor or ejecutivo code
-    zones = zones.filter(z => z.vendedor === selectedSeller || z.zona === selectedSeller);
-    returnsSellers = returnsSellers.filter(s => s.nombre.toLowerCase().includes(selectedSeller.toLowerCase()) || s.ejecutivo === selectedSeller);
-    clientReturns = clientReturns.filter(c => c.ejecutivo === selectedSeller || c.cliente.toLowerCase().includes(selectedSeller.toLowerCase()));
+    zones          = zones.filter(z => z.vendedor === selectedSeller || z.zona === selectedSeller);
+    returnsSellers = returnsSellers.filter(s =>
+      s.nombre.toLowerCase().includes(selectedSeller.toLowerCase()) ||
+      s.ejecutivo === selectedSeller
+    );
+    clientReturns  = clientReturns.filter(c =>
+      c.ejecutivo === selectedSeller ||
+      c.cliente.toLowerCase().includes(selectedSeller.toLowerCase())
+    );
   }
 
-  return {
-    providers,
-    salesDaily,
-    zones,
-    returnsSellers,
-    returnsConcepts,
-    returnsDaily,
-    clientReturns
-  };
+  return { providers, salesDaily, zones, returnsSellers, returnsConcepts, returnsDaily, clientReturns };
 };
 
 export const calculateKPIs = (filteredData) => {
