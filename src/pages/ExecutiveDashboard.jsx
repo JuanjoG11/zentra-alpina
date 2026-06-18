@@ -58,7 +58,8 @@ const DailySalesTable = ({ salesDaily, totalBudget }) => {
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-[1fr_1fr_1fr_80px_72px] gap-x-3 px-3 pb-1 border-b border-slate-800/60">
+      {/* Header — oculto en móvil muy pequeño */}
+      <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_1fr_80px_72px] gap-x-3 px-3 pb-1 border-b border-slate-800/60">
         {['Fecha','Contado','Crédito','Total día','vs Meta'].map(h => (
           <span key={h} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</span>
         ))}
@@ -71,20 +72,40 @@ const DailySalesTable = ({ salesDaily, totalBudget }) => {
           const pct = dailyTarget > 0 ? d.total / dailyTarget : 0;
           const tl = trafficLight(pct);
           const TlIcon = tl.Icon;
-          const diff = d.total - dailyTarget;
 
           return (
             <div
               key={i}
-              className={`grid grid-cols-[1fr_1fr_1fr_80px_72px] gap-x-3 items-center px-3 py-2.5 rounded-lg border ${tl.border} ${tl.bg} hover:brightness-110 transition-all`}
+              className={`rounded-lg border ${tl.border} ${tl.bg} hover:brightness-110 transition-all px-3 py-2.5`}
             >
-              <span className="text-xs font-semibold text-slate-200 capitalize">{label}</span>
-              <span className="text-xs text-emerald-400 font-medium">{formatShortCurrency(d.contado)}</span>
-              <span className="text-xs text-amber-400 font-medium">{formatShortCurrency(d.credito)}</span>
-              <span className="text-xs font-bold text-white">{formatShortCurrency(d.total)}</span>
-              <div className="flex items-center gap-1">
-                <TlIcon className={`h-3.5 w-3.5 shrink-0 ${tl.color}`} />
-                <span className={`text-[10px] font-bold ${tl.color}`}>{formatPercent(pct)}</span>
+              {/* Desktop: 5 columnas */}
+              <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_1fr_80px_72px] gap-x-3 items-center">
+                <span className="text-xs font-semibold text-slate-200 capitalize">{label}</span>
+                <span className="text-xs text-emerald-400 font-medium">{formatShortCurrency(d.contado)}</span>
+                <span className="text-xs text-amber-400 font-medium">{formatShortCurrency(d.credito)}</span>
+                <span className="text-xs font-bold text-white">{formatShortCurrency(d.total)}</span>
+                <div className="flex items-center gap-1">
+                  <TlIcon className={`h-3.5 w-3.5 shrink-0 ${tl.color}`} />
+                  <span className={`text-[10px] font-bold ${tl.color}`}>{formatPercent(pct)}</span>
+                </div>
+              </div>
+              {/* Móvil: 2 líneas compactas */}
+              <div className="sm:hidden flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-slate-200 capitalize">{label}</span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    <span className="text-emerald-400">{formatShortCurrency(d.contado)}</span>
+                    <span className="mx-1 text-slate-600">+</span>
+                    <span className="text-amber-400">{formatShortCurrency(d.credito)}</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-white">{formatShortCurrency(d.total)}</p>
+                  <div className="flex items-center justify-end gap-1 mt-0.5">
+                    <TlIcon className={`h-3 w-3 ${tl.color}`} />
+                    <span className={`text-[10px] font-bold ${tl.color}`}>{formatPercent(pct)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           );

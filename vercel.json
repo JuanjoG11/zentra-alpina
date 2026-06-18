@@ -1,9 +1,13 @@
 {
-  "buildCommand": "npx tsc --noEmit --skipLibCheck || true && npx vite build",
+  "buildCommand": "npx vite build",
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "env": {
+    "VITE_SUPABASE_URL": "https://torxgpnqiezpnqqdomik.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_NSH1tlPsBZ_XsC3bbTRtyA_gRGibIur"
+  }
 }

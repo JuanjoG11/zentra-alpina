@@ -254,16 +254,16 @@ const ProvidersAnalysis = () => {
       {/* Detail Providers Table */}
       <GlassCard hoverable={false} className="bg-slate-950/95 border border-slate-800/80 p-5 shadow-lg shadow-slate-950/20">
         <h3 className="text-base font-bold text-white mb-4">Listado y Rendimiento de Proveedores Alpina</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full min-w-[520px] text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-850 text-slate-500 font-semibold">
+              <tr className="border-b border-slate-800 text-slate-500 font-semibold">
                 <th className="pb-3 pl-2">Proveedor</th>
-                <th className="pb-3 text-right">Ventas 2025</th>
+                <th className="pb-3 text-right hidden sm:table-cell">Ventas 2025</th>
                 <th className="pb-3 text-right">Ventas 2026</th>
-                <th className="pb-3 text-right">Proyectado 2026</th>
-                <th className="pb-3 text-right">Margen Promedio</th>
-                <th className="pb-3 text-right">Crecimiento YoY</th>
+                <th className="pb-3 text-right hidden md:table-cell">Proyectado</th>
+                <th className="pb-3 text-right hidden md:table-cell">Margen</th>
+                <th className="pb-3 text-right">Crec. YoY</th>
                 <th className="pb-3 pr-2 text-right">Cuota %</th>
               </tr>
             </thead>
@@ -274,20 +274,18 @@ const ProvidersAnalysis = () => {
                 
                 return (
                   <tr key={idx} className="hover:bg-slate-900/10 transition-colors">
-                    <td className="py-3 pl-2 font-bold text-slate-200">{item.proveedor}</td>
-                    <td className="py-3 text-right text-slate-400">{formatCurrency(item.ventas2025)}</td>
-                    <td className="py-3 text-right font-semibold text-slate-100">{formatCurrency(item.ventas2026)}</td>
-                    <td className="py-3 text-right text-slate-400">{formatCurrency(item.proyectado2026)}</td>
-                    <td className="py-3 text-right text-slate-300 font-mono">{(item.margen2026 / 100).toLocaleString('es-CO', {style: 'percent', minimumFractionDigits: 1})}</td>
-                    <td className="py-3 text-right">
-                      <span className={`inline-flex items-center gap-0.5 font-bold ${
-                        growthRate > 0 ? 'text-emerald-400' : growthRate < 0 ? 'text-rose-400' : 'text-slate-400'
-                      }`}>
+                    <td className="py-2.5 pl-2 font-bold text-slate-200 max-w-[120px] truncate">{item.proveedor}</td>
+                    <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatShortCurrency(item.ventas2025)}</td>
+                    <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(item.ventas2026)}</td>
+                    <td className="py-2.5 text-right text-slate-400 hidden md:table-cell">{formatShortCurrency(item.proyectado2026)}</td>
+                    <td className="py-2.5 text-right text-slate-300 hidden md:table-cell">{(item.margen2026 / 100).toLocaleString('es-CO', {style:'percent', minimumFractionDigits:1})}</td>
+                    <td className="py-2.5 text-right">
+                      <span className={`inline-flex items-center gap-0.5 font-bold ${growthRate > 0 ? 'text-emerald-400' : growthRate < 0 ? 'text-rose-400' : 'text-slate-400'}`}>
                         {growthRate > 0 ? <ArrowUpRight className="h-3 w-3" /> : growthRate < 0 ? <ArrowDownRight className="h-3 w-3" /> : null}
                         {growthRate !== 0 ? formatPercent(growthRate) : 'N/A'}
                       </span>
                     </td>
-                    <td className="py-3 pr-2 text-right font-semibold text-blue-400">{formatPercent(marketShare)}</td>
+                    <td className="py-2.5 pr-2 text-right font-semibold text-blue-400">{formatPercent(marketShare)}</td>
                   </tr>
                 );
               })}

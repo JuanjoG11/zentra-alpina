@@ -250,51 +250,42 @@ const SalesAnalysis = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        {/* Tabla Pareto — scroll horizontal en móvil */}
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full min-w-[640px] text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-850 text-slate-500 font-semibold">
+              <tr className="border-b border-slate-800 text-slate-500 font-semibold">
                 <th className="pb-3 pl-2">Zona</th>
                 <th className="pb-3">Eje</th>
-                <th className="pb-3">Vendedor</th>
-                <th className="pb-3 text-right">Ventas Netas</th>
-                <th className="pb-3 text-right">Presupuesto</th>
-                <th className="pb-3 text-right">Cumplimiento</th>
-                <th className="pb-3 text-right">Participación %</th>
-                <th className="pb-3 text-right">Acumulado %</th>
-                <th className="pb-3 pr-2 text-center">Clasificación</th>
+                <th className="pb-3 hidden md:table-cell">Vendedor</th>
+                <th className="pb-3 text-right">Ventas</th>
+                <th className="pb-3 text-right hidden sm:table-cell">Presupuesto</th>
+                <th className="pb-3 text-right">Cumpl.</th>
+                <th className="pb-3 text-right hidden sm:table-cell">Part. %</th>
+                <th className="pb-3 text-right hidden md:table-cell">Acum. %</th>
+                <th className="pb-3 pr-2 text-center">Clase</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/60">
               {paretoData.map((item, idx) => {
                 const complianceRate = item.presupuesto > 0 ? item.ventasNetas / item.presupuesto : 0;
                 return (
-                  <tr
-                    key={idx}
-                    className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}
-                  >
-                    <td className="py-3 pl-2 font-bold text-slate-200">{item.zona}</td>
-                    <td className="py-3"><CityBadge zona={item.zona} /></td>
-                    <td className="py-3 text-slate-400 text-[11px] max-w-[130px] truncate">{item.vendedor}</td>
-                    <td className="py-3 text-right font-semibold text-slate-100">{formatCurrency(item.ventasNetas)}</td>
-                    <td className="py-3 text-right text-slate-400">{formatCurrency(item.presupuesto)}</td>
-                    <td className="py-3 text-right">
-                      <span className={`font-bold ${
-                        complianceRate >= 1.0 ? 'text-emerald-400' :
-                        complianceRate >= 0.8 ? 'text-amber-400'   : 'text-rose-400'
-                      }`}>
+                  <tr key={idx} className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}>
+                    <td className="py-2.5 pl-2 font-bold text-slate-200">{item.zona}</td>
+                    <td className="py-2.5"><CityBadge zona={item.zona} /></td>
+                    <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
+                    <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(item.ventasNetas)}</td>
+                    <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatShortCurrency(item.presupuesto)}</td>
+                    <td className="py-2.5 text-right">
+                      <span className={`font-bold ${complianceRate >= 1.0 ? 'text-emerald-400' : complianceRate >= 0.8 ? 'text-amber-400' : 'text-rose-400'}`}>
                         {formatPercent(complianceRate)}
                       </span>
                     </td>
-                    <td className="py-3 text-right text-slate-300">{formatPercent(item.share)}</td>
-                    <td className="py-3 text-right text-slate-400">{formatPercent(item.accumShare)}</td>
-                    <td className="py-3 pr-2 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                        item.isCore
-                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                          : 'bg-slate-800/80 text-slate-500'
-                      }`}>
-                        {item.isCore ? 'CORE (A)' : 'B/C'}
+                    <td className="py-2.5 text-right text-slate-300 hidden sm:table-cell">{formatPercent(item.share)}</td>
+                    <td className="py-2.5 text-right text-slate-400 hidden md:table-cell">{formatPercent(item.accumShare)}</td>
+                    <td className="py-2.5 pr-2 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${item.isCore ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-slate-800/80 text-slate-500'}`}>
+                        {item.isCore ? 'A' : 'B/C'}
                       </span>
                     </td>
                   </tr>

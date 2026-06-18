@@ -128,27 +128,27 @@ const ReturnsAnalysis = () => {
             <ShieldAlert className="h-5 w-5 text-rose-500" />
             <h3 className="text-base font-bold text-white">Clientes Críticos por Devoluciones</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full min-w-[420px] text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-850 text-slate-500 font-semibold">
+                <tr className="border-b border-slate-800 text-slate-500 font-semibold">
                   <th className="pb-3">Cliente</th>
-                  <th className="pb-3 text-center">Ejecutivo</th>
-                  <th className="pb-3 text-center">Eje</th>
-                  <th className="pb-3 text-right">Devuelto sin IVA</th>
-                  <th className="pb-3 text-right">Registros</th>
+                  <th className="pb-3 text-center hidden sm:table-cell">Ejecutivo</th>
+                  <th className="pb-3 text-center hidden md:table-cell">Eje</th>
+                  <th className="pb-3 text-right">Devuelto</th>
+                  <th className="pb-3 text-right pr-2 hidden sm:table-cell">Registros</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/60">
                 {criticalClients.map((client, idx) => (
                   <tr key={idx} className="hover:bg-slate-900/10 transition-colors">
-                    <td className="py-3 font-semibold text-slate-200 truncate max-w-[180px]" title={client.cliente}>
+                    <td className="py-3 font-semibold text-slate-200 truncate max-w-[160px]" title={client.cliente}>
                       {client.cliente}
                     </td>
-                    <td className="py-3 text-center text-slate-400 font-mono text-[10px]">{client.ejecutivo}</td>
-                    <td className="py-3 text-center"><CityBadge zona={client.ejecutivo} /></td>
-                    <td className="py-3 text-right font-bold text-rose-400">{formatCurrency(client.totalReturn)}</td>
-                    <td className="py-3 text-right text-slate-300 pr-4">{client.count}</td>
+                    <td className="py-3 text-center text-slate-400 font-mono text-[10px] hidden sm:table-cell">{client.ejecutivo}</td>
+                    <td className="py-3 text-center hidden md:table-cell"><CityBadge zona={client.ejecutivo} /></td>
+                    <td className="py-3 text-right font-bold text-rose-400">{formatShortCurrency(client.totalReturn)}</td>
+                    <td className="py-3 text-right text-slate-300 pr-4 hidden sm:table-cell">{client.count}</td>
                   </tr>
                 ))}
               </tbody>

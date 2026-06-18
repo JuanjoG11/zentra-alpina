@@ -5,40 +5,49 @@ import Topbar from './Topbar';
 import useStore from '../../store/useStore';
 
 const Layout = () => {
-  const { sidebarOpen, fetchDataFromSupabase } = useStore();
+  const { sidebarOpen, toggleSidebar, fetchDataFromSupabase } = useStore();
 
   useEffect(() => {
     fetchDataFromSupabase();
   }, [fetchDataFromSupabase]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans overflow-x-hidden selection:bg-blue-500/30 selection:text-blue-200">
-      {/* Background Decorative Elements */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans overflow-x-hidden">
+      {/* Fondo decorativo */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Glow point 1 */}
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] animate-pulse duration-[8000ms]" />
-        {/* Glow point 2 */}
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-500/10 blur-[150px] animate-pulse duration-[12000ms]" />
-        {/* Glowing border/accent */}
-        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-emerald-500/5 blur-[100px] animate-pulse duration-[10000ms]" />
-        
-        {/* Grid Overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-500/10 blur-[150px] animate-pulse" />
+        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-emerald-500/5 blur-[100px] animate-pulse" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20" />
       </div>
 
-      {/* Sidebar Navigation */}
+      {/* Sidebar */}
       <Sidebar />
 
-      {/* Layout Content Wrapper */}
-      <div className="flex flex-col min-h-screen relative z-10">
-        {/* Topbar Filtering */}
+      {/* Overlay móvil para cerrar el sidebar */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-slate-950/70 backdrop-blur-sm lg:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
+
+      {/* Contenido principal */}
+      <div className="relative z-10 flex flex-col min-h-screen">
         <Topbar />
 
-        {/* Page Content */}
-        <main 
-          className="flex-1 p-6 pt-20 transition-all duration-300 ease-in-out"
-          style={{ paddingLeft: sidebarOpen ? '17.5rem' : '6.5rem' }}
-        >
+        {/*
+          Padding izquierdo:
+          - móvil (< lg): 0 — sidebar es overlay, no empuja el contenido
+          - lg con sidebar cerrado: pl-20 (5rem = w-20)
+          - lg con sidebar abierto: pl-64 (16rem = w-64)
+        */}
+        <main className={`
+          flex-1 pt-20 px-4 pb-6
+          transition-all duration-300 ease-in-out
+          lg:px-6
+          ${sidebarOpen ? 'lg:pl-[17rem]' : 'lg:pl-[6rem]'}
+        `}>
           <div className="max-w-7xl mx-auto space-y-6">
             <Outlet />
           </div>

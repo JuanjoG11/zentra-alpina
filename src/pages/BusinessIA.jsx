@@ -41,7 +41,8 @@ import {
 const BusinessIA = () => {
   const [activeTab, setActiveTab] = useState('overview'); // overview, ai, commercial, logistics
   const filters = useStore();
-  const filteredData = getFilteredData(filters);
+  const dbData  = useStore(state => state.dbData);
+  const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
   // Dynamic Anomalies Detection
@@ -165,56 +166,34 @@ const BusinessIA = () => {
       </div>
 
       {/* 2. TABS NAVIGATION */}
-      <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-slate-950/60 border border-slate-900 backdrop-blur-md">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-300 ${
-            activeTab === 'overview'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-          }`}
-        >
-          <Compass className="h-4 w-4" />
-          <span>Vista General Ejecutiva</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('ai')}
-          className={`flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-300 ${
-            activeTab === 'ai'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-          }`}
-        >
-          <Brain className="h-4 w-4" />
-          <span>Diagnóstico IA & Alertas</span>
-          {anomalies.length > 0 && (
-            <span className="bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-rose-400/20 shadow-md animate-pulse">
-              {anomalies.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('commercial')}
-          className={`flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-300 ${
-            activeTab === 'commercial'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-          }`}
-        >
-          <LineChart className="h-4 w-4" />
-          <span>Tendencias Comerciales</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('logistics')}
-          className={`flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-300 ${
-            activeTab === 'logistics'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-          }`}
-        >
-          <Truck className="h-4 w-4" />
-          <span>Calidad & Retornos</span>
-        </button>
+      <div className="flex flex-nowrap overflow-x-auto scrollbar-none gap-2 p-1.5 rounded-2xl bg-slate-950/60 border border-slate-900 backdrop-blur-md">
+        {[
+          { id: 'overview',   label: 'Vista General',       icon: Compass    },
+          { id: 'ai',         label: 'Diagnóstico IA',      icon: Brain,     badge: anomalies.length },
+          { id: 'commercial', label: 'Tendencias',          icon: LineChart  },
+          { id: 'logistics',  label: 'Calidad & Retornos',  icon: Truck      },
+        ].map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 text-xs font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-300 whitespace-nowrap shrink-0 ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{tab.label}</span>
+              {tab.badge > 0 && (
+                <span className="bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* 3. TABS CONTENT */}
@@ -480,16 +459,14 @@ const BusinessIA = () => {
 
       {activeTab === 'commercial' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            
-            {/* Sales Daily Trend */}
-            <GlassCard hoverable={false} className="xl:col-span-2 p-5 shadow-xl">
-              <div className="flex items-center justify-between mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <GlassCard hoverable={false} className="lg:col-span-2 p-5 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                 <div>
-                  <h3 className="text-base font-bold text-white">Tendencia de Ventas (Histórico Diario)</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Visualización del volumen total diario facturado durante el periodo actual.</p>
+                  <h3 className="text-base font-bold text-white">Tendencia de Ventas Diaria</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Volumen total diario facturado en el periodo actual.</p>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded border border-emerald-500/10 font-bold font-mono">
+                <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded border border-emerald-500/10 font-bold font-mono shrink-0">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span>Creciente</span>
                 </div>
@@ -497,26 +474,22 @@ const BusinessIA = () => {
               <BILineChart data={filteredData.salesDaily} />
             </GlassCard>
 
-            {/* Cash vs Credit flow */}
-            <GlassCard hoverable={false} className="p-5 shadow-xl">
-              <div>
-                <h3 className="text-base font-bold text-white">Flujo Financiero: Contado vs Crédito</h3>
-                <p className="text-xs text-slate-400 mb-4">Distribución diaria de las facturaciones realizadas en efectivo contra los términos de crédito.</p>
-              </div>
+            <GlassCard hoverable={false} className="lg:col-span-1 p-5 shadow-xl">
+              <h3 className="text-base font-bold text-white mb-1">Contado vs Crédito</h3>
+              <p className="text-xs text-slate-400 mb-4">Distribución diaria por modalidad de pago.</p>
               <BIStackedBarChart data={filteredData.salesDaily} />
             </GlassCard>
           </div>
 
-          {/* Treemap Provider share */}
           <GlassCard hoverable={false} className="p-5 shadow-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <Layers className="h-5 w-5 text-indigo-400" />
+            <div className="flex items-start gap-2 mb-3">
+              <Layers className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-base font-bold text-white">Distribución de Ventas por Marcas (Treemap)</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Mapa proporcional del mercado. El tamaño de los bloques representa el volumen de ventas en 2026 de cada marca.</p>
+                <h3 className="text-base font-bold text-white">Distribución de Ventas por Marcas</h3>
+                <p className="text-xs text-slate-400 mt-0.5">El tamaño de los bloques representa el volumen de ventas 2026 de cada marca.</p>
               </div>
             </div>
-            <div className="min-h-[340px] flex items-center justify-center">
+            <div className="min-h-[280px] sm:min-h-[340px] flex items-center justify-center">
               <BITreemapChart data={filteredData.providers} />
             </div>
           </GlassCard>
@@ -525,10 +498,8 @@ const BusinessIA = () => {
 
       {activeTab === 'logistics' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            
-            {/* Bridge: sales -> returns -> net sales */}
-            <GlassCard hoverable={false} className="xl:col-span-1 p-5 shadow-xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <GlassCard hoverable={false} className="lg:col-span-1 p-5 shadow-xl">
               <div>
                 <h3 className="text-base font-bold text-white">Puente de Conciliación Comercial</h3>
                 <p className="text-xs text-slate-400 mb-4">Conciliación de ventas brutas deduciendo devoluciones registradas para calcular las netas.</p>
@@ -536,40 +507,36 @@ const BusinessIA = () => {
               <BIWaterfallChart sales={totalSales} returns={totalReturns} />
             </GlassCard>
 
-            {/* Heatmap returns concepts */}
-            <GlassCard hoverable={false} className="xl:col-span-2 p-5 shadow-xl">
-              <div className="flex items-center justify-between mb-4">
+            <GlassCard hoverable={false} className="lg:col-span-2 p-5 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                 <div>
                   <h3 className="text-base font-bold text-white">Mapa de Calor: Fricciones de Devolución</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Correlación cruzada entre ejecutivos y motivos de rechazo en entrega (COP Miles).</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Correlación cruzada entre ejecutivos y motivos de rechazo (COP Miles).</p>
                 </div>
-                <span className="text-[10px] bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Foco: Motivo principal "Sin Plata"</span>
+                <span className="text-[10px] bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono shrink-0">Motivo principal: "Sin Plata"</span>
               </div>
               <BIHeatmapChart returnsSellers={filteredData.returnsSellers} clientReturns={filteredData.clientReturns} />
             </GlassCard>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            
-            {/* Scatter Plot volume vs returns rate */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <GlassCard hoverable={false} className="p-5 shadow-xl">
-              <div className="flex items-center gap-2 mb-2">
-                <Activity className="h-5 w-5 text-rose-400" />
+              <div className="flex items-start gap-2 mb-3">
+                <Activity className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-base font-bold text-white">Correlación: Volumen vs Devoluciones (Scatter)</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Identifique clientes de alto volumen que reportan tasas de retorno fuera del promedio de tolerancia.</p>
+                  <h3 className="text-base font-bold text-white">Correlación: Volumen vs Devoluciones</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Clientes de alto volumen con tasas de retorno fuera del promedio.</p>
                 </div>
               </div>
               <BIScatterPlot clientReturns={filteredData.clientReturns} />
             </GlassCard>
 
-            {/* Funnel returns concepts ranking */}
             <GlassCard hoverable={false} className="p-5 shadow-xl">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="h-5 w-5 text-indigo-400" />
+              <div className="flex items-start gap-2 mb-3">
+                <AlertCircle className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-base font-bold text-white">Jerarquía de Causales de Devolución (Embudo)</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Efecto piramidal de las justificaciones reportadas en retornos por valor monetario consolidado.</p>
+                  <h3 className="text-base font-bold text-white">Causales de Devolución</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Jerarquía de justificaciones por valor monetario.</p>
                 </div>
               </div>
               <BIFunnelChart data={filteredData.returnsConcepts} />

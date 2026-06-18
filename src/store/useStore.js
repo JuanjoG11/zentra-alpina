@@ -33,7 +33,8 @@ const useStore = create((set, get) => ({
   selectedZone: 'Todas',
   selectedProvider: 'Todas',
   selectedSeller: 'Todas',
-  sidebarOpen: true,
+  // En móvil inicia cerrado, en desktop abierto
+  sidebarOpen: typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
   darkMode: true,
 
   // Datos de negocio — se usan datos persistidos si existen, si no el archivo estático
@@ -74,7 +75,7 @@ const useStore = create((set, get) => ({
         supabase.from('zones').select('*'),
         supabase.from('returns_sellers').select('*'),
         supabase.from('sales_daily').select('*'),
-        supabase.from('returns_daily').select('*')
+        supabase.from('returns_daily').select('*').then(r => r.error?.code === '42P01' ? { data: [], error: null } : r)
       ]);
 
       if (provRes.error) throw provRes.error;

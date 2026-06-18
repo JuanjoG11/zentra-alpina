@@ -1,7 +1,0 @@
-pandas>=1.5
-pyarrow
-openpyxl
-python-dotenv
-supabase
-pandera
-pyxlsb

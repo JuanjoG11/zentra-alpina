@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData } from '../utils/calculations';
+import { getFilteredData, ZONA_CIUDAD_MAP } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency, formatNumber } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
@@ -12,12 +12,7 @@ const FocosNumerica = () => {
   const dbData = useStore(state => state.dbData);
   const filteredData = getFilteredData(dbData, filters);
 
-  const zoneCity = (zona) => {
-    if (zona.startsWith('E')) return 'ARMENIA';
-    if (zona.startsWith('M')) return 'MANIZALES';
-    if (zona.startsWith('P')) return 'PEREIRA';
-    return 'OTRO';
-  };
+  const zoneCity = (zona) => ZONA_CIUDAD_MAP[zona] || 'OTRO';
 
   const [selectedCity, setSelectedCity] = useState('ALL');
 
@@ -227,12 +222,12 @@ const FocosNumerica = () => {
             </div>
             <span className="text-xs uppercase tracking-[0.24em] text-slate-500">Total general {formatPercent(goalTotals.impactedClients / goalTotals.metaClients)}</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full min-w-[400px] text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-850 text-slate-500 uppercase tracking-[0.12em] text-[10px]">
+                <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-[0.12em] text-[10px]">
                   <th className="pb-3 pr-4">Ciudad</th>
-                  <th className="pb-3 pr-4">Universo</th>
+                  <th className="pb-3 pr-4 hidden sm:table-cell">Universo</th>
                   <th className="pb-3 pr-4">Meta</th>
                   <th className="pb-3 pr-4">Impactados</th>
                   <th className="pb-3 pr-4">% Numérica</th>
@@ -242,12 +237,12 @@ const FocosNumerica = () => {
               <tbody className="divide-y divide-slate-900/60">
                 {cityGoalData.map((city) => (
                   <tr key={city.city} className="hover:bg-slate-900/10 transition-colors">
-                    <td className="py-3 pr-4 text-slate-300 font-semibold">{city.city}</td>
-                    <td className="py-3 pr-4 text-slate-400">{formatNumber(city.universeClients)}</td>
-                    <td className="py-3 pr-4 text-slate-300">{formatNumber(city.metaClients)}</td>
-                    <td className="py-3 pr-4 text-slate-300">{formatNumber(city.impactedClients)}</td>
-                    <td className="py-3 pr-4 text-slate-100">{formatPercent(city.numericalCoverage)}</td>
-                    <td className="py-3 pr-2 text-slate-100">{formatNumber(city.clientsMissing)}</td>
+                    <td className="py-2.5 pr-4 text-slate-300 font-semibold">{city.city}</td>
+                    <td className="py-2.5 pr-4 text-slate-400 hidden sm:table-cell">{formatNumber(city.universeClients)}</td>
+                    <td className="py-2.5 pr-4 text-slate-300">{formatNumber(city.metaClients)}</td>
+                    <td className="py-2.5 pr-4 text-slate-300">{formatNumber(city.impactedClients)}</td>
+                    <td className="py-2.5 pr-4 font-bold text-slate-100">{formatPercent(city.numericalCoverage)}</td>
+                    <td className="py-2.5 pr-2 text-slate-100">{formatNumber(city.clientsMissing)}</td>
                   </tr>
                 ))}
                 <tr className="bg-slate-900/40">
@@ -312,8 +307,8 @@ const FocosNumerica = () => {
         />
       </GlassCard>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <GlassCard hoverable={false} className="col-span-1 bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <GlassCard hoverable={false} className="lg:col-span-1 bg-slate-950/85 border border-slate-800/70 p-5">
           <h4 className="text-sm font-bold text-white mb-4">Top zonas de atención</h4>
           <div className="space-y-3">
             <div className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-4">
@@ -329,7 +324,7 @@ const FocosNumerica = () => {
           </div>
         </GlassCard>
 
-        <GlassCard hoverable={false} className="col-span-2 bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
+        <GlassCard hoverable={false} className="lg:col-span-2 bg-slate-950/85 border border-slate-800/70 p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h4 className="text-sm font-bold text-white">Resumen por ciudad</h4>

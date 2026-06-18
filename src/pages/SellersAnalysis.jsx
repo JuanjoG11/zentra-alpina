@@ -252,15 +252,15 @@ const SellersAnalysis = () => {
         <GlassCard hoverable={false} className="col-span-1 lg:col-span-2">
           <h3 className="text-sm font-bold text-white mb-4">Desempeño por Zona</h3>
           <div className="overflow-auto max-h-80">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full min-w-[480px] text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 text-slate-500 font-semibold sticky top-0 bg-slate-950/90 backdrop-blur-sm">
                   <th className="pb-3 pl-2">Zona</th>
                   <th className="pb-3">Eje</th>
-                  <th className="pb-3">Vendedor</th>
+                  <th className="pb-3 hidden sm:table-cell">Vendedor</th>
                   <th className="pb-3 text-right">Ventas</th>
                   <th className="pb-3 text-right">Cumpl.</th>
-                  <th className="pb-3 text-right pr-2">Facturas</th>
+                  <th className="pb-3 text-right pr-2 hidden sm:table-cell">Facturas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/60">
@@ -277,7 +277,7 @@ const SellersAnalysis = () => {
                           {meta.label}
                         </span>
                       </td>
-                      <td className="py-2.5 text-slate-400 text-[11px] max-w-[140px] truncate">{z.vendedor}</td>
+                      <td className="py-2.5 text-slate-400 text-[11px] max-w-[140px] truncate hidden sm:table-cell">{z.vendedor}</td>
                       <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(z.ventasNetas)}</td>
                       <td className="py-2.5 text-right">
                         <span className={`flex items-center justify-end gap-1 font-bold ${cm.color}`}>
@@ -285,7 +285,7 @@ const SellersAnalysis = () => {
                           {formatPercent(rate)}
                         </span>
                       </td>
-                      <td className="py-2.5 text-right pr-2 font-mono text-slate-400">{z.facturas.toLocaleString('es-CO')}</td>
+                      <td className="py-2.5 text-right pr-2 font-mono text-slate-400 hidden sm:table-cell">{z.facturas.toLocaleString('es-CO')}</td>
                     </tr>
                   );
                 })}
@@ -298,14 +298,14 @@ const SellersAnalysis = () => {
       {/* ── Tabla vendedores con ciudad ── */}
       <GlassCard hoverable={false}>
         <h3 className="text-sm font-bold text-white mb-4">Ejecutivos Comerciales · Ventas y Calidad de Entrega</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="w-full min-w-[520px] text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-800 text-slate-500 font-semibold">
                 <th className="pb-3 pl-2">Ejecutivo</th>
-                <th className="pb-3">Eje</th>
+                <th className="pb-3 hidden sm:table-cell">Eje</th>
                 <th className="pb-3 text-right">Ventas</th>
-                <th className="pb-3 text-right">Devoluciones</th>
+                <th className="pb-3 text-right hidden sm:table-cell">Devoluciones</th>
                 <th className="pb-3 text-right">Tasa Dev.</th>
                 <th className="pb-3 text-right pr-2">Calidad</th>
               </tr>
@@ -316,26 +316,24 @@ const SellersAnalysis = () => {
                 const isAlert = s.porcentajeDevolucion > 0.05;
                 return (
                   <tr key={i} className={`hover:bg-slate-900/20 transition-colors ${isAlert ? 'bg-rose-950/10' : ''}`}>
-                    <td className="py-2.5 pl-2 font-bold text-slate-200 max-w-[180px] truncate">{s.nombre}</td>
-                    <td className="py-2.5">
+                    <td className="py-2.5 pl-2 font-bold text-slate-200 max-w-[150px] truncate">{s.nombre}</td>
+                    <td className="py-2.5 hidden sm:table-cell">
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.text}`}>
                         {meta.label}
                       </span>
                     </td>
                     <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(s.ventas)}</td>
-                    <td className="py-2.5 text-right text-rose-400 font-semibold">{formatShortCurrency(s.devoluciones)}</td>
+                    <td className="py-2.5 text-right text-rose-400 font-semibold hidden sm:table-cell">{formatShortCurrency(s.devoluciones)}</td>
                     <td className="py-2.5 text-right">
                       <span className={`font-bold ${isAlert ? 'text-rose-400' : s.porcentajeDevolucion <= 0.02 ? 'text-emerald-400' : 'text-amber-400'}`}>
                         {formatPercent(s.porcentajeDevolucion)}
                       </span>
                     </td>
                     <td className="py-2.5 text-right pr-2">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${s.porcentajeDevolucion <= 0.02 ? 'bg-emerald-500' : s.porcentajeDevolucion <= 0.05 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                            style={{ width: `${Math.max(0, (1 - s.porcentajeDevolucion) * 100)}%` }}
-                          />
+                      <div className="flex items-center justify-end gap-1.5">
+                        <div className="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden hidden sm:block">
+                          <div className={`h-full rounded-full ${s.porcentajeDevolucion <= 0.02 ? 'bg-emerald-500' : s.porcentajeDevolucion <= 0.05 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                            style={{ width: `${Math.max(0, (1 - s.porcentajeDevolucion) * 100)}%` }} />
                         </div>
                         <span className={`text-xs font-bold ${s.porcentajeDevolucion <= 0.02 ? 'text-emerald-400' : s.porcentajeDevolucion <= 0.05 ? 'text-amber-400' : 'text-rose-400'}`}>
                           {formatPercent(1 - s.porcentajeDevolucion)}
