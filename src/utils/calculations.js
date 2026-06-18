@@ -136,10 +136,11 @@ export const calculateKPIs = (filteredData) => {
     : providers.reduce((sum, p) => sum + p.ventas2026, 0);
     console.log('calculateKPIs - totalSales:', totalSales, 'hasDailySales:', hasDailySales, 'salesDaily count:', salesDaily?.length, 'providers count:', providers?.length);
 
-  // 2. Presupuesto (Budget): sum of budget in zones (fallback unchanged)
+  // 2. Presupuesto: suma de zonas, o el presupuesto real del mes si no hay zonas
+  const PRESUPUESTO_REAL_MES = 4001885288; // Junio 2026 — 25 días hábiles
   const totalBudget = zones.length > 0
     ? zones.reduce((sum, z) => sum + z.presupuesto, 0)
-    : totalSales / 0.973;
+    : PRESUPUESTO_REAL_MES;
 
   // 3. Devoluciones: preferimos datos diarios, si no hay usamos devoluciones por vendedor, o estimación
   const dailyReturnsSum = Array.isArray(returnsDaily) ? returnsDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;

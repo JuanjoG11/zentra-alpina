@@ -40,11 +40,14 @@ const trafficLight = (pct) => {
 };
 
 // ─── Daily Sales Table ────────────────────────────────────────────────
-const DailySalesTable = ({ salesDaily, totalBudget }) => {
-  const [showAll, setShowAll] = useState(false);
+const PRESUPUESTO_JUNIO = 4001885288;
+const DIAS_HABILES_MES  = 25;
+const DIA_HABIL_ACTUAL  = 13;
+const META_DIARIA       = PRESUPUESTO_JUNIO / DIAS_HABILES_MES;          // ~$160.075.412
+const META_ACUMULADA    = META_DIARIA * DIA_HABIL_ACTUAL;                // Meta al día 13
 
-  const businessDays = 22;
-  const dailyTarget = totalBudget > 0 ? totalBudget / businessDays : 0;
+const DailySalesTable = ({ salesDaily }) => {
+  const [showAll, setShowAll] = useState(false);
 
   const rows = [...salesDaily]
     .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime()))
@@ -52,13 +55,50 @@ const DailySalesTable = ({ salesDaily, totalBudget }) => {
 
   const displayed = showAll ? rows : rows.slice(0, 8);
 
+  // Totales reales acumulados
+  const totalAcumulado = rows.reduce((s, d) => s + (d.total || 0), 0);
+  const vsMetaAcum     = META_ACUMULADA > 0 ? totalAcumulado / META_ACUMULADA : 0;
+  const tlAcum         = trafficLight(vsMetaAcum);
+  const TlAcumIcon     = tlAcum.Icon;
+
   if (rows.length === 0) return (
     <p className="text-slate-500 text-sm text-center py-8">Sin datos de ventas diarias cargados.</p>
   );
 
   return (
-    <div className="space-y-2">
-      {/* Header — oculto en móvil muy pequeño */}
+    <div className="space-y-3">
+      {/* ── Resumen acumulado ── */}
+      <div className={`rounded-xl border ${tlAcum.border} ${tlAcum.bg} px-4 py-3`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Acumulado real · Día hábil {DIA_HABIL_ACTUAL}/{DIAS_HABILES_MES}
+            </p>
+            <p className="text-lg font-extrabold text-white mt-0.5">{formatCurrency(totalAcumulado)}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Meta acumulada: <span className="text-slate-200 font-semibold">{formatCurrency(META_ACUMULADA)}</span>
+              &nbsp;·&nbsp; Meta día: <span className="text-slate-200 font-semibold">{formatShortCurrency(META_DIARIA)}</span>
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <div className={`flex items-center gap-1.5 text-sm font-extrabold ${tlAcum.color}`}>
+              <TlAcumIcon className="h-4 w-4" />
+              {formatPercent(vsMetaAcum)} de meta acumulada
+            </div>
+            <div className="w-36 h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  vsMetaAcum >= 1 ? 'bg-emerald-500' : vsMetaAcum >= 0.8 ? 'bg-amber-500' : 'bg-rose-500'
+                }`}
+                style={{ width: `${Math.min(vsMetaAcum * 100, 100)}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-slate-500">{DIA_HABIL_ACTUAL} de {DIAS_HABILES_MES} días hábiles</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Encabezado tabla ── */}
       <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_1fr_80px_72px] gap-x-3 px-3 pb-1 border-b border-slate-800/60">
         {['Fecha','Contado','Crédito','Total día','vs Meta'].map(h => (
           <span key={h} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</span>
@@ -69,16 +109,12 @@ const DailySalesTable = ({ salesDaily, totalBudget }) => {
         {displayed.map((d, i) => {
           const dateObj = new Date(d.fecha);
           const label = dateObj.toLocaleDateString('es-CO', { weekday: 'short', day: '2-digit', month: 'short' });
-          const pct = dailyTarget > 0 ? d.total / dailyTarget : 0;
+          const pct = META_DIARIA > 0 ? d.total / META_DIARIA : 0;
           const tl = trafficLight(pct);
           const TlIcon = tl.Icon;
 
           return (
-            <div
-              key={i}
-              className={`rounded-lg border ${tl.border} ${tl.bg} hover:brightness-110 transition-all px-3 py-2.5`}
-            >
-              {/* Desktop: 5 columnas */}
+            <div key={i} className={`rounded-lg border ${tl.border} ${tl.bg} hover:brightness-110 transition-all px-3 py-2.5`}>
               <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_1fr_80px_72px] gap-x-3 items-center">
                 <span className="text-xs font-semibold text-slate-200 capitalize">{label}</span>
                 <span className="text-xs text-emerald-400 font-medium">{formatShortCurrency(d.contado)}</span>
@@ -89,7 +125,6 @@ const DailySalesTable = ({ salesDaily, totalBudget }) => {
                   <span className={`text-[10px] font-bold ${tl.color}`}>{formatPercent(pct)}</span>
                 </div>
               </div>
-              {/* Móvil: 2 líneas compactas */}
               <div className="sm:hidden flex items-center justify-between">
                 <div>
                   <span className="text-xs font-semibold text-slate-200 capitalize">{label}</span>
@@ -390,7 +425,7 @@ const ExecutiveDashboard = () => {
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500 inline-block"/>Crítico</span>
             </div>
           </div>
-          <DailySalesTable salesDaily={filteredData.salesDaily} totalBudget={kpis.totalBudget} />
+          <DailySalesTable salesDaily={filteredData.salesDaily} />
         </GlassCard>
 
         {/* Ranking zonas */}

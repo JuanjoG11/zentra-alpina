@@ -79,6 +79,7 @@ const ProvidersAnalysis = () => {
       background: 'transparent',
       foreColor: '#94a3b8',
       toolbar: { show: false },
+      animations: { enabled: false },
       fontFamily: 'Inter, sans-serif'
     },
     colors: ['#64748b', '#3b82f6'], // slate-500 (2025), blue-500 (2026)

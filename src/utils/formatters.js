@@ -20,15 +20,19 @@ export const formatShortCurrency = (val) => {
 
   let formatted = '';
   if (absVal >= 1_000_000_000) {
-    formatted = `$ ${(absVal / 1_000_000_000).toFixed(2).replace('.', ',')} B`;
+    // Mostrar en miles de millones con 2 decimales: $ 1.109 Mill.
+    const mill = absVal / 1_000_000;
+    formatted = `$ ${mill.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} Mill.`;
   } else if (absVal >= 1_000_000) {
-    formatted = `$ ${(absVal / 1_000_000).toFixed(2).replace('.', ',')} M`;
+    const mill = absVal / 1_000_000;
+    formatted = `$ ${mill.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} Mill.`;
   } else if (absVal >= 1_000) {
-    formatted = `$ ${(absVal / 1_000).toFixed(1).replace('.', ',')} K`;
+    const miles = absVal / 1_000;
+    formatted = `$ ${miles.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} K`;
   } else {
-    formatted = `$ ${absVal.toFixed(0)}`;
+    formatted = `$ ${Math.round(absVal).toLocaleString('es-CO')}`;
   }
-  
+
   return isNegative ? `-${formatted}` : formatted;
 };
 

@@ -527,13 +527,14 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
   }
 
 
-  // Calculate projection factor based on 22 business days
+  // Proyección: 25 días hábiles en el mes, vamos en el día 13
+  const TOTAL_BUSINESS_DAYS = 25;
   const elapsedDays = Object.keys(salesDailyAggr).length || 1;
-// If we have data for less than 15 days, avoid aggressive projection to prevent over‑inflated numbers.
-let projectionFactor = 1;
-if (elapsedDays >= 15) {
-  projectionFactor = 22 / elapsedDays;
-}
+  // Solo proyectar si tenemos datos suficientes y no pasamos del total de días
+  let projectionFactor = 1;
+  if (elapsedDays >= 5 && elapsedDays < TOTAL_BUSINESS_DAYS) {
+    projectionFactor = TOTAL_BUSINESS_DAYS / elapsedDays;
+  }
 
   // Format aggregates
   // Providers: agrupado por nmProveedor
@@ -747,7 +748,7 @@ const UploadExcel = () => {
       if (hasSupabase && supabase) {
         console.log('Sincronizando con Supabase PostgreSQL...');
         try {
-          // 1. Providers
+          // 1. Providers — upsert por nombre
           const providersDb = processedData.providers.map(p => ({
             proveedor: p.proveedor,
             ventas2026: p.ventas2026,
@@ -759,18 +760,18 @@ const UploadExcel = () => {
           const { error: errProv } = await supabase.from('providers').insert(providersDb);
           if (errProv) throw new Error('Error al cargar proveedores: ' + errProv.message);
 
-          // 2. Zones
+          // 2. Zones — upsert por zona
           const zonesDb = processedData.zones.map(z => ({
             zona: z.zona,
             presupuesto: z.presupuesto,
             facturas: z.facturas,
-            ventasnetas: z.ventasNetas // lowercase column in Postgres
+            ventasnetas: z.ventasNetas
           }));
           await supabase.from('zones').delete().neq('id', 0);
           const { error: errZones } = await supabase.from('zones').insert(zonesDb);
           if (errZones) throw new Error('Error al cargar zonas: ' + errZones.message);
 
-          // 3. Returns Sellers
+          // 3. Returns Sellers — upsert por nombre+ejecutivo
           const returnsSellersDb = processedData.returnsSellers.map(s => ({
             nombre: s.nombre,
             ejecutivo: s.ejecutivo,
@@ -781,23 +782,51 @@ const UploadExcel = () => {
           const { error: errSellers } = await supabase.from('returns_sellers').insert(returnsSellersDb);
           if (errSellers) throw new Error('Error al cargar vendedores: ' + errSellers.message);
 
-          // 4. Sales Daily (Chunked upload to prevent size limit errors)
-          await supabase.from('sales_daily').delete().neq('id', 0);
+          // 4. Sales Daily — DELETE total + INSERT deduplicado (sin upsert)
           if (processedData.salesDailyDb && processedData.salesDailyDb.length > 0) {
-            const chunkSize = 500;
-            for (let i = 0; i < processedData.salesDailyDb.length; i += chunkSize) {
-              const chunk = processedData.salesDailyDb.slice(i, i + chunkSize);
+            // Deduplicar por (fecha, proveedor, vendedor) antes de insertar
+            const salesMap = new Map();
+            processedData.salesDailyDb.forEach(row => {
+              const key = `${row.fecha}__${row.proveedor}__${row.vendedor}`;
+              if (salesMap.has(key)) {
+                // Acumular si hay duplicado
+                const existing = salesMap.get(key);
+                existing.ventas   += row.ventas;
+                existing.unidades += row.unidades;
+              } else {
+                salesMap.set(key, { ...row });
+              }
+            });
+            const dedupedSales = Array.from(salesMap.values());
+            console.log(`Sales daily: ${processedData.salesDailyDb.length} filas → ${dedupedSales.length} deduplicadas`);
+
+            // Limpiar tabla y reinsertar
+            await supabase.from('sales_daily').delete().gte('id', 0);
+            const chunkSize = 400;
+            for (let i = 0; i < dedupedSales.length; i += chunkSize) {
+              const chunk = dedupedSales.slice(i, i + chunkSize);
               const { error: errSales } = await supabase.from('sales_daily').insert(chunk);
               if (errSales) throw new Error('Error al cargar ventas diarias: ' + errSales.message);
             }
           }
 
-          // 5. Returns Daily (insert aggregated returns)
-          await supabase.from('returns_daily').delete().neq('id', 0);
+          // 5. Returns Daily — DELETE total + INSERT deduplicado por fecha
           if (processedData.returnsDaily && processedData.returnsDaily.length > 0) {
-            const chunkSize = 500;
-            for (let i = 0; i < processedData.returnsDaily.length; i += chunkSize) {
-              const chunk = processedData.returnsDaily.slice(i, i + chunkSize);
+            const returnsMap = new Map();
+            processedData.returnsDaily.forEach(row => {
+              const key = String(row.fecha);
+              if (returnsMap.has(key)) {
+                returnsMap.get(key).devoluciones += row.devoluciones;
+              } else {
+                returnsMap.set(key, { ...row });
+              }
+            });
+            const dedupedReturns = Array.from(returnsMap.values());
+
+            await supabase.from('returns_daily').delete().gte('id', 0);
+            const chunkSize = 400;
+            for (let i = 0; i < dedupedReturns.length; i += chunkSize) {
+              const chunk = dedupedReturns.slice(i, i + chunkSize);
               const { error: errReturns } = await supabase.from('returns_daily').insert(chunk);
               if (errReturns) throw new Error('Error al cargar devoluciones diarias: ' + errReturns.message);
             }

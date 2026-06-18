@@ -12,25 +12,39 @@ const baseApexOptions = {
   },
   chart: {
     background: 'transparent',
-    foreColor: '#94a3b8', // slate-400
+    foreColor: '#94a3b8',
     toolbar: { show: false },
-    fontFamily: 'Inter, sans-serif'
+    fontFamily: 'Inter, sans-serif',
+    // Desactivar animaciones previene el error "Cannot read properties of null (reading 'node')"
+    // cuando el componente se desmonta antes de que termine la animación
+    animations: {
+      enabled: false
+    },
+    redrawOnParentResize: true,
+    redrawOnWindowResize: true
   },
   grid: {
-    borderColor: '#1e293b', // slate-800
+    borderColor: '#1e293b',
     strokeDashArray: 4
   },
   tooltip: {
     theme: 'dark',
     x: { show: true }
+  },
+  noData: {
+    text: 'Sin datos',
+    style: { color: '#475569', fontSize: '13px' }
   }
 };
 
 // 1. LINE CHART - Sales trend
 export const BILineChart = ({ data = [], title = 'Tendencia de Ventas' }) => {
+  if (!data || data.length === 0) return (
+    <div className="h-[320px] flex items-center justify-center text-slate-500 text-sm">Sin datos de ventas diarias</div>
+  );
   const series = [{
     name: 'Ventas Totales',
-    data: data.map(item => item.total)
+    data: data.map(item => Math.round(item.total || 0))
   }];
   
   const options = {
@@ -94,6 +108,9 @@ export const BIAreaChart = ({ data = [], title = 'Ventas Acumuladas' }) => {
 
 // 3. STACKED BAR CHART - Cash vs Credit Sales
 export const BIStackedBarChart = ({ data = [] }) => {
+  if (!data || data.length === 0) return (
+    <div className="h-[320px] flex items-center justify-center text-slate-500 text-sm">Sin datos</div>
+  );
   const normalizedData = data.map(item => ({
     ...item,
     contado: Number.isFinite(item.contado) ? item.contado : 0,
@@ -155,8 +172,12 @@ export const BIStackedBarChart = ({ data = [] }) => {
 
 // 4. DONUT CHART - Provider sales participation
 export const BIDonutChart = ({ data = [] }) => {
-  const series = data.map(item => item.ventas2026);
-  const labels = data.map(item => item.proveedor);
+  const filtered = (data || []).filter(item => item.ventas2026 > 0);
+  if (filtered.length === 0) return (
+    <div className="h-[340px] flex items-center justify-center text-slate-500 text-sm">Sin datos de proveedores</div>
+  );
+  const series = filtered.map(item => item.ventas2026);
+  const labels = filtered.map(item => item.proveedor);
 
   const options = {
     ...baseApexOptions,
@@ -329,8 +350,8 @@ export const BITreemapChart = ({ data = [] }) => {
 };
 
 // 7. GAUGE CHART - Compliance indicator
-export const BIGaugeChart = ({ val = 0.973 }) => {
-  const percentage = Math.round(val * 100);
+export const BIGaugeChart = ({ val = 0 }) => {
+  const percentage = Math.min(Math.round((val || 0) * 100), 200);
   const series = [percentage];
 
   const options = {
@@ -514,6 +535,9 @@ export const BIScatterPlot = ({ clientReturns = [] }) => {
 
 // 11. FUNNEL CHART - Returns reasons ranking
 export const BIFunnelChart = ({ data = [] }) => {
+  if (!data || data.length === 0) return (
+    <div className="h-[320px] flex items-center justify-center text-slate-500 text-sm">Sin conceptos de devolución</div>
+  );
   const sortedConcepts = [...data]
     .sort((a, b) => b.porcentaje - a.porcentaje)
     .slice(0, 7);

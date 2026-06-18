@@ -88,7 +88,14 @@ const SellersAnalysis = () => {
     { name: 'Presupuesto',   data: chartZones.map(z => z.presupuesto)  },
   ];
   const barOptions = {
-    chart: { type: 'bar', background: 'transparent', foreColor: '#94a3b8', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+    chart: {
+      type: 'bar',
+      background: 'transparent',
+      foreColor: '#94a3b8',
+      toolbar: { show: false },
+      animations: { enabled: false },
+      fontFamily: 'Inter, sans-serif'
+    },
     colors: ['#3b82f6', '#1e293b'],
     plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 } },
     dataLabels: { enabled: false },

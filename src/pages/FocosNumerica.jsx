@@ -12,9 +12,17 @@ const FocosNumerica = () => {
   const dbData = useStore(state => state.dbData);
   const filteredData = getFilteredData(dbData, filters);
 
-  const zoneCity = (zona) => ZONA_CIUDAD_MAP[zona] || 'OTRO';
+  // ── Constantes del mes ──────────────────────────────────────────────
+  const PRESUPUESTO_MES = 4001885288;
+  const DIAS_HABILES    = 25;
+  const DIA_ACTUAL      = 13;
+  const META_DIARIA     = PRESUPUESTO_MES / DIAS_HABILES;
+  const META_ACUMULADA  = META_DIARIA * DIA_ACTUAL;
 
+  // ── useState SIEMPRE antes de useMemo ───────────────────────────────
   const [selectedCity, setSelectedCity] = useState('ALL');
+
+  const zoneCity = (zona) => ZONA_CIUDAD_MAP[zona] || 'OTRO';
 
   const numericFocus = filteredData.zones.map((z) => ({
     ...z,
@@ -85,7 +93,13 @@ const FocosNumerica = () => {
   }];
 
   const coverageOptions = {
-    chart: { type: 'bar', background: 'transparent', toolbar: { tools: { zoom: true, pan: true, reset: true }, autoSelected: 'zoom' }, zoom: { enabled: true }, fontFamily: 'Inter, sans-serif' },
+    chart: {
+      type: 'bar',
+      background: 'transparent',
+      toolbar: { show: false },
+      animations: { enabled: false },
+      fontFamily: 'Inter, sans-serif'
+    },
     colors: ['#38bdf8'],
     plotOptions: { bar: { borderRadius: 10, columnWidth: '55%' } },
     dataLabels: { enabled: false },
@@ -101,7 +115,13 @@ const FocosNumerica = () => {
   }];
 
   const efficiencyOptions = {
-    chart: { type: 'line', background: 'transparent', toolbar: { tools: { zoom: true, pan: true, reset: true }, autoSelected: 'zoom' }, zoom: { enabled: true }, fontFamily: 'Inter, sans-serif' },
+    chart: {
+      type: 'line',
+      background: 'transparent',
+      toolbar: { show: false },
+      animations: { enabled: false },
+      fontFamily: 'Inter, sans-serif'
+    },
     colors: ['#f59e0b'],
     stroke: { curve: 'smooth', width: 3 },
     markers: { size: 4, colors: ['#f59e0b'] },
@@ -172,7 +192,35 @@ const FocosNumerica = () => {
           </div>
         </div>
 
-        <GlassCard hoverable={false} className="bg-slate-950/70 border border-sky-500/20 p-6 shadow-[0_25px_80px_-45px_rgba(56,189,248,0.6)]">
+        <GlassCard hoverable={false} className="bg-slate-950/70 border border-sky-500/20 p-5 shadow-[0_25px_80px_-45px_rgba(56,189,248,0.6)]">
+          {/* Banner de avance del mes */}
+          <div className="mb-4 pb-4 border-b border-slate-800/60">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Avance Junio 2026 · Día hábil {DIA_ACTUAL} de {DIAS_HABILES}</p>
+                <p className="text-xl font-extrabold text-white mt-1">
+                  Meta acumulada al día {DIA_ACTUAL}: <span className="text-sky-300">{formatCurrency(META_ACUMULADA)}</span>
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Presupuesto total mes: <span className="text-slate-200 font-semibold">{formatCurrency(PRESUPUESTO_MES)}</span>
+                  &nbsp;·&nbsp; Meta diaria: <span className="text-slate-200 font-semibold">{formatCurrency(META_DIARIA)}</span>
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500">Progreso del mes</span>
+                  <span className="text-sm font-bold text-sky-400">{DIA_ACTUAL}/{DIAS_HABILES} días</span>
+                </div>
+                <div className="w-40 h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-500 transition-all"
+                    style={{ width: `${(DIA_ACTUAL / DIAS_HABILES) * 100}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-slate-500">{Math.round((DIA_ACTUAL / DIAS_HABILES) * 100)}% del mes transcurrido</span>
+              </div>
+            </div>
+          </div>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -292,11 +340,21 @@ const FocosNumerica = () => {
         </div>
         <Chart
           options={{
-            chart: { id: 'sales-forecast', zoom: { enabled: true }, toolbar: { tools: { zoom: true, pan: true, download: true, reset: true }, autoSelected: 'zoom' } },
-            xaxis: { type: 'category' },
-            stroke: { curve: 'smooth' },
+            chart: {
+              id: 'sales-forecast',
+              background: 'transparent',
+              toolbar: { show: false },
+              animations: { enabled: false },
+              fontFamily: 'Inter, sans-serif'
+            },
+            xaxis: { type: 'category', labels: { style: { colors: '#94a3b8', fontSize: '10px' } } },
+            yaxis: { labels: { style: { colors: '#94a3b8' }, formatter: v => formatShortCurrency(v) } },
+            stroke: { curve: 'smooth', width: [2, 2] },
             tooltip: { theme: 'dark' },
-            colors: ['#60a5fa', '#34d399']
+            colors: ['#60a5fa', '#34d399'],
+            grid: { borderColor: '#1e293b', strokeDashArray: 4 },
+            legend: { position: 'top', labels: { colors: '#94a3b8' } },
+            noData: { text: 'Sin datos', style: { color: '#475569' } }
           }}
           series={[
             { name: 'Actual', data: salesTimeseries.actual },
