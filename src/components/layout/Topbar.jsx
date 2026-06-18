@@ -54,7 +54,14 @@ const Topbar = () => {
   // Extract unique filter values from real data
   const zonesList = ['Todas', ...new Set((dbData.zones || []).map(z => z.zona))].filter(Boolean);
   const providersList = ['Todas', ...new Set((dbData.providers || [])
-    .filter(p => p.proveedor.toUpperCase().includes('ALPINA'))
+    .filter(p => 
+      p.proveedor.toUpperCase().includes('ALPINA') || 
+      p.proveedor.toUpperCase().includes('BON YURT') ||
+      p.proveedor.toUpperCase().includes('ALPIN') ||
+      p.proveedor.toUpperCase().includes('YOGO') ||
+      p.proveedor.toUpperCase().includes('YOX') ||
+      (p.proveedorReal && p.proveedorReal.toUpperCase().includes('ALPINA'))
+    )
     .map(p => p.proveedor))].filter(Boolean);
   const sellersList = [
     'Todas', 

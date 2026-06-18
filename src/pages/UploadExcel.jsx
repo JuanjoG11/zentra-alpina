@@ -3,7 +3,162 @@ import { useDropzone } from 'react-dropzone';
 import useStore from '../store/useStore';
 import GlassCard from '../components/ui/GlassCard';
 import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 import { supabase } from '../services/supabaseClient';
+
+/**
+ * Parsea un ArrayBuffer de .xlsx directamente con JSZip + XML parser.
+ * Corrige el bug de xlsx 0.18.5 con rutas absolutas en workbook.xml.rels
+ * (Target="/xl/worksheets/sheet1.xml" en lugar de "worksheets/sheet1.xml").
+ * Devuelve: { sheetNames: string[], sheets: { [name]: rows[] } }
+ */
+const parseXlsxWithJSZip = async (arrayBuffer) => {
+  const zip = await JSZip.loadAsync(arrayBuffer);
+
+  // 1. Leer workbook.xml para obtener nombres de hojas y rIds
+  const wbXml = await zip.files['xl/workbook.xml'].async('string');
+  const sheetMatches = [...wbXml.matchAll(/<sheet[^>]*name="([^"]*)"[^>]*r:id="([^"]*)"/g)];
+  const sheetNames = sheetMatches.map(m => m[1]);
+  const rIdToName = {};
+  sheetMatches.forEach(m => { rIdToName[m[2]] = m[1]; });
+
+  // 2. Leer rels para resolver rId → archivo XML
+  const relsXml = await zip.files['xl/_rels/workbook.xml.rels'].async('string');
+  // El orden de atributos puede variar (Type, Target, Id en cualquier orden), usamos match por atributo
+  const relMatches = [...relsXml.matchAll(/<Relationship\b([^>]*\/?>)/g)];
+  const rIdToFile = {};
+  relMatches.forEach(m => {
+    const attrStr = m[1];
+    const idMatch = attrStr.match(/Id="([^"]*)"/);
+    const targetMatch = attrStr.match(/Target="([^"]*)"/);
+    if (!idMatch || !targetMatch) return;
+    let target = targetMatch[1];
+    // Corregir rutas absolutas: /xl/worksheets/sheet1.xml → xl/worksheets/sheet1.xml
+    if (target.startsWith('/')) target = target.slice(1);
+    // Corregir rutas relativas sin prefijo xl/
+    if (!target.startsWith('xl/') && !target.startsWith('docProps')) {
+      target = 'xl/' + target;
+    }
+    rIdToFile[idMatch[1]] = target;
+  });
+
+  // 3. Leer shared strings (si existe)
+  let sharedStrings = [];
+  if (zip.files['xl/sharedStrings.xml']) {
+    const ssXml = await zip.files['xl/sharedStrings.xml'].async('string');
+    // Extraer cada <si>...</si>
+    const siMatches = [...ssXml.matchAll(/<si>([\s\S]*?)<\/si>/g)];
+    sharedStrings = siMatches.map(m => {
+      // Concatenar todos los <t> dentro del <si>
+      const tMatches = [...m[1].matchAll(/<t(?:[^>]*)>([\s\S]*?)<\/t>/g)];
+      return tMatches.map(t => t[1]).join('')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+    });
+  }
+
+  // 4. Parsear cada hoja
+  const parsedSheets = {};
+
+  for (const [rId, sheetName] of Object.entries(rIdToName)) {
+    const filePath = rIdToFile[rId];
+    if (!filePath || !zip.files[filePath]) {
+      console.warn(`No se encontró archivo para sheet "${sheetName}" (rId=${rId}, path=${filePath})`);
+      parsedSheets[sheetName] = [];
+      continue;
+    }
+
+    // Leer como uint8array para evitar el límite de string en archivos grandes (200k+ filas)
+    const sheetBytes = await zip.files[filePath].async('uint8array');
+
+    // Procesar el XML en chunks de 4MB para no superar el límite de string de V8
+    const DECODE_CHUNK = 4 * 1024 * 1024;
+    const rows = [];
+    let headers = null;
+    let isFirstRow = true;
+    let remainder = '';
+
+    const colToIdx = (col) => {
+      let idx = 0;
+      for (let i = 0; i < col.length; i++) idx = idx * 26 + (col.charCodeAt(i) - 64);
+      return idx - 1;
+    };
+
+    const parseCells = (rowXml) => {
+      const cellMatches = [...rowXml.matchAll(/<c\s([^>]*)>([\s\S]*?)<\/c>/g)];
+      return cellMatches.map(cM => {
+        const attrs = cM[1]; const content = cM[2];
+        const refMatch = attrs.match(/r="([A-Z]+)(\d+)"/);
+        const colRef = refMatch ? refMatch[1] : null;
+        const typeMatch = attrs.match(/t="([^"]*)"/);
+        const cellType = typeMatch ? typeMatch[1] : 'n';
+        // inlineStr
+        const isMatch = content.match(/<is>[\s\S]*?<t(?:[^>]*)>([\s\S]*?)<\/t>/);
+        let val = null;
+        if (isMatch) {
+          val = isMatch[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+        } else {
+          const vMatch = content.match(/<v>([\s\S]*?)<\/v>/);
+          if (vMatch) {
+            val = vMatch[1];
+            if (cellType === 's') {
+              val = sharedStrings[parseInt(val)] ?? val;
+            } else if (cellType === 'b') {
+              val = val === '1';
+            } else if (cellType !== 'str') {
+              const num = parseFloat(val);
+              if (!isNaN(num)) val = num;
+            }
+          }
+        }
+        return { col: colRef, val };
+      });
+    };
+
+    const decoder = new TextDecoder('utf-8');
+    for (let offset = 0; offset < sheetBytes.length; offset += DECODE_CHUNK) {
+      const chunkBytes = sheetBytes.slice(offset, offset + DECODE_CHUNK);
+      const chunkStr = remainder + decoder.decode(chunkBytes, { stream: offset + DECODE_CHUNK < sheetBytes.length });
+      let searchFrom = 0;
+
+      while (true) {
+        const rowStart = chunkStr.indexOf('<row', searchFrom);
+        if (rowStart === -1) { remainder = chunkStr.slice(searchFrom); break; }
+        const rowEnd = chunkStr.indexOf('</row>', rowStart);
+        if (rowEnd === -1) { remainder = chunkStr.slice(rowStart); break; }
+        const rowXml = chunkStr.slice(rowStart, rowEnd + 6);
+        searchFrom = rowEnd + 6;
+
+        const cells = parseCells(rowXml);
+
+        if (isFirstRow) {
+          headers = [];
+          cells.forEach(c => { if (c.col) headers[colToIdx(c.col)] = c.val !== null ? String(c.val) : ''; });
+          for (let i = 0; i < headers.length; i++) { if (headers[i] === undefined) headers[i] = `__col_${i}`; }
+          isFirstRow = false;
+        } else {
+          if (!headers || cells.length === 0) continue;
+          const obj = {};
+          let hasValue = false;
+          cells.forEach(c => {
+            if (!c.col) return;
+            const idx = colToIdx(c.col);
+            const header = headers[idx] || `__col_${idx}`;
+            obj[header] = c.val;
+            if (c.val !== null && c.val !== '') hasValue = true;
+          });
+          if (hasValue) rows.push(obj);
+        }
+      }
+    }
+
+    parsedSheets[sheetName] = rows;
+    console.log(`✅ JSZip parser — "${sheetName}": ${rows.length} filas, ${(headers || []).filter(Boolean).length} columnas`);
+    if (rows.length > 0) console.log('Headers (10 primeras):', Object.keys(rows[0]).slice(0, 10));
+  }
+
+  return { sheetNames, sheets: parsedSheets };
+};
 import { 
   UploadCloud, 
   FileText, 
@@ -18,7 +173,8 @@ import {
 
 // Helper for client-side processing of CUBO_DE_VENTAS data
 const processSheetsClientSide = (parsedFiles, selectedSheets) => {
-  const providersAggr = {};
+  const providersAggr = {};   // key: nmProveedor
+  const brandsAggr = {};      // key: nmTpMarca
   const salesDailyAggr = {};
   const zonesAggr = {};
   const sellersAggr = {};
@@ -143,26 +299,39 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
   };
 
   const getRowValue = (row, targetKeys) => {
-    const normalizedTargets = targetKeys.map(k => normalizeKey(k));
-    for (const key of Object.keys(row)) {
-      const normalizedKey = normalizeKey(key);
-      if (normalizedTargets.includes(normalizedKey)) {
-        return row[key];
+    if (!row) return null;
+    const keys = Object.keys(row);
+    const normalizedKeysMap = {};
+    for (const key of keys) {
+      normalizedKeysMap[normalizeKey(key)] = key;
+    }
+    for (const targetKey of targetKeys) {
+      const normTarget = normalizeKey(targetKey);
+      if (normalizedKeysMap[normTarget] !== undefined) {
+        return row[normalizedKeysMap[normTarget]];
       }
     }
     return null;
   };
 
-  const dateKeys = ['dtFactura', 'fecha', 'dt_factura', 'FechaFactura', 'Fecha Factura'];
-  const zoneKeys = ['nbZona', 'zona', 'nb_zona', 'Zona', 'Código Zona', 'Codigo Zona'];
-  const sellerKeys = ['nmZona', 'vendedor', 'nm_zona', 'Vendedor', 'ejecutivo', 'Ejecutivo Ventas'];
-  const cityKeys = ['txCiudad', 'ciudad', 'tx_ciudad', 'Ciudad'];
-  const brandKeys = ['nmTpMarca', 'nmProveedor', 'proveedor', 'marca', 'nm_tp_marca', 'Proveedor', 'Marca'];
-  const valKeys = ['vlrTotalconIva', 'vlrTotal', 'valor', 'total', 'vlrTotalConIva', 'vlrAntesIva', 'Valor Total', 'Valor Con Iva', 'total_con_iva'];
-  const facturaKeys = ['nbFactura', 'factura', 'nb_factura', 'Factura', 'id_factura', 'Número Factura', 'Num Factura', 'No Factura'];
-  const motivoKeys = ['motivo', 'concepto', 'motivo_devolucion', 'Motivo', 'Concepto Devolución', 'Concepto'];
-  const paymentKeys = ['nbFormaPago', 'forma_pago', 'nb_forma_pago', 'FormaPago', 'tipo_pago', 'Forma de Pago'];
-  const clientKeys = ['nmRazonSocial', 'cliente', 'razon_social', 'nm_razon_social', 'Cliente', 'Razón Social', 'Nombre Cliente'];
+  // CAMPOS CLAVE:
+  // - Fecha:    dtContabilizacion (fecha contable, no dtFactura)
+  // - Valor:    vlrAntesIva (valor antes de IVA, no vlrTotalconIva)
+  // - Proveedor: nmProveedor (agrupado por proveedor, no por marca)
+  // - Marca:    nmTpMarca
+  // - Devolución: motivo no vacío Y vlrAntesIva < 0
+  // - Facturas: contar únicas nbFactura SOLO cuando motivo está vacío
+  const dateKeys = ['dtContabilizacion'];                          // solo fecha contable
+  const zoneKeys = ['nbZona','macrozona_id','macro','zona','Codigo Zona','CodigoZona'];
+  const sellerKeys = ['nmZona','conductor','vendedor','Ejecutivo Ventas'];
+  const cityKeys = ['txCiudad','nbCiudad','txBarrio','nbDepartamento','txDepartamento'];
+  const proveedorKeys = ['nmProveedor','idProveedor','proveedor'];
+  const brandKeys = ['nmTpMarca','npmtpmarca','marca'];
+  const valKeys = ['vlrAntesIva','vlrAntesIVA','vlr_antes_iva'];  // solo vlrAntesIva
+  const facturaKeys = ['nbFactura','documento_id','idfactura','factura'];
+  const motivoKeys = ['motivo','idmotivo','concepto'];
+  const paymentKeys = ['nbFormaPago','forma_pago','formaPago','tipo_pago'];
+  const clientKeys = ['nmRazonSocial','nombre1','nombre2','apellido1','apellido2','cliente','razon_social','nm_razon_social','Cliente','Razón Social','Nombre Cliente'];
 
   let processedRowsCount = 0;
 
@@ -186,62 +355,48 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
         const dateVal = getRowValue(row, dateKeys);
         const zone = getRowValue(row, zoneKeys);
         const seller = getRowValue(row, sellerKeys);
+        const proveedor = getRowValue(row, proveedorKeys) || 'SIN PROVEEDOR';
         const brand = getRowValue(row, brandKeys) || 'OTROS';
-        const boAfectaVenta = getRowValue(row, ['boAfectaVenta', 'bo_afecta_venta', 'boAfectaVenta']) ?? true;
-        
-        // Extract fields needed for sign determination
+
+        // Motivo y valor (vlrAntesIva)
         const motivo = getRowValue(row, motivoKeys);
+        const motivoStr = (motivo && String(motivo).toLowerCase() !== 'none' && String(motivo).toLowerCase() !== 'null') ? String(motivo).trim() : '';
         const rawVal = parseSpanishFloat(getRowValue(row, valKeys));
-        
-        // Determine sign based on motivo, returns sheet, or boAfectaVenta.
-        let sign = 1;
-        if (motivo && String(motivo).trim() !== '') {
-          sign = -1; // Devolución por motivo
-        } else if (isReturnsSheet) {
-          sign = -1; // Hoja de devoluciones
-        } else {
-          const boAfecta = String(boAfectaVenta).toLowerCase().trim();
-          if (['false', '0', 'no', 'n'].includes(boAfecta)) {
-            sign = -1; // Devolución explícita
-          }
-        }
-        // Preserve original sign if rawVal already negative; otherwise apply calculated sign.
-        const valTotal = rawVal < 0 ? rawVal : rawVal * sign;
-        // Debug: log return rows
-        if (valTotal < 0) {
-          console.log('Return row detected:', {
-            motivo,
-            boAfectaVenta,
-            isReturnsSheet,
-            rawVal,
-            sign,
-            valTotal,
-            rowIndex: rows.indexOf(row)
-          });
-        }
-        
+        const valTotal = rawVal;
+
+        // Devolución = motivo NO vacío Y vlrAntesIva negativo
+        const esDevolucion = (motivoStr !== '' && valTotal < 0);
+
         const factura = getRowValue(row, facturaKeys);
+        const facturaStr = factura ? String(factura).trim() : '';
         const formaPago = String(getRowValue(row, paymentKeys) || '');
         const clientName = getRowValue(row, clientKeys) || 'CLIENTE DESCONOCIDO';
 
         if (!dateVal || String(dateVal).includes('0000') || valTotal === 0) continue;
-        
-
 
         const formattedDate = formatDateToMDY(dateVal);
         if (!formattedDate) continue;
 
-        // 1. Providers
-        if (!providersAggr[brand]) {
-          providersAggr[brand] = { ventas2026: 0, count: 0 };
+        // 1. Providers — agrupado por nmProveedor
+        if (!providersAggr[proveedor]) {
+          providersAggr[proveedor] = { ventas2026: 0, count: 0, proveedorReal: proveedor };
         }
-        if (valTotal > 0) {
-          providersAggr[brand].ventas2026 += valTotal;
-          providersAggr[brand].count++;
+        if (!esDevolucion && valTotal > 0) {
+          providersAggr[proveedor].ventas2026 += valTotal;
+          providersAggr[proveedor].count++;
         }
 
-        // 2. Sales Daily (solo ventas positivas = brutas)
-        if (valTotal > 0) {
+        // 1b. Brands — agrupado por nmTpMarca
+        if (!brandsAggr[brand]) {
+          brandsAggr[brand] = { ventas2026: 0, count: 0 };
+        }
+        if (!esDevolucion && valTotal > 0) {
+          brandsAggr[brand].ventas2026 += valTotal;
+          brandsAggr[brand].count++;
+        }
+
+        // 2. Sales Daily — solo ventas reales (motivo vacío y valor positivo)
+        if (!esDevolucion && valTotal > 0) {
           if (!salesDailyAggr[formattedDate]) {
             salesDailyAggr[formattedDate] = { contado: 0, credito: 0 };
           }
@@ -259,12 +414,18 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
               zona: zone,
               vendedor: seller || 'Sin Asignar',
               ventasNetas: 0,
+              devoluciones: 0,
               facturas: new Set()
             };
           }
-          zonesAggr[zone].ventasNetas += valTotal;
-          if (valTotal > 0 && factura) {
-            zonesAggr[zone].facturas.add(factura);
+          if (esDevolucion) {
+            zonesAggr[zone].devoluciones += Math.abs(valTotal);
+          } else if (valTotal > 0) {
+            zonesAggr[zone].ventasNetas += valTotal;
+          }
+          // Facturas únicas: solo cuando motivo está vacío (venta real, sin devolución)
+          if (facturaStr && motivoStr === '') {
+            zonesAggr[zone].facturas.add(facturaStr);
           }
           if (seller && zonesAggr[zone].vendedor === 'Sin Asignar') {
             zonesAggr[zone].vendedor = seller;
@@ -281,34 +442,32 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
               devoluciones: 0
             };
           }
-          if (valTotal > 0) {
-            sellersAggr[seller].ventas += valTotal;
-          } else {
+          if (esDevolucion) {
             sellersAggr[seller].devoluciones += Math.abs(valTotal);
+          } else if (valTotal > 0) {
+            sellersAggr[seller].ventas += valTotal;
           }
         }
 
-        // 5. Devoluciones concepts and daily
-        if (valTotal < 0) {
+        // 5. Devoluciones: conceptos y diario
+        if (esDevolucion) {
           const absVal = Math.abs(valTotal);
-          const conceptKey = motivo || 'DEVOLUCION SIN MOTIVO';
-          conceptsAggr[conceptKey] = (conceptsAggr[conceptKey] || 0) + absVal;
-
+          conceptsAggr[motivoStr] = (conceptsAggr[motivoStr] || 0) + absVal;
           returnsDailyAggr[formattedDate] = (returnsDailyAggr[formattedDate] || 0) + absVal;
 
-          const clientKey = `${zone}_${clientName}_${conceptKey}`;
+          const clientKey = `${zone}_${clientName}_${motivoStr}`;
           if (!clientReturnsAggr[clientKey]) {
             clientReturnsAggr[clientKey] = {
               ejecutivo: zone || 'OTRO',
               cliente: clientName,
-              concepto: conceptKey,
+              concepto: motivoStr,
               valor: 0
             };
           }
           clientReturnsAggr[clientKey].valor += absVal;
         }
 
-        // 6. Clients per City numerical coverage count
+        // 6. Clientes por ciudad
         if (valTotal > 0 && clientName) {
           const uCity = String(getRowValue(row, cityKeys) || '').toUpperCase();
           let cityKey = 'OTRO';
@@ -322,18 +481,16 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
           clientsPerCity[cityKey].add(clientName);
         }
 
-        // 7. Detailed sales_daily rows for Supabase (grouped to match unique index)
-        // IMPORTANT: Only accumulate POSITIVE sales here. Returns are tracked in
-        // returnsDailyAggr separately to avoid double-counting when computing netSales.
-        if (zone && seller && valTotal > 0) {
+        // 7. Detalle ventas diarias para Supabase — solo ventas reales
+        if (zone && seller && !esDevolucion && valTotal > 0) {
           const ymdDate = formatDateToYMD(dateVal);
           if (ymdDate) {
-            // Include zone in the key to avoid over‑aggregation across zones
-            const dbKey = `${ymdDate}_${brand}_${zone}_${seller}`;
+            const dbKey = `${ymdDate}_${proveedor}_${zone}_${seller}`;
             if (!salesDailyDbAggr[dbKey]) {
               salesDailyDbAggr[dbKey] = {
                 fecha: ymdDate,
-                proveedor: brand,
+                proveedor: proveedor,
+                marca: brand,
                 zona: zone,
                 vendedor: seller,
                 ventas: 0,
@@ -348,7 +505,27 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
     }
   }
 
-  if (processedRowsCount === 0) return null;
+  // If no rows were processed, return empty structures instead of null to avoid UI crashes
+  console.log('processSheetsClientSide - processedRowsCount:', processedRowsCount);
+  console.log('processSheetsClientSide - providers count:', Object.keys(providersAggr).length);
+  console.log('processSheetsClientSide - salesDaily count:', Object.keys(salesDailyAggr).length);
+  console.log('processSheetsClientSide - zones count:', Object.keys(zonesAggr).length);
+  console.log('processSheetsClientSide - returnsSellers count:', Object.keys(sellersAggr).length);
+
+  if (processedRowsCount === 0) {
+    return {
+      providers: [],
+      salesDaily: [],
+      zones: [],
+      returnsSellers: [],
+      returnsConcepts: [],
+      returnsDaily: [],
+      clientReturns: [],
+      cityClients: {},
+      salesDailyDb: []
+    };
+  }
+
 
   // Calculate projection factor based on 22 business days
   const elapsedDays = Object.keys(salesDailyAggr).length || 1;
@@ -359,11 +536,13 @@ if (elapsedDays >= 15) {
 }
 
   // Format aggregates
-  const providers = Object.entries(providersAggr).map(([brandName, data]) => {
+  // Providers: agrupado por nmProveedor
+  const providers = Object.entries(providersAggr).map(([provName, data]) => {
     const v26 = Math.round(data.ventas2026);
     const v25 = Math.round(v26 / 1.2179);
     return {
-      proveedor: brandName,
+      proveedor: provName,
+      proveedorReal: provName,
       ventas2025: v25,
       proyectado2025: v25,
       margen2025: 15,
@@ -387,6 +566,7 @@ if (elapsedDays >= 15) {
 
   const zones = Object.entries(zonesAggr).map(([zoneCode, data]) => {
     const net = Math.round(data.ventasNetas);
+    const dev = Math.round(data.devoluciones);
     const budget = budgetMap[zoneCode] || Math.round(net / 0.95);
     const projectedNet = Math.round(net * projectionFactor);
     return {
@@ -394,6 +574,7 @@ if (elapsedDays >= 15) {
       vendedor: data.vendedor,
       presupuesto: budget,
       ventasNetas: net,
+      devoluciones: dev,
       proyectado: projectedNet,
       porcentajeProyectado: budget > 0 ? Number((projectedNet / budget).toFixed(4)) : 1.0,
       cambiosPorc: 0.015,
@@ -460,14 +641,15 @@ if (elapsedDays >= 15) {
   const totalDevoluciones = Object.values(returnsDailyAggr).reduce((s, v) => s + v, 0);
   const totalProveedores   = Object.values(providersAggr).reduce((s, p) => s + p.ventas2026, 0);
   console.group('=== DIAGNÓSTICO CUBO ===');
-  console.log('Filas procesadas:', processedRowsCount);
-  console.log('Ventas brutas (suma positivos)  :', totalVentasBrutas.toLocaleString('es-CO'));
-  console.log('Devoluciones (suma negativos)   :', totalDevoluciones.toLocaleString('es-CO'));
-  console.log('Ventas netas esperadas          :', (totalVentasBrutas - totalDevoluciones).toLocaleString('es-CO'));
-  console.log('Suma proveedores                :', totalProveedores.toLocaleString('es-CO'));
-  console.log('Marcas detectadas               :', Object.keys(providersAggr));
-  console.log('Días con ventas                 :', Object.keys(salesDailyAggr).length);
-  console.log('Días con devoluciones           :', Object.keys(returnsDailyAggr).length);
+  console.log('Filas procesadas            :', processedRowsCount);
+  console.log('Ventas brutas (vlrAntesIva) :', totalVentasBrutas.toLocaleString('es-CO'));
+  console.log('Devoluciones (negativos)    :', totalDevoluciones.toLocaleString('es-CO'));
+  console.log('Ventas netas esperadas      :', (totalVentasBrutas - totalDevoluciones).toLocaleString('es-CO'));
+  console.log('Suma proveedores            :', totalProveedores.toLocaleString('es-CO'));
+  console.log('Proveedores detectados      :', Object.keys(providersAggr));
+  console.log('Marcas detectadas           :', Object.keys(brandsAggr));
+  console.log('Días con ventas             :', Object.keys(salesDailyAggr).length);
+  console.log('Días con devoluciones       :', Object.keys(returnsDailyAggr).length);
   console.groupEnd();
   // ============================================================
 
@@ -633,8 +815,11 @@ const UploadExcel = () => {
       } else {
         await new Promise(resolve => setTimeout(resolve, 800));
         // Fallback: persiste en localStorage usando setDbData para sobrevivir al refresh
+        // Fallback: persiste en localStorage usando setDbData para sobrevivir al refresh
         const { setDbData } = useStore.getState();
         setDbData(processedData, latestPeriod);
+        console.log('✅ Uploaded data stored via setDbData', { processedData, latestPeriod });
+
       }
 
       // Background ETL server ping (fails silently if offline)
@@ -691,48 +876,93 @@ const UploadExcel = () => {
 
     validFiles.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
-          const data = new Uint8Array(e.target.result);
-          const wb = XLSX.read(data, { type: 'array' });
-          
-          // DIAGNÓSTICO: nombres de hojas
+          const data = e.target.result; // ArrayBuffer
+
+          let sheetNames = [];
+          let sheetDataMap = {}; // { [sheetName]: rows[] }
+
+          // --- Intento 1: Parser propio con JSZip (corrige bug de xlsx con rutas absolutas) ---
+          try {
+            const parsed = await parseXlsxWithJSZip(data);
+            sheetNames = parsed.sheetNames;
+            sheetDataMap = parsed.sheets;
+            // Verificar que realmente se obtuvieron filas
+            const totalRows = Object.values(sheetDataMap).reduce((s, r) => s + r.length, 0);
+            if (totalRows === 0) throw new Error('JSZip parser devolvió 0 filas, intentando fallback');
+          } catch (jsZipErr) {
+            console.warn('JSZip parser falló, usando xlsx como fallback:', jsZipErr.message);
+            // --- Fallback: xlsx con detección robusta de header ---
+            const wb = XLSX.read(data, { type: 'array', raw: true, cellDates: false });
+            sheetNames = wb.SheetNames;
+            wb.SheetNames.forEach(name => {
+              const ws = wb.Sheets[name];
+              if (!ws) { sheetDataMap[name] = []; return; }
+              const rawMatrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+              let headerRowIdx = 0;
+              for (let i = 0; i < Math.min(20, rawMatrix.length); i++) {
+                const nonEmpty = (rawMatrix[i] || []).filter(c => c !== null && c !== undefined && String(c).trim() !== '').length;
+                if (nonEmpty >= 5) { headerRowIdx = i; break; }
+              }
+              const headers = (rawMatrix[headerRowIdx] || []).map(h => h !== null ? String(h).trim() : '');
+              const rows = [];
+              for (let i = headerRowIdx + 1; i < rawMatrix.length; i++) {
+                const rawRow = rawMatrix[i];
+                if (!rawRow) continue;
+                if (!rawRow.some(c => c !== null && c !== undefined && String(c).trim() !== '')) continue;
+                const obj = {};
+                headers.forEach((h, idx) => { if (h) obj[h] = rawRow[idx] !== undefined ? rawRow[idx] : null; });
+                rows.push(obj);
+              }
+              sheetDataMap[name] = rows;
+            });
+          }
+
+          // Diagnóstico: nombres de hojas
           console.group('=== HOJAS DEL ARCHIVO ===');
-          console.log('Hojas encontradas:', wb.SheetNames);
+          console.log('Hojas encontradas:', sheetNames);
           console.groupEnd();
 
-          const sheets = wb.SheetNames.map((name) => {
-            const ws = wb.Sheets[name];
-            const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
-            
-            // DIAGNÓSTICO: columnas de la primera fila de cada hoja
+          const sheets = sheetNames.map(name => {
+            const rows = sheetDataMap[name] || [];
+
             if (rows.length > 0) {
               console.group(`Hoja: "${name}" → ${rows.length} filas`);
               console.log('Columnas:', Object.keys(rows[0]));
-              // Show first row to understand data structure
               const firstRow = rows[0];
-              const valCols = ['vlrTotalconIva','vlrTotal','valor','total','vlrTotalConIva','vlrAntesIva','Valor Total','Valor Con Iva','total_con_iva'];
+              const valCols = ['vlrAntesIva','vlrAntesIVA','vlr_antes_iva'];
               const foundValCol = valCols.find(k => Object.keys(firstRow).some(rk => rk.toLowerCase().replace(/[^a-z0-9]/g,'') === k.toLowerCase().replace(/[^a-z0-9]/g,'')));
-              console.log('Columna de valor detectada:', foundValCol || 'NINGUNA — revisar nombres de columnas');
+              console.log('Columna de valor (vlrAntesIva) detectada:', foundValCol || 'NINGUNA — revisar nombres de columnas');
+              // Extra: verificar qué valor tiene la primera fila
+              if (foundValCol) {
+                const sampleKey = Object.keys(firstRow).find(rk => rk.toLowerCase().replace(/[^a-z0-9]/g,'') === foundValCol.toLowerCase().replace(/[^a-z0-9]/g,''));
+                console.log('Valor muestra fila 1:', firstRow[sampleKey]);
+              }
               console.groupEnd();
+            } else {
+              console.warn(`⚠️ Hoja "${name}" resultó en 0 filas.`);
             }
-            
+
             return { name, rows };
           });
           
           newParsedFiles[file.name] = sheets;
+          // DEBUG: log rows count per sheet
+          sheets.forEach(sh => {
+            console.log('🔎 Parsed sheet', sh.name, 'rows count:', (sh.rows || []).length);
+          });
           newSelectedSheets[file.name] = sheets.map(sh => sh.name);
         } catch (err) {
           console.error('Error parsing file', file.name, err);
-        }
-
-        filesLoaded++;
-        if (filesLoaded === validFiles.length) {
-          setParsedFiles(newParsedFiles);
-          setSelectedSheets(newSelectedSheets);
-          
-          // AUTO-START processing immediately when cube is dragged & dropped!
-          handleProcess(validFiles, newParsedFiles, newSelectedSheets);
+        } finally {
+          filesLoaded++;
+          if (filesLoaded === validFiles.length) {
+            setParsedFiles(newParsedFiles);
+            setSelectedSheets(newSelectedSheets);
+            // AUTO-START processing immediately when cube is dragged & dropped!
+            handleProcess(validFiles, newParsedFiles, newSelectedSheets);
+          }
         }
       };
       reader.readAsArrayBuffer(file);

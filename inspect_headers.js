@@ -1,5 +1,5 @@
 const XLSX = require('xlsx');
-const excelPath = 'C:\\Users\\Juanjo\\Downloads\\CUBO_DE_VENTAS_TYM_EJE_AWS_de_2026-05-01_a_2026-05-27_user_60_e3679ba8.xlsx';
+const excelPath = 'C:\\Users\\Juanjo\\Downloads\\CUBO_DE_VENTAS_TYM_EJE_AWS_de_2026-06-01_a_2026-06-17_user_60_a46bcd22.xlsx';
 
 console.log('Loading workbook sheet header...');
 const workbook = XLSX.readFile(excelPath, { sheetRows: 5 });

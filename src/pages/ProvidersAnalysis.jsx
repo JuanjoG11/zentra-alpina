@@ -20,6 +20,14 @@ const ProvidersAnalysis = () => {
   const dbData = useStore(state => state.dbData);
   const filteredData = getFilteredData(dbData, filters);
 
+  // If no providers data, show fallback UI
+  if (!filteredData || !filteredData.providers || filteredData.providers.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400">
+        No se encontraron datos de proveedores. Cargue un archivo válido.
+      </div>
+    );
+  }
   // Sorting providers by sales volume 2026
   const sortedProviders = [...filteredData.providers]
     .sort((a, b) => b.ventas2026 - a.ventas2026);

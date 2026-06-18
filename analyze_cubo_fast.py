@@ -2,7 +2,7 @@ from openpyxl import load_workbook
 import time
 from collections import Counter
 
-excel_path = r"C:\Users\Juanjo\Downloads\CUBO_DE_VENTAS_TYM_EJE_AWS_de_2026-05-01_a_2026-05-27_user_60_e3679ba8.xlsx"
+excel_path = r"C:\Users\Juanjo\Downloads\CUBO_DE_VENTAS_TYM_EJE_AWS_de_2026-06-01_a_2026-06-17_user_60_a46bcd22.xlsx"
 
 print("Opening workbook in read_only mode...")
 t0 = time.time()

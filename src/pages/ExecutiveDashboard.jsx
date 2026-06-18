@@ -30,10 +30,15 @@ import {
 } from 'lucide-react';
 
 const ExecutiveDashboard = () => {
-  const filters = useStore();
+  // Watch for dbData changes to trigger re‑render logs
   const dbData = useStore(state => state.dbData);
+  React.useEffect(() => {
+    console.log('ExecutiveDashboard - dbData updated, triggering recalculation');
+  }, [dbData]);
+  const filters = useStore();
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
+  console.log('ExecutiveDashboard - KPIs computed:', kpis);
 
   const getPeriodLabel = () => {
     if (filteredData.salesDaily && filteredData.salesDaily.length > 0) {

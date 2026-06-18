@@ -3,6 +3,14 @@
  * Alpina Sales Cube CSV Importer
  * Streams the 200MB+ CSV file, performs aggregations, updates src/data/alpina-data.js,
  * and upserts summarized metrics to Supabase tables.
+ *
+ * Columnas clave del cubo:
+ *   dtContabilizacion  → fecha (antes usábamos dtFactura)
+ *   nmProveedor         → proveedor
+ *   nmTpMarca           → marca
+ *   vlrAntesIva         → valor de venta (antes usábamos vlrTotalconIva)
+ *   nbFactura           → número de factura (conteo único, solo si motivo vacío)
+ *   motivo              → si tiene valor y vlrAntesIva < 0 → devolución
  */
 const fs = require('fs');
 const readline = require('readline');
@@ -95,12 +103,13 @@ function formatDateToMDY(dateStr) {
 }
 
 // Aggregation stores
-const providersAggr = {};    // key: brand (nmTpMarca)
-const salesDailyAggr = {};    // key: date (dtFactura)
+const providersAggr = {};    // key: proveedor (nmProveedor)
+const brandsAggr = {};       // key: marca (nmTpMarca)
+const salesDailyAggr = {};    // key: date (dtContabilizacion)
 const zonesAggr = {};         // key: zone (nbZona)
 const sellersAggr = {};       // key: seller (nmZona)
 const conceptsAggr = {};      // key: motivo
-const returnsDailyAggr = {};   // key: date (dtFactura)
+const returnsDailyAggr = {};   // key: date (dtContabilizacion)
 const clientReturnsAggr = {}; // key: zone + '_' + client + '_' + motivo
 const salesDailyDbAggr = {};  // key: date_brand_seller_zone for Supabase sales_daily
 
@@ -130,12 +139,13 @@ rl.on('line', (line) => {
   }
 
   // Get field indices
-  const idxDate = headerMap['dtFactura'];
+  const idxDate = headerMap['dtContabilizacion'];
   const idxZone = headerMap['nbZona'];
   const idxSeller = headerMap['nmZona'];
   const idxCity = headerMap['txCiudad'];
+  const idxProveedor = headerMap['nmProveedor'];
   const idxBrand = headerMap['nmTpMarca'];
-  const idxValTotal = headerMap['vlrTotalconIva'];
+  const idxValTotal = headerMap['vlrAntesIva'];
   const idxFactura = headerMap['nbFactura'];
   const idxMotivo = headerMap['motivo'];
   const idxFormaPago = headerMap['nbFormaPago'];
@@ -145,31 +155,44 @@ rl.on('line', (line) => {
   const zone = parts[idxZone];
   const seller = parts[idxSeller];
   const city = parts[idxCity];
-  const brand = parts[idxBrand] || 'OTROS';
+  const proveedor = parts[idxProveedor] ? parts[idxProveedor].trim() : 'SIN PROVEEDOR';
+  const brand = parts[idxBrand] ? parts[idxBrand].trim() : 'OTROS';
   const valTotal = parseSpanishFloat(parts[idxValTotal]);
-  const factura = parts[idxFactura];
+  const factura = parts[idxFactura] ? parts[idxFactura].trim() : '';
   const motivo = parts[idxMotivo] ? parts[idxMotivo].trim() : '';
   const formaPago = parts[idxFormaPago];
   const clientName = parts[idxRazonSocial] || 'CLIENTE DESCONOCIDO';
+
+  // Devolución = motivo NO vacío Y valor negativo
+  const esDevolucion = (motivo !== '' && valTotal < 0);
 
   if (!date || date.includes('0000') || !valTotal) return;
 
   const formattedDate = formatDateToMDY(date);
 
-  // 1. providers aggregation (group by Brand)
-  if (!providersAggr[brand]) {
-    providersAggr[brand] = { ventas2026: 0, count: 0 };
+  // 1. providers aggregation (group by nmProveedor)
+  if (!providersAggr[proveedor]) {
+    providersAggr[proveedor] = { ventas2026: 0, count: 0 };
   }
-  if (valTotal > 0) {
-    providersAggr[brand].ventas2026 += valTotal;
-    providersAggr[brand].count++;
+  if (!esDevolucion && valTotal > 0) {
+    providersAggr[proveedor].ventas2026 += valTotal;
+    providersAggr[proveedor].count++;
   }
 
-  // 2. salesDaily aggregation
+  // 1b. brands aggregation (group by nmTpMarca)
+  if (!brandsAggr[brand]) {
+    brandsAggr[brand] = { ventas2026: 0, count: 0 };
+  }
+  if (!esDevolucion && valTotal > 0) {
+    brandsAggr[brand].ventas2026 += valTotal;
+    brandsAggr[brand].count++;
+  }
+
+  // 2. salesDaily aggregation (solo ventas reales, no devoluciones)
   if (!salesDailyAggr[date]) {
     salesDailyAggr[date] = { contado: 0, credito: 0 };
   }
-  if (valTotal > 0) {
+  if (!esDevolucion && valTotal > 0) {
     if (formaPago === '1') {
       salesDailyAggr[date].contado += valTotal;
     } else {
@@ -184,11 +207,17 @@ rl.on('line', (line) => {
         zona: zone,
         vendedor: seller || 'Sin Asignar',
         ventasNetas: 0,
+        devoluciones: 0,
         facturas: new Set()
       };
     }
-    zonesAggr[zone].ventasNetas += valTotal; // positive sales + negative returns
-    if (valTotal > 0 && factura) {
+    if (esDevolucion) {
+      zonesAggr[zone].devoluciones += Math.abs(valTotal);
+    } else if (valTotal > 0) {
+      zonesAggr[zone].ventasNetas += valTotal;
+    }
+    // Conteo de facturas: solo únicas Y solo si motivo está vacío (venta real)
+    if (factura && motivo === '') {
       zonesAggr[zone].facturas.add(factura);
     }
     // Update seller name if blank previously
@@ -207,30 +236,29 @@ rl.on('line', (line) => {
         devoluciones: 0
       };
     }
-    if (valTotal > 0) {
-      sellersAggr[seller].ventas += valTotal;
-    } else {
+    if (esDevolucion) {
       sellersAggr[seller].devoluciones += Math.abs(valTotal);
+    } else if (valTotal > 0) {
+      sellersAggr[seller].ventas += valTotal;
     }
   }
 
-  // 5. Devoluciones concepts and daily
-  if (valTotal < 0) {
+  // 5. Devoluciones concepts and daily (solo si esDevolucion = motivo no vacío Y valor negativo)
+  if (esDevolucion) {
     const absVal = Math.abs(valTotal);
     // concepts
-    const conceptKey = motivo || 'DEVOLUCION SIN MOTIVO';
-    conceptsAggr[conceptKey] = (conceptsAggr[conceptKey] || 0) + absVal;
+    conceptsAggr[motivo] = (conceptsAggr[motivo] || 0) + absVal;
 
     // daily returns
     returnsDailyAggr[date] = (returnsDailyAggr[date] || 0) + absVal;
 
     // client returns (composite)
-    const clientKey = `${zone}_${clientName}_${conceptKey}`;
+    const clientKey = `${zone}_${clientName}_${motivo}`;
     if (!clientReturnsAggr[clientKey]) {
       clientReturnsAggr[clientKey] = {
         ejecutivo: zone || 'OTRO',
         cliente: clientName,
-        concepto: conceptKey,
+        concepto: motivo,
         valor: 0
       };
     }
@@ -238,12 +266,14 @@ rl.on('line', (line) => {
   }
 
   // 6. Detailed sales_daily rows for Supabase (grouped to match unique index)
-  if (zone && seller) {
-    const dbKey = `${date}_${brand}_${seller}`;
+  //    Solo ventas reales (no devoluciones)
+  if (zone && seller && !esDevolucion) {
+    const dbKey = `${date}_${proveedor}_${seller}`;
     if (!salesDailyDbAggr[dbKey]) {
       salesDailyDbAggr[dbKey] = {
         fecha: date,
-        proveedor: brand,
+        proveedor: proveedor,
+        marca: brand,
         zona: zone,
         vendedor: seller,
         ventas: 0,
@@ -298,12 +328,14 @@ rl.on('close', async () => {
   // 3. Zones
   const zones = Object.entries(zonesAggr).map(([zoneCode, data]) => {
     const net = Math.round(data.ventasNetas);
+    const dev = Math.round(data.devoluciones);
     const budget = budgetMap[zoneCode] || Math.round(net / 0.95);
     return {
       zona: zoneCode,
       vendedor: data.vendedor,
       presupuesto: budget,
       ventasNetas: net,
+      devoluciones: dev,
       proyectado: net,
       porcentajeProyectado: budget > 0 ? Number((net / budget).toFixed(4)) : 1.0,
       cambiosPorc: 0.015,
@@ -368,11 +400,12 @@ rl.on('close', async () => {
 
   // Print statistics
   console.log('\n--- Estadísticas del Cubo Importado ---');
-  console.log(`Marcas/Proveedores detectados: ${providers.length}`);
+  console.log(`Proveedores detectados: ${providers.length}`);
+  console.log(`Marcas detectadas: ${Object.keys(brandsAggr).length}`);
   console.log(`Zonas procesadas: ${zones.length}`);
   console.log(`Vendedores: ${returnsSellers.length}`);
-  console.log(`Total Ventas Brutas: $${providers.reduce((sum, p) => sum + p.ventas2026, 0).toLocaleString()}`);
-  console.log(`Total Devoluciones: $${Math.round(totalDevValue).toLocaleString()}`);
+  console.log(`Total Ventas (vlrAntesIva): $${providers.reduce((sum, p) => sum + p.ventas2026, 0).toLocaleString()}`);
+  console.log(`Total Devoluciones (motivo + negativo): $${Math.round(totalDevValue).toLocaleString()}`);
 
   // Sincronizar con Supabase
   if (supabase) {

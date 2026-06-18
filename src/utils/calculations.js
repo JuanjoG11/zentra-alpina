@@ -26,8 +26,16 @@ export const getFilteredData = (arg1, arg2) => {
   let returnsDaily = [...(baseData.returnsDaily || [])];
   let clientReturns = [...(baseData.clientReturns || [])];
 
-  // Keep only Alpina brands across the application
-  providers = providers.filter(p => p.proveedor.toUpperCase().includes('ALPINA'));
+  // Los proveedores ya vienen filtrados del cubo (todos son ALPINA SA).
+  // Mantener el filtro flexible por si hay otros cubos con más proveedores.
+  providers = providers.filter(p =>
+    p.proveedor.toUpperCase().includes('ALPINA') ||
+    p.proveedor.toUpperCase().includes('BON YURT') ||
+    p.proveedor.toUpperCase().includes('ALPIN') ||
+    p.proveedor.toUpperCase().includes('YOGO') ||
+    p.proveedor.toUpperCase().includes('YOX') ||
+    (p.proveedorReal && p.proveedorReal.toUpperCase().includes('ALPINA'))
+  );
 
   // Filter providers by selected provider if set
   if (selectedProvider !== 'Todas') {
@@ -66,6 +74,7 @@ export const calculateKPIs = (filteredData) => {
   const totalSales = hasDailySales
     ? salesDaily.reduce((sum, d) => sum + (d.total || 0), 0)
     : providers.reduce((sum, p) => sum + p.ventas2026, 0);
+    console.log('calculateKPIs - totalSales:', totalSales, 'hasDailySales:', hasDailySales, 'salesDaily count:', salesDaily?.length, 'providers count:', providers?.length);
 
   // 2. Presupuesto (Budget): sum of budget in zones (fallback unchanged)
   const totalBudget = zones.length > 0
