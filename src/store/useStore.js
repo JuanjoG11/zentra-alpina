@@ -29,7 +29,7 @@ const hasSupabase = !!supabase; // supabase is null if not configured
 const useStore = create((set, get) => ({
   // Filtros globales
   selectedPeriod: persistedPeriod,
-  selectedCity: 'PEREIRA',
+  selectedCity: 'Todas',
   selectedZone: 'Todas',
   selectedProvider: 'Todas',
   selectedSeller: 'Todas',
