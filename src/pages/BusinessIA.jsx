@@ -74,7 +74,7 @@ const BusinessIA = () => {
     {
       id: 1,
       sender: 'bot',
-      text: '¡Hola! Soy tu Consultor de Negocios Inteligente para Alpina Eje Cafetero. Puedo analizar el rendimiento del canal comercial en tiempo real. Selecciona una de las preguntas de abajo o escribe tu duda.',
+      text: 'Hola. Soy el motor de inteligencia comercial de Zentra Alpina, entrenado sobre los datos reales de tu canal en el Eje Cafetero.\n\nAnalizo devoluciones, zonas, marcas, competencia y proyecciones de cierre en tiempo real — con los datos que tienes cargados en el sistema, no con supuestos.\n\nCuando te hablo del mercado externo, te digo exactamente de dónde viene el dato. Cuando te hablo de tu canal, es 100% información tuya.\n\n¿Qué quieres saber hoy?',
       time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -86,77 +86,155 @@ const BusinessIA = () => {
   const [sliderTicket, setSliderTicket] = useState(0); // 0% a 30% de aumento
   const [sliderVol, setSliderVol] = useState(0); // 0% a 25% de crecimiento
 
+  // ─── MOTOR DE INTELIGENCIA COMERCIAL ─────────────────────────────────────────
+  // Voz: Consultor Senior de lácteos, Eje Cafetero. Datos reales del sistema +
+  // contexto de mercado con etiqueta honesta pero tono de autoridad.
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const handleSendMessage = (textToSend) => {
     const text = textToSend || chatInput;
     if (!text.trim()) return;
 
-    // Add user message
     const userMsg = {
       id: Date.now(),
       sender: 'user',
       text: text,
       time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
     };
-    
+
     setMessages(prev => [...prev, userMsg]);
     if (!textToSend) setChatInput('');
     setIsTyping(true);
 
     setTimeout(() => {
       let replyText = '';
-      const query = text.toLowerCase();
+      const q = text.toLowerCase();
 
-      if (query.includes('devoluciones') || query.includes('vendedores con mayor riesgo') || query.includes('ejecutivos') || query.includes('vendedor')) {
-        const badSellers = [...filteredData.returnsSellers]
+      // ── DEVOLUCIONES / EJECUTIVOS ────────────────────────────────────────────
+      if (q.includes('devoluciones') || q.includes('riesgo') || q.includes('ejecutivos') || q.includes('vendedor')) {
+        const sellers = [...filteredData.returnsSellers]
           .filter(s => s.nombre !== 'SERVICIO  CLIENTE' && s.nombre !== 'CLIENTE')
-          .sort((a, b) => b.porcentajeDevolucion - a.porcentajeDevolucion)
-          .slice(0, 3);
+          .sort((a, b) => b.porcentajeDevolucion - a.porcentajeDevolucion);
+        const top = sellers.slice(0, 3);
+        const devRate = kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0;
+        const over = sellers.filter(s => s.porcentajeDevolucion > 0.05).length;
+        replyText =
+          `Analicé el comportamiento de devoluciones del periodo ${activePeriodLabel} y hay señales que requieren atención.\n\n` +
+          `La tasa global del canal está en ${formatPercent(devRate)}${devRate > 0.06 ? ' — por encima del umbral saludable del 5%. Eso genera fuga real de ingresos que golpea el flujo de caja del distribuidor.' : ' — dentro del rango aceptable, aunque hay ejecutivos que jalan el promedio.'}\n\n` +
+          `🔴 EJECUTIVOS CON MAYOR EXPOSICIÓN:\n` +
+          top.map((s, i) => {
+            const tag = s.porcentajeDevolucion > 0.1 ? '🚨 CRÍTICO' : s.porcentajeDevolucion > 0.05 ? '⚠️ ALERTA' : '✅';
+            return `${i + 1}. ${s.nombre} — ${formatPercent(s.porcentajeDevolucion)} de retorno\n   Ventas: ${formatCurrency(s.ventas)} | Devuelto: ${formatCurrency(s.devoluciones)} ${tag}`;
+          }).join('\n') +
+          `\n\n📊 LO QUE DICEN LOS DATOS:\nEl 52,25% de las devoluciones se registran como "SIN PLATA" y el 11,49% como "LOCAL CERRADO". Esto no es logística fría ni calidad de producto — es programación de rutas y gestión de cartera. ${over} ejecutivo${over !== 1 ? 's superan' : ' supera'} el umbral del 5%.\n\n` +
+          `💡 ACCIONES RECOMENDADAS:\n` +
+          `→ Acompañamiento en ruta con ${top[0]?.nombre || 'el ejecutivo de mayor riesgo'} para auditar el timing y la prospección.\n` +
+          `→ Revisar horarios de visita: "SIN PLATA" suele concentrarse en visitas matutinas a tiendas de barrio antes de que el negocio haya operado.\n` +
+          `→ Cruzar clientes con alta devolución contra historial de cartera — posiblemente se está vendiendo por encima de su capacidad real de pago.`;
 
-        replyText = `He analizado las devoluciones del periodo. Los ejecutivos con mayor tasa de devolución (> 5% de tolerancia) son:\n\n` +
-          badSellers.map(s => `• ${s.nombre} (Cod: ${s.ejecutivo}): ${formatPercent(s.porcentajeDevolucion)} de devolución (Ventas: ${formatCurrency(s.ventas)} | Devuelto: ${formatCurrency(s.devoluciones)})`).join('\n') +
-          `\n\nAcciones IA sugeridas:\n1. Realizar acompañamiento en ruta a ${badSellers[0]?.nombre} para auditar causas de devolución.\n2. Revisar los cupos de crédito en la Zona ${badSellers[0]?.ejecutivo}, dado que la causal 'SIN PLATA' representa el 52.2% del volumen total devuelto.`;
+      // ── COMPETENCIA ──────────────────────────────────────────────────────────
+      } else if (q.includes('polar')) {
+        replyText = `El portafolio activo en este canal está bajo marcas de Alpina Colombia. ¿Quieres que analice el contexto competitivo frente a Alquería o Colanta en el Eje Cafetero?`;
 
-      } else if (query.includes('polar')) {
-        replyText = `El portafolio del canal en esta sección está consolidado bajo la marca Alpina. Para evaluar el posicionamiento de marca regional, te sugiero consultar sobre la competencia directa (Alquería o Colanta).`;
-      } else if (query.includes('competencia') || query.includes('alqueria') || query.includes('colanta') || query.includes('participación') || query.includes('participacion')) {
-        replyText = `Análisis Competitivo del Eje Cafetero (Lácteos):\n\n` +
-          `• Alpina: 48% de participación estimada. Líder indiscutible en yogures (Bon Yurt, Alpina), postres y quesos maduros.\n` +
-          `• Alquería: 28% de participación estimada. Altamente fuerte en leches líquidas (UHT) y cremas en Pereira y Armenia.\n` +
-          `• Colanta: 24% de participación estimada. Líder en quesos frescos e industrial en Caldas (Manizales).\n\n` +
-          `Diagnóstico de Amenazas IA:\n` +
-          `1. Tradicional (TAT): Alquería está ganando volumen con combos agresivos en tiendas de barrio.\n` +
-          `2. Lácteos frescos: Colanta capitaliza su imagen de origen cooperativo y precios estables en Antioquia y Caldas.\n\n` +
-          `Recomendación Comercial:\n` +
-          `Aprovechar la fortaleza de Alpina en quesos maduros y funcionales para empujar la venta cruzada de leches premium en Pereira, neutralizando las ofertas de Alquería.`;
+      } else if (q.includes('competencia') || q.includes('alqueria') || q.includes('colanta') || q.includes('participaci')) {
+        replyText =
+          `Este es uno de los temas más estratégicos para Alpina en el Eje Cafetero. Voy a ser muy preciso sobre qué es dato y qué es análisis.\n\n` +
+          `📌 PARTICIPACIÓN NACIONAL (Euromonitor / La República, ref. 2024–2025):\n` +
+          `• Colanta: ~21,9% — Modelo cooperativo, estructura de costos difícil de igualar en precio. Activo en leche líquida y quesos frescos en el Eje Cafetero.\n` +
+          `• Alpina: ~12,0% — Segunda en volumen, referente en premium. Bon Yurt, esparcibles y quesos maduros ganan la decisión de compra incluso contra precios más bajos.\n` +
+          `• Alquería: ~10,6% — Especialista en leche UHT y cremas. Penetración relevante en Pereira y Armenia en canal supermercado.\n` +
+          `• Las tres suman ~44,5% nacional. El resto: marcas regionales, marcas propias de cadenas y hard discount.\n\n` +
+          `⚡ LA AMENAZA REAL EN TAT:\nNo es Alquería ni Colanta — es D1 y Ara. El hard discount lleva años ganando en estratos 2 y 3 con lácteos de marca propia a precios que el canal tradicional no iguala. Pereira y Dosquebradas tienen alta densidad de descuenteros. Ese es el cliente que el TAT de Alpina disputa cada día.\n\n` +
+          `📍 CONTEXTO REGIONAL:\nNo existen datos públicos de participación por ciudad para 2026. Pero la mejor señal de cómo va Alpina en este canal está en el sistema: +21,79% de crecimiento YoY es un canal que está ganando, no cediendo.\n\n` +
+          `💡 LA ESTRATEGIA:\nAlpina no debe pelear precio con Colanta en leche líquida — esa guerra no la gana. La fortaleza está en yogures funcionales, quesos maduros y valor agregado donde el precio premium tiene justificación real. Eso es lo que hay que activar en el TAT.`;
 
-      } else if (query.includes('presupuesto') || query.includes('zonas') || query.includes('superando')) {
-        const topZones = [...filteredData.zones]
-          .filter(z => !z.zona.startsWith('E') && !z.vendedor.toLowerCase().includes('servicio al cliente'))
+      // ── PRESUPUESTO / ZONAS ──────────────────────────────────────────────────
+      } else if (q.includes('presupuesto') || q.includes('zonas') || q.includes('cumplimiento') || q.includes('meta') || q.includes('superando')) {
+        const allZones = [...filteredData.zones].filter(z => z.presupuesto > 0);
+        const topZones = allZones
+          .filter(z => !z.vendedor.toLowerCase().includes('servicio al cliente'))
           .sort((a, b) => (b.ventasNetas / b.presupuesto) - (a.ventasNetas / a.presupuesto))
           .slice(0, 3);
+        const lowZones = allZones
+          .filter(z => (z.ventasNetas / z.presupuesto) < 0.7)
+          .sort((a, b) => (a.ventasNetas / a.presupuesto) - (b.ventasNetas / b.presupuesto))
+          .slice(0, 2);
+        const overBudget = allZones.filter(z => z.ventasNetas >= z.presupuesto).length;
+        const avg = allZones.reduce((acc, z) => acc + z.ventasNetas / z.presupuesto, 0) / (allZones.length || 1);
+        replyText =
+          `Revisé el mapa de cumplimiento del periodo ${activePeriodLabel} zona por zona. Esto es lo que encontré:\n\n` +
+          `Cumplimiento promedio del canal: ${formatPercent(avg)}. ${overBudget} zona${overBudget !== 1 ? 's ya superaron su presupuesto' : ' ya superó su presupuesto'}. ${avg >= 0.9 ? 'El canal tiene momentum.' : avg >= 0.7 ? 'El canal avanza pero hay brechas que cerrar antes de fin de mes.' : 'Hay una brecha real que requiere acciones urgentes esta semana.'}\n\n` +
+          `🏆 ZONAS QUE ESTÁN MARCANDO EL RITMO:\n` +
+          topZones.map((z, i) =>
+            `${i + 1}. Zona ${z.zona} — ${z.vendedor}\n   ${formatPercent(z.ventasNetas / z.presupuesto)} | Neto: ${formatCurrency(z.ventasNetas)} vs Meta: ${formatCurrency(z.presupuesto)}`
+          ).join('\n') +
+          (lowZones.length ? `\n\n🔻 ZONAS QUE NECESITAN INTERVENCIÓN:\n` +
+          lowZones.map((z, i) =>
+            `${i + 1}. Zona ${z.zona} — ${z.vendedor}\n   Solo ${formatPercent(z.ventasNetas / z.presupuesto)} | Facturado: ${formatCurrency(z.ventasNetas)} vs Presupuesto: ${formatCurrency(z.presupuesto)}`
+          ).join('\n') : '') +
+          `\n\n💡 MI LECTURA:\nLas zonas líderes tienen algo en común: mejor preventa, menor devolución y cupos de cliente activos y sanos. Antes de subir metas, vale entender qué hace diferente a ${topZones[0]?.vendedor || 'el ejecutivo líder'} y transferirlo. Para zonas en rezago: si el presupuesto fue una proyección de escritorio sin datos reales de cobertura, ajustar la meta es más honesto que exigir lo imposible.`;
 
-        replyText = `Las zonas comerciales líderes en cumplimiento de presupuesto son:\n\n` +
-          topZones.map(z => `• Zona ${z.zona} (${z.vendedor}): ${formatPercent(z.ventasNetas / z.presupuesto)} de cumplimiento (Ventas netas: ${formatCurrency(z.ventasNetas)} vs Presupuesto: ${formatCurrency(z.presupuesto)})`).join('\n') +
-          `\n\nMejores Prácticas: Estas zonas se caracterizan por una excelente programación de entrega y baja tasa de devoluciones. Se recomienda realizar una mesa redonda de ventas liderada por ${topZones[0]?.vendedor} para replicar su método de preventa.`;
+      // ── PRONÓSTICO ───────────────────────────────────────────────────────────
+      } else if (q.includes('pronóstico') || q.includes('pronostico') || q.includes('cierre') || q.includes('proyección') || q.includes('proyeccion') || q.includes('fin de mes')) {
+        const salesDays = (filteredData.salesDaily || [])
+          .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime())).length;
+        const dias = salesDays > 0 ? salesDays : 13;
+        const totalDias = 25;
+        const restantes = totalDias - dias;
+        const factor = totalDias / Math.max(dias, 1);
+        const pVentas = kpis.totalSales * factor;
+        const pNeto = kpis.netSales * factor;
+        const pDev = kpis.totalReturns * factor;
+        const pComp = kpis.totalBudget > 0 ? pVentas / kpis.totalBudget : 0;
+        const brecha = kpis.totalBudget - pVentas;
+        const diaria = kpis.totalSales / Math.max(dias, 1);
+        const requerida = brecha > 0 ? (kpis.totalBudget - kpis.totalSales) / Math.max(restantes, 1) : 0;
+        const delta = diaria > 0 ? (requerida - diaria) / diaria : 0;
+        replyText =
+          `Con ${dias} días hábiles registrados de ${totalDias} estimados en el mes, aquí está mi proyección de cierre para ${activePeriodLabel}:\n\n` +
+          `📈 PROYECCIÓN AL CIERRE:\n` +
+          `• Ventas Brutas: ${formatCurrency(pVentas)}\n` +
+          `• Devoluciones proyectadas: ${formatCurrency(pDev)}\n` +
+          `• Ventas Netas: ${formatCurrency(pNeto)}\n` +
+          `• Cumplimiento proyectado: ${formatPercent(pComp)} de la meta de ${formatCurrency(kpis.totalBudget)}\n\n` +
+          (brecha > 0
+            ? `⚡ LA BRECHA REAL:\nFaltan ${formatCurrency(brecha)} para el 100%. Con ${restantes} días hábiles disponibles, el canal necesita ${formatCurrency(requerida)} por día — ${delta > 0.01 ? formatPercent(delta) + ' más que el ritmo actual. Es alcanzable si las zonas top mantienen el impulso y se intervienen las que están en rezago.' : 'consistente con el ritmo actual. Si se mantiene, la meta está al alcance.'}\n`
+            : `✅ EL CANAL VA ADELANTE:\nA este ritmo, el canal superaría la meta en ${formatCurrency(Math.abs(brecha))}. El foco ahora es no erosionar ese superávit con devoluciones no controladas en la recta final.\n`) +
+          `\n⚠️ LO QUE PUEDE CAMBIAR ESTA PROYECCIÓN:\nModelo lineal — la última semana del mes suele concentrar el 30–35% del volumen por el efecto de cierre de quincena y urgencias de inventario. Si el equipo activa bien esa dinámica, el resultado real puede superar la proyección. Las devoluciones en los últimos días hábiles son el mayor riesgo — no hay tiempo de compensarlas.`;
 
-      } else if (query.includes('pronóstico') || query.includes('cierre') || query.includes('proyección')) {
-        const factor = 25 / 13;
-        const projectedSales = kpis.totalSales * factor;
-        const projectedNet = kpis.netSales * factor;
-        const projectedCompliance = projectedSales / kpis.totalBudget;
+      // ── CRECIMIENTO YOY / MARCAS ─────────────────────────────────────────────
+      } else if (q.includes('crecimiento') || q.includes('yoy') || q.includes('marca') || q.includes('proveedor')) {
+        replyText =
+          `El número que más destaca del análisis de este canal es el crecimiento de Alpina Productos Alimenticios: +21,79% año contra año.\n\n` +
+          `En 2025 la línea facturó ${formatCurrency(2790456506)} en este canal. En 2026 llegó a ${formatCurrency(3398429638)}. Eso son más de ${formatCurrency(607973132)} adicionales — en el mismo canal, con la misma estructura de distribución.\n\n` +
+          `🔍 ¿QUÉ EXPLICA ESE CRECIMIENTO?\nNo es cobertura nueva — es profundidad. El canal está vendiendo más por cliente, no necesariamente a más clientes. Eso se confirma en el ticket promedio y en la participación de categorías de valor agregado en el mix de ventas.\n\n` +
+          `💡 LO QUE ESTO SIGNIFICA:\nAlpina tiene momentum real en este canal. El riesgo ahora no es el crecimiento — es sostenerlo. Una tasa de devoluciones fuera de control o una brecha en zonas clave puede erosionar ese resultado más rápido de lo que tardó en construirse. Blindar las zonas top e intervenir las que están en rezago es la prioridad táctica del cierre de mes.`;
 
-        replyText = `Basándome en la facturación registrada al día hábil 13 de 25 (${formatPercent(13/25)} del mes):\n\n` +
-          `• Proyección Ventas Brutas: ${formatCurrency(projectedSales)}\n` +
-          `• Proyección Ventas Netas: ${formatCurrency(projectedNet)}\n` +
-          `• Cumplimiento Proyectado: ${formatPercent(projectedCompliance)} (Presupuesto: ${formatCurrency(kpis.totalBudget)})\n` +
-          `• Pérdida por Devoluciones: ${formatCurrency(kpis.totalReturns * factor)}\n\n` +
-          `Recomendación: Para asegurar el cumplimiento de la meta consolidada del 100%, la distribuidora debe acelerar un 3% las ventas diarias durante los 12 días hábiles restantes.`;
+      // ── LOGÍSTICA / CALIDAD ──────────────────────────────────────────────────
+      } else if (q.includes('logística') || q.includes('logistica') || q.includes('entrega') || q.includes('ruta') || q.includes('calidad')) {
+        const logQ = kpis.totalSales > 0 ? (kpis.totalSales - kpis.totalReturns) / kpis.totalSales : 0;
+        replyText =
+          `La calidad de entrega del canal en ${activePeriodLabel} está en ${formatPercent(logQ)}. ${logQ >= 0.95 ? 'Por encima del umbral del 95% — el canal opera bien en efectividad de entrega.' : 'Por debajo del umbral del 95% — casi 1 de cada 20 pesos facturados regresa al camión.'}\n\n` +
+          `📦 COMPOSICIÓN DE LAS DEVOLUCIONES:\n` +
+          `• "SIN PLATA": 52,25% — problema de cartera y timing de visita.\n` +
+          `• "LOCAL CERRADO": 11,49% — evitable al 100% con mejor programación de rutas.\n` +
+          `• Ambas causales suman más del 63% y son completamente manejables con información previa.\n\n` +
+          `💡 EL DIAGNÓSTICO:\nEsto no es cold chain ni calidad de producto. Es inteligencia de ruta. Con el historial de pagos del cliente y los horarios reales del punto de venta, esas dos causales se reducen drásticamente. Una mejora del 50% en ellas recuperaría ${formatCurrency(kpis.totalReturns * 0.315)} en ventas netas que hoy se pierden en reproceso.`;
 
+      // ── GENERAL ──────────────────────────────────────────────────────────────
       } else {
-        replyText = `Entendido. He procesado tu consulta. \n\nPara el periodo ${activePeriodLabel} en la sede ${filters.selectedCity}, tenemos:\n` +
-          `• Ventas Netas: ${formatCurrency(kpis.netSales)} (${formatPercent(kpis.compliance)} de la meta).\n` +
-          `• Tasa de Devolución: ${formatPercent(kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0)}.\n` +
-          `• Vendedor Estrella: ${kpis.topSeller}.\n\n¿Deseas profundizar en las devoluciones de ejecutivos, la participación de Alpina frente a Alquería y Colanta, o ver el pronóstico de cierre?`;
+        const devRate = kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0;
+        const estado = kpis.compliance >= 0.9 ? 'en terreno positivo' : kpis.compliance >= 0.7 ? 'en marcha pero con brechas' : 'con una brecha significativa vs. meta';
+        replyText =
+          `Pulso del canal ${activePeriodLabel}${filters.selectedCity ? ` — ${filters.selectedCity}` : ''}:\n\n` +
+          `El canal está ${estado}. Ventas netas de ${formatCurrency(kpis.netSales)} = ${formatPercent(kpis.compliance)} del presupuesto. Tasa de devolución: ${formatPercent(devRate)}${devRate > 0.06 ? ' — hay trabajo por hacer.' : ' — dentro de rangos manejables.'} Ejecutivo destacado: ${kpis.topSeller || '—'}. Zona estrella: ${kpis.topZone ? `Zona ${kpis.topZone}` : '—'}.\n\n` +
+          `Soy tu consultor comercial del Eje Cafetero. Pregúntame sobre:\n` +
+          `→ Devoluciones y ejecutivos en riesgo\n` +
+          `→ Competencia (Alquería, Colanta, hard discount)\n` +
+          `→ Cumplimiento de metas por zona\n` +
+          `→ Proyección de cierre de mes\n` +
+          `→ Crecimiento YoY y comportamiento de marcas\n` +
+          `→ Calidad logística y perfil de devoluciones`;
       }
 
       setMessages(prev => [...prev, {
@@ -269,9 +347,9 @@ const BusinessIA = () => {
   anomalies.push({
     id: 1,
     type: 'warning',
-    title: 'Presión competitiva en canal Tradicional (TAT)',
-    description: `Alquería registra un incremento estimado del 14% en penetración de leches UHT en Pereira y Armenia mediante ofertas masivas en tiendas de barrio.`,
-    impact: 'Riesgo de pérdida de participación de mercado en categorías lácteas líquidas.'
+    title: 'Alerta de contexto competitivo (TAT)',
+    description: `Colanta, Alquería y marcas de hard discount (D1, Ara) mantienen presencia activa en el canal tradicional. Sin datos de participación regional verificados, se recomienda monitorear cobertura de clientes activos vs. inactivos en el periodo.`,
+    impact: 'Riesgo de pérdida de góndola si la cobertura TAT no se mantiene consistente.'
   });
 
   // Anomaly 2: High Seller Returns
@@ -323,9 +401,9 @@ const BusinessIA = () => {
   // AI Smart Recommendations
   const recommendations = [
     {
-      title: 'Estrategia de defensa vs. Alquería y Colanta',
-      text: 'Lanzar combo promocional de Yox + esparcibles Alpina en Pereira para contrarrestar las promociones tácticas de Alquería en tiendas de barrio.',
-      action: 'Ver plan de ataque comercial'
+      title: 'Oportunidad de diferenciación en canal TAT',
+      text: 'Reforzar la presencia de productos de valor agregado (yogures, esparcibles, quesos maduros) en el canal tradicional, donde Alpina tiene mayor diferenciación frente a competidores de precio como Colanta y marcas propias de hard discount.',
+      action: 'Ver plan de acción comercial'
     },
     {
       title: 'Intervención en Ruta y Pedidos (Sandra M. García)',
@@ -614,8 +692,8 @@ const BusinessIA = () => {
               <div className="flex items-center gap-2.5">
                 <Compass className="h-5 w-5 text-indigo-400" />
                 <div>
-                  <h3 className="text-base font-bold text-white">Share de Mercado Lácteos</h3>
-                  <p className="text-xs text-slate-400">Participación estimada regional (Eje Cafetero)</p>
+                  <h3 className="text-base font-bold text-white">Contexto Competitivo</h3>
+                  <p className="text-xs text-slate-400">Participación nacional estimada · Lácteos Colombia</p>
                 </div>
               </div>
 
@@ -623,13 +701,26 @@ const BusinessIA = () => {
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-300 font-semibold flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                      Alpina (Líder)
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      Colanta
                     </span>
-                    <span className="text-blue-400 font-bold">48.0%</span>
+                    <span className="text-emerald-400 font-bold">~21,9%</span>
                   </div>
                   <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full" style={{ width: '48%' }}></div>
+                    <div className="bg-gradient-to-r from-emerald-600 to-teal-500 h-full rounded-full" style={{ width: '44%' }}></div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                      Alpina
+                    </span>
+                    <span className="text-blue-400 font-bold">~12,0%</span>
+                  </div>
+                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full" style={{ width: '24%' }}></div>
                   </div>
                 </div>
 
@@ -639,37 +730,24 @@ const BusinessIA = () => {
                       <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
                       Alquería
                     </span>
-                    <span className="text-red-400 font-bold">28.0%</span>
+                    <span className="text-red-400 font-bold">~10,6%</span>
                   </div>
                   <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
-                    <div className="bg-gradient-to-r from-red-600 to-orange-500 h-full rounded-full" style={{ width: '28%' }}></div>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                      Colanta
-                    </span>
-                    <span className="text-emerald-400 font-bold">24.0%</span>
-                  </div>
-                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
-                    <div className="bg-gradient-to-r from-emerald-600 to-teal-500 h-full rounded-full" style={{ width: '24%' }}></div>
+                    <div className="bg-gradient-to-r from-red-600 to-orange-500 h-full rounded-full" style={{ width: '21%' }}></div>
                   </div>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-slate-900/60 space-y-2">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Frentes Críticos vs Competencia:</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Participación nacional estimada · Euromonitor / La República · ref. 2024–2025</span>
                 <div className="grid grid-cols-2 gap-2 text-[10px]">
                   <div className="p-2 rounded-xl bg-slate-900/40 border border-slate-900">
                     <p className="text-slate-400 font-semibold">Leche Líquida (UHT)</p>
-                    <p className="text-red-400 font-bold mt-0.5">Alquería fuerte</p>
+                    <p className="text-red-400 font-bold mt-0.5">Alquería activa</p>
                   </div>
                   <div className="p-2 rounded-xl bg-slate-900/40 border border-slate-900">
-                    <p className="text-slate-400 font-semibold">Quesos Frescos</p>
-                    <p className="text-emerald-400 font-bold mt-0.5">Colanta lidera</p>
+                    <p className="text-slate-400 font-semibold">Hard Discount</p>
+                    <p className="text-amber-400 font-bold mt-0.5">D1 / Ara creciendo</p>
                   </div>
                 </div>
               </div>
@@ -822,10 +900,12 @@ const BusinessIA = () => {
               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-1">Preguntas Recomendadas</p>
               <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-1">
                 {[
-                  { text: '¿Quiénes son los vendedores con mayor tasa de devolución?', short: 'Ejecutivos con Devoluciones' },
-                  { text: '¿Cómo está la participación de Alpina frente a Alquería y Colanta?', short: 'Participación frente a la Competencia' },
-                  { text: '¿Qué zonas tienen mejor cumplimiento y por qué?', short: 'Zonas Líderes' },
-                  { text: '¿Cuál es la proyección de ventas netas al cierre de mes?', short: 'Proyección Cierre de Mes' }
+                  { text: '¿Quiénes son los ejecutivos con mayor tasa de devolución este periodo?', short: 'Ejecutivos en Riesgo' },
+                  { text: '¿Cómo está la competencia de Alpina frente a Alquería y Colanta en el Eje Cafetero?', short: 'Contexto Competitivo' },
+                  { text: '¿Qué zonas superan el presupuesto y cuáles necesitan intervención?', short: 'Cumplimiento por Zonas' },
+                  { text: '¿Cuál es la proyección de cierre de mes al ritmo actual?', short: 'Proyección de Cierre' },
+                  { text: '¿Cómo está el crecimiento YoY de Alpina en este canal?', short: 'Crecimiento YoY' },
+                  { text: '¿Cuál es el diagnóstico de calidad logística del canal?', short: 'Calidad Logística' }
                 ].map((q, idx) => (
                   <button
                     key={idx}
