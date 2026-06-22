@@ -7,7 +7,9 @@ import {
   Menu, ChevronDown, X, FileText
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { applyPlugin } from 'jspdf-autotable';
+
+applyPlugin(jsPDF);
 
 const selectCls = "w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 font-medium focus:outline-none focus:border-blue-500 transition-colors";
 
@@ -97,7 +99,7 @@ const Topbar = () => {
         margin: { left: 15, right: 15 }
       });
 
-      let currentY = doc.autoTable.previous.finalY + 10;
+      let currentY = doc.lastAutoTable.finalY + 10;
 
       // Sección 2: Ranking de Zonas y Vendedores (Top 5)
       doc.setFont('helvetica', 'bold');
@@ -132,7 +134,7 @@ const Topbar = () => {
         margin: { left: 15, right: 15 }
       });
 
-      currentY = doc.autoTable.previous.finalY + 10;
+      currentY = doc.lastAutoTable.finalY + 10;
 
       // Obtener Top 5 Vendedores
       doc.setFont('helvetica', 'bold');
@@ -212,7 +214,7 @@ const Topbar = () => {
         margin: { left: 15, right: 15 }
       });
 
-      currentY = doc.autoTable.previous.finalY + 12;
+      currentY = doc.lastAutoTable.finalY + 12;
 
       // Diagnóstico IA
       doc.setFont('helvetica', 'bold');

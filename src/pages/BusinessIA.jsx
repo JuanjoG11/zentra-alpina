@@ -278,7 +278,7 @@ const BusinessIA = () => {
   const criticalSellers = filteredData.returnsSellers.filter(s => s.porcentajeDevolucion > 0.08);
   criticalSellers.forEach((s, idx) => {
     anomalies.push({
-      id: 2 + idx,
+      id: `seller-${s.ejecutivo || idx}-${idx}`,
       type: 'warning',
       title: `Retornos anómalos: ${s.nombre}`,
       description: `El vendedor ${s.nombre} (Ejecutivo ${s.ejecutivo}) registra una tasa de devoluciones del ${formatPercent(s.porcentajeDevolucion)}, superando el umbral de tolerancia del 5%. Devolvió ${formatCurrency(s.devoluciones)}.`,
@@ -290,7 +290,7 @@ const BusinessIA = () => {
   const lowZones = filteredData.zones.filter(z => z.ventasNetas / z.presupuesto < 0.6);
   lowZones.forEach((z, idx) => {
     anomalies.push({
-      id: 10 + idx,
+      id: `zone-${z.zona || idx}-${idx}`,
       type: 'warning',
       title: `Bajo cumplimiento comercial: Zona ${z.zona}`,
       description: `La zona ${z.zona} registra un cumplimiento de meta de apenas el ${formatPercent(z.ventasNetas / z.presupuesto)} con una facturación de ${formatCurrency(z.ventasNetas)} vs un presupuesto de ${formatCurrency(z.presupuesto)}.`,
