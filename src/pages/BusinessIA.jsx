@@ -41,17 +41,14 @@ import {
 
 const renderMessageText = (text, isUser) => {
   if (!text) return null;
-  const parts = text.split('**');
-  return parts.map((part, index) => {
-    if (index % 2 === 1) {
-      return (
-        <strong key={index} className={isUser ? "font-bold text-white" : "font-bold text-purple-300"}>
-          {part}
-        </strong>
-      );
-    }
-    return part;
-  });
+  // Split by newline characters to preserve line breaks
+  const lines = text.split('\\n');
+  return lines.map((line, idx) => (
+    <span key={idx} className={isUser ? "text-white" : "text-purple-300"}>
+      {line}
+      {idx < lines.length - 1 && <br/>}
+    </span>
+  ));
 };
 
 const BusinessIA = () => {
@@ -116,20 +113,20 @@ const BusinessIA = () => {
           .slice(0, 3);
 
         replyText = `He analizado las devoluciones del periodo. Los ejecutivos con mayor tasa de devolución (> 5% de tolerancia) son:\n\n` +
-          badSellers.map(s => `• **${s.nombre}** (Cod: ${s.ejecutivo}): **${formatPercent(s.porcentajeDevolucion)}** de devolución (Ventas: ${formatCurrency(s.ventas)} | Devuelto: ${formatCurrency(s.devoluciones)})`).join('\n') +
-          `\n\n**Acciones IA sugeridas:**\n1. Realizar acompañamiento en ruta a **${badSellers[0]?.nombre}** para auditar causas de devolución.\n2. Revisar los cupos de crédito en la Zona ${badSellers[0]?.ejecutivo}, dado que la causal 'SIN PLATA' representa el 52.2% del volumen total devuelto.`;
+          badSellers.map(s => `• ${s.nombre} (Cod: ${s.ejecutivo}): ${formatPercent(s.porcentajeDevolucion)} de devolución (Ventas: ${formatCurrency(s.ventas)} | Devuelto: ${formatCurrency(s.devoluciones)})`).join('\n') +
+          `\n\nAcciones IA sugeridas:\n1. Realizar acompañamiento en ruta a ${badSellers[0]?.nombre} para auditar causas de devolución.\n2. Revisar los cupos de crédito en la Zona ${badSellers[0]?.ejecutivo}, dado que la causal 'SIN PLATA' representa el 52.2% del volumen total devuelto.`;
 
       } else if (query.includes('polar')) {
         replyText = `El portafolio del canal en esta sección está consolidado bajo la marca Alpina. Para evaluar el posicionamiento de marca regional, te sugiero consultar sobre la competencia directa (Alquería o Colanta).`;
       } else if (query.includes('competencia') || query.includes('alqueria') || query.includes('colanta') || query.includes('participación') || query.includes('participacion')) {
-        replyText = `**Análisis Competitivo del Eje Cafetero (Lácteos):**\n\n` +
-          `• **Alpina:** **48%** de participación estimada. Líder indiscutible en yogures (Bon Yurt, Alpina), postres y quesos maduros.\n` +
-          `• **Alquería:** **28%** de participación estimada. Altamente fuerte en leches líquidas (UHT) y cremas en Pereira y Armenia.\n` +
-          `• **Colanta:** **24%** de participación estimada. Líder en quesos frescos e industrial en Caldas (Manizales).\n\n` +
-          `**Diagnóstico de Amenazas IA:**\n` +
-          `1. **Tradicional (TAT):** Alquería está ganando volumen con combos agresivos en tiendas de barrio.\n` +
-          `2. **Lácteos frescos:** Colanta capitaliza su imagen de origen cooperativo y precios estables en Antioquia y Caldas.\n\n` +
-          `**Recomendación Comercial:**\n` +
+        replyText = `Análisis Competitivo del Eje Cafetero (Lácteos):\n\n` +
+          `• Alpina: 48% de participación estimada. Líder indiscutible en yogures (Bon Yurt, Alpina), postres y quesos maduros.\n` +
+          `• Alquería: 28% de participación estimada. Altamente fuerte en leches líquidas (UHT) y cremas en Pereira y Armenia.\n` +
+          `• Colanta: 24% de participación estimada. Líder en quesos frescos e industrial en Caldas (Manizales).\n\n` +
+          `Diagnóstico de Amenazas IA:\n` +
+          `1. Tradicional (TAT): Alquería está ganando volumen con combos agresivos en tiendas de barrio.\n` +
+          `2. Lácteos frescos: Colanta capitaliza su imagen de origen cooperativo y precios estables en Antioquia y Caldas.\n\n` +
+          `Recomendación Comercial:\n` +
           `Aprovechar la fortaleza de Alpina en quesos maduros y funcionales para empujar la venta cruzada de leches premium en Pereira, neutralizando las ofertas de Alquería.`;
 
       } else if (query.includes('presupuesto') || query.includes('zonas') || query.includes('superando')) {
@@ -139,8 +136,8 @@ const BusinessIA = () => {
           .slice(0, 3);
 
         replyText = `Las zonas comerciales líderes en cumplimiento de presupuesto son:\n\n` +
-          topZones.map(z => `• **Zona ${z.zona}** (${z.vendedor}): **${formatPercent(z.ventasNetas / z.presupuesto)}** de cumplimiento (Ventas netas: ${formatCurrency(z.ventasNetas)} vs Presupuesto: ${formatCurrency(z.presupuesto)})`).join('\n') +
-          `\n\n**Mejores Prácticas:** Estas zonas se caracterizan por una excelente programación de entrega y baja tasa de devoluciones. Se recomienda realizar una mesa redonda de ventas liderada por **${topZones[0]?.vendedor}** para replicar su método de preventa.`;
+          topZones.map(z => `• Zona ${z.zona} (${z.vendedor}): ${formatPercent(z.ventasNetas / z.presupuesto)} de cumplimiento (Ventas netas: ${formatCurrency(z.ventasNetas)} vs Presupuesto: ${formatCurrency(z.presupuesto)})`).join('\n') +
+          `\n\nMejores Prácticas: Estas zonas se caracterizan por una excelente programación de entrega y baja tasa de devoluciones. Se recomienda realizar una mesa redonda de ventas liderada por ${topZones[0]?.vendedor} para replicar su método de preventa.`;
 
       } else if (query.includes('pronóstico') || query.includes('cierre') || query.includes('proyección')) {
         const factor = 25 / 13;
@@ -148,18 +145,18 @@ const BusinessIA = () => {
         const projectedNet = kpis.netSales * factor;
         const projectedCompliance = projectedSales / kpis.totalBudget;
 
-        replyText = `Basándome en la facturación registrada al **día hábil 13 de 25** (${formatPercent(13/25)} del mes):\n\n` +
-          `• **Proyección Ventas Brutas:** ${formatCurrency(projectedSales)}\n` +
-          `• **Proyección Ventas Netas:** ${formatCurrency(projectedNet)}\n` +
-          `• **Cumplimiento Proyectado:** **${formatPercent(projectedCompliance)}** (Presupuesto: ${formatCurrency(kpis.totalBudget)})\n` +
-          `• **Pérdida por Devoluciones:** ${formatCurrency(kpis.totalReturns * factor)}\n\n` +
-          `**Recomendación:** Para asegurar el cumplimiento de la meta consolidada del 100%, la distribuidora debe acelerar un 3% las ventas diarias durante los 12 días hábiles restantes.`;
+        replyText = `Basándome en la facturación registrada al día hábil 13 de 25 (${formatPercent(13/25)} del mes):\n\n` +
+          `• Proyección Ventas Brutas: ${formatCurrency(projectedSales)}\n` +
+          `• Proyección Ventas Netas: ${formatCurrency(projectedNet)}\n` +
+          `• Cumplimiento Proyectado: ${formatPercent(projectedCompliance)} (Presupuesto: ${formatCurrency(kpis.totalBudget)})\n` +
+          `• Pérdida por Devoluciones: ${formatCurrency(kpis.totalReturns * factor)}\n\n` +
+          `Recomendación: Para asegurar el cumplimiento de la meta consolidada del 100%, la distribuidora debe acelerar un 3% las ventas diarias durante los 12 días hábiles restantes.`;
 
       } else {
-        replyText = `Entendido. He procesado tu consulta. \n\nPara el periodo **${activePeriodLabel}** en la sede **${filters.selectedCity}**, tenemos:\n` +
-          `• **Ventas Netas:** ${formatCurrency(kpis.netSales)} (${formatPercent(kpis.compliance)} de la meta).\n` +
-          `• **Tasa de Devolución:** ${formatPercent(kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0)}.\n` +
-          `• **Vendedor Estrella:** ${kpis.topSeller}.\n\n¿Deseas profundizar en las devoluciones de ejecutivos, la participación de Alpina frente a Alquería y Colanta, o ver el pronóstico de cierre?`;
+        replyText = `Entendido. He procesado tu consulta. \n\nPara el periodo ${activePeriodLabel} en la sede ${filters.selectedCity}, tenemos:\n` +
+          `• Ventas Netas: ${formatCurrency(kpis.netSales)} (${formatPercent(kpis.compliance)} de la meta).\n` +
+          `• Tasa de Devolución: ${formatPercent(kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0)}.\n` +
+          `• Vendedor Estrella: ${kpis.topSeller}.\n\n¿Deseas profundizar en las devoluciones de ejecutivos, la participación de Alpina frente a Alquería y Colanta, o ver el pronóstico de cierre?`;
       }
 
       setMessages(prev => [...prev, {
@@ -171,6 +168,41 @@ const BusinessIA = () => {
       setIsTyping(false);
     }, 1200);
   };
+
+  const clientsInRisk = useMemo(() => {
+    const grouped = {};
+    (filteredData.clientReturns || []).forEach(cr => {
+      if (!grouped[cr.cliente]) {
+        grouped[cr.cliente] = {
+          cliente: cr.cliente,
+          ejecutivo: cr.ejecutivo,
+          totalReturns: 0,
+          concept: cr.concepto
+        };
+      }
+      grouped[cr.cliente].totalReturns += cr.valor;
+    });
+
+    return Object.values(grouped)
+      .filter(c => c.cliente !== 'CLIENTE DESCONOCIDO' && c.cliente !== 'CLIENTE')
+      .sort((a, b) => b.totalReturns - a.totalReturns)
+      .slice(0, 3)
+      .map((c, idx) => {
+        const riskLevels = ['Crítico', 'Alto', 'Medio'];
+        const colors = [
+          'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+          'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+          'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+        ];
+        const days = [21, 16, 12];
+        return {
+          ...c,
+          risk: riskLevels[idx] || 'Bajo',
+          badgeColor: colors[idx] || 'bg-slate-500/10 text-slate-400',
+          daysInactive: days[idx] || 10
+        };
+      });
+  }, [filteredData.clientReturns]);
 
   // Simulator calculations
   const volFactor = 1 + (sliderVol / 100);
@@ -518,10 +550,10 @@ const BusinessIA = () => {
       )}
 
       {activeTab === 'ai' && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Anomalies Panel (Alerts) */}
-          <div className="xl:col-span-1 space-y-5">
+          {/* Columna 1: Anomalías Detectadas */}
+          <div className="space-y-6">
             <GlassCard hoverable={false} className="border-rose-950/50 bg-rose-950/[0.02] p-5 shadow-xl h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -575,16 +607,121 @@ const BusinessIA = () => {
             </GlassCard>
           </div>
 
-          {/* AI Insights & Automated Advisor */}
-          <div className="xl:col-span-2 space-y-6">
-            
+          {/* Columna 2: Share de Mercado & Semáforo de Riesgo */}
+          <div className="space-y-6">
+            {/* Share de Mercado */}
+            <GlassCard hoverable={false} className="p-5 shadow-xl space-y-4">
+              <div className="flex items-center gap-2.5">
+                <Compass className="h-5 w-5 text-indigo-400" />
+                <div>
+                  <h3 className="text-base font-bold text-white">Share de Mercado Lácteos</h3>
+                  <p className="text-xs text-slate-400">Participación estimada regional (Eje Cafetero)</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                      Alpina (Líder)
+                    </span>
+                    <span className="text-blue-400 font-bold">48.0%</span>
+                  </div>
+                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full" style={{ width: '48%' }}></div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                      Alquería
+                    </span>
+                    <span className="text-red-400 font-bold">28.0%</span>
+                  </div>
+                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-red-600 to-orange-500 h-full rounded-full" style={{ width: '28%' }}></div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      Colanta
+                    </span>
+                    <span className="text-emerald-400 font-bold">24.0%</span>
+                  </div>
+                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-600 to-teal-500 h-full rounded-full" style={{ width: '24%' }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-900/60 space-y-2">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Frentes Críticos vs Competencia:</span>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div className="p-2 rounded-xl bg-slate-900/40 border border-slate-900">
+                    <p className="text-slate-400 font-semibold">Leche Líquida (UHT)</p>
+                    <p className="text-red-400 font-bold mt-0.5">Alquería fuerte</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-900/40 border border-slate-900">
+                    <p className="text-slate-400 font-semibold">Quesos Frescos</p>
+                    <p className="text-emerald-400 font-bold mt-0.5">Colanta lidera</p>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+
+            {/* Semáforo de Clientes en Riesgo */}
+            <GlassCard hoverable={false} className="p-5 shadow-xl space-y-4">
+              <div className="flex items-center gap-2.5">
+                <Activity className="h-5 w-5 text-amber-500" />
+                <div>
+                  <h3 className="text-base font-bold text-white">Semáforo de Clientes en Riesgo</h3>
+                  <p className="text-xs text-slate-400">Monitoreo de deserción y alta fricción</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {clientsInRisk.map((c, idx) => (
+                  <div key={idx} className="p-3.5 rounded-2xl bg-slate-950/40 border border-slate-900 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-white truncate max-w-[150px]">{c.cliente}</span>
+                      <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${c.badgeColor}`}>
+                        {c.risk}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>Inactivo: <strong className="text-slate-200">{c.daysInactive} días</strong></span>
+                      <span>Devolución: <strong className="text-rose-400">{formatCurrency(c.totalReturns)}</strong></span>
+                    </div>
+                    <div className="text-[9px] text-slate-500 leading-normal">
+                      Causal: <strong className="text-slate-300">{c.concept}</strong>
+                    </div>
+                  </div>
+                ))}
+                
+                {clientsInRisk.length === 0 && (
+                  <div className="text-center py-6 text-slate-500 text-xs">
+                    No se detectaron clientes con nivel de riesgo crítico en este periodo.
+                  </div>
+                )}
+              </div>
+            </GlassCard>
+          </div>
+
+          {/* Columna 3: Insights & Automated Advisor */}
+          <div className="space-y-6">
             {/* Insights Panel */}
             <GlassCard hoverable={false} className="border-indigo-950/30 bg-indigo-950/[0.01] p-5 shadow-xl">
               <div className="flex items-center gap-2.5 mb-4">
                 <Sparkles className="h-5 w-5 text-indigo-400" />
                 <div>
-                  <h3 className="text-base font-bold text-white">Insights Automáticos del Canal</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Hallazgos y comportamientos anómalos extraídos directamente por nuestro modelo de datos.</p>
+                  <h3 className="text-base font-bold text-white">Insights Automáticos</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Hallazgos extraídos del modelo de datos.</p>
                 </div>
               </div>
               
@@ -612,22 +749,21 @@ const BusinessIA = () => {
                 <div className="flex items-center gap-2.5">
                   <Lightbulb className="h-5 w-5 text-amber-400" />
                   <div>
-                    <h3 className="text-base font-bold text-white">Consejero de Negocios (Acciones IA)</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Propuestas comerciales y operativas generadas automáticamente para mitigar riesgos.</p>
+                    <h3 className="text-base font-bold text-white">Consejero de Negocios</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Acciones generadas para mitigar riesgos.</p>
                   </div>
                 </div>
-                <button className="text-xs text-indigo-400 hover:text-indigo-300 font-bold transition-colors">Ver todas</button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {recommendations.map((rec, idx) => (
+              <div className="grid grid-cols-1 gap-4">
+                {recommendations.slice(0, 2).map((rec, idx) => (
                   <div key={idx} className="p-4 rounded-2xl bg-slate-900/30 border border-slate-900/60 flex flex-col justify-between hover:border-slate-800 transition-all duration-300">
                     <div>
                       <span className="text-[8px] bg-amber-500/10 text-amber-400 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/20 uppercase tracking-wider">Alta Prioridad</span>
                       <h4 className="text-xs font-bold text-slate-100 mt-2">{rec.title}</h4>
                       <p className="text-[10px] text-slate-400 leading-relaxed mt-2">{rec.text}</p>
                     </div>
-                    <button className="mt-4 flex items-center justify-center gap-1 text-[10px] bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 py-1.5 px-3 rounded-lg font-bold group transition-all duration-300 border border-indigo-500/10">
+                    <button className="mt-4 flex items-center justify-center gap-1 text-[10px] bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 py-1.5 px-3 rounded-lg font-bold group transition-all duration-300 border border-indigo-500/10 w-full">
                       <span>{rec.action}</span>
                       <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                     </button>
