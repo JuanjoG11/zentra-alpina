@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { alpinaData } from '../data/alpina-data';
 import { supabase } from '../services/supabaseClient';
+import { DEFAULT_ZONE_SELLERS } from '../utils/calculations';
 
 const STORAGE_KEY = 'zentra_alpina_dbData';
 const PERIOD_KEY  = 'zentra_alpina_period';
@@ -104,7 +105,7 @@ const useStore = create((set, get) => ({
 
       const zones = dbZones.map(z => ({
         zona: z.zona,
-        vendedor: z.vendedor || 'Sin Asignar',
+        vendedor: z.vendedor && z.vendedor !== 'Sin Asignar' ? z.vendedor : (DEFAULT_ZONE_SELLERS[z.zona] || 'Sin Asignar'),
         presupuesto: Number(z.presupuesto) || 0,
         ventasNetas: Number(z.ventasnetas) || Number(z.ventasNetas) || 0,
         proyectado: Number(z.ventasnetas) || Number(z.ventasNetas) || 0,
@@ -115,7 +116,7 @@ const useStore = create((set, get) => ({
 
       const returnsSellers = dbSellers.map(s => ({
         ejecutivo: s.ejecutivo,
-        nombre: s.nombre,
+        nombre: s.nombre && s.nombre !== 'Sin Asignar' ? s.nombre : (DEFAULT_ZONE_SELLERS[s.ejecutivo] || 'Sin Asignar'),
         ventas: Number(s.ventas) || 0,
         devoluciones: Number(s.devoluciones) || 0,
         porcentajeDevolucion: s.ventas > 0 ? Number(s.devoluciones) / Number(s.ventas) : 0.0
@@ -230,8 +231,8 @@ const useStore = create((set, get) => ({
     {
       id: 4,
       type: 'danger',
-      title: 'Caída en ventas',
-      message: 'Alimentos Polar cayó -63.41%',
+      title: 'Alquería ganando terreno',
+      message: 'Alquería incrementó 14% en leches UHT en Pereira',
       time: 'Hace 6h',
       read: false,
     },

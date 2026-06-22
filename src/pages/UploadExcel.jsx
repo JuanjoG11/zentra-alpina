@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import useStore from '../store/useStore';
 import GlassCard from '../components/ui/GlassCard';
+import { DEFAULT_ZONE_SELLERS } from '../utils/calculations';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { supabase } from '../services/supabaseClient';
@@ -191,10 +192,46 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
   };
 
   const budgetMap = {
-    'E7001': 15718970, 'M9450': 52875518, 'M9451': 60284852, 'M9453': 122322227,
-    'M9454': 127741607, 'M9455': 132916601, 'M9456': 98461006, 'M9457': 109101932,
-    'M9458': 97290771, 'M9459': 138264192, 'M9460': 144798907, 'M9461': 119740612,
-    'P7004': 147442404, 'P7005': 108916800, 'P7006': 142737629, 'P7007': 159379696
+    'E7000': 9739616,
+    'E7001': 15718970,
+    'M9450': 52875518,
+    'M9451': 60284852,
+    'M9453': 122322227,
+    'M9454': 127741607,
+    'M9455': 132916601,
+    'M9456': 98461006,
+    'M9457': 109101932,
+    'M9458': 97290771,
+    'M9459': 138264192,
+    'M9460': 144798907,
+    'M9461': 119740612,
+    'M9550': 78079017,
+    'M9552': 115979855,
+    'M9553': 118994777,
+    'M9554': 142991674,
+    'M9555': 131824208,
+    'M9556': 124797071,
+    'M9557': 230089941,
+    'M9558': 135727633,
+    'M9559': 165238515,
+    'M9560': 87159396,
+    'M9600': 62564014,
+    'M9601': 121038599,
+    'M9602': 138410924,
+    'M9603': 137651254,
+    'M9604': 115578543,
+    'M9605': 137739094,
+    'M9606': 101500232,
+    'P7000': 65937889,
+    'P7001': 71018396,
+    'P7002': 149868956,
+    'P7004': 147442404,
+    'P7005': 108916800,
+    'P7006': 142737629,
+    'P7007': 159379696,
+    'P7008': 93551428,
+    'P7009': 64522723,
+    'P7010': 78172901
   };
 
   const parseSpanishFloat = (str) => {
@@ -355,6 +392,10 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
         const dateVal = getRowValue(row, dateKeys);
         const zone = getRowValue(row, zoneKeys);
         const seller = getRowValue(row, sellerKeys);
+        let activeSeller = seller;
+        if (!activeSeller || String(activeSeller).trim() === '' || String(activeSeller).toLowerCase() === 'sin asignar') {
+          activeSeller = DEFAULT_ZONE_SELLERS[zone] || 'Sin Asignar';
+        }
         const proveedor = getRowValue(row, proveedorKeys) || 'SIN PROVEEDOR';
         const brand = getRowValue(row, brandKeys) || 'OTROS';
 
@@ -412,7 +453,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
           if (!zonesAggr[zone]) {
             zonesAggr[zone] = {
               zona: zone,
-              vendedor: seller || 'Sin Asignar',
+              vendedor: activeSeller || 'Sin Asignar',
               ventasNetas: 0,
               devoluciones: 0,
               facturas: new Set()
@@ -427,25 +468,25 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
           if (facturaStr && motivoStr === '') {
             zonesAggr[zone].facturas.add(facturaStr);
           }
-          if (seller && zonesAggr[zone].vendedor === 'Sin Asignar') {
-            zonesAggr[zone].vendedor = seller;
+          if (activeSeller && zonesAggr[zone].vendedor === 'Sin Asignar') {
+            zonesAggr[zone].vendedor = activeSeller;
           }
         }
 
         // 4. Returns Sellers
-        if (seller) {
-          if (!sellersAggr[seller]) {
-            sellersAggr[seller] = {
+        if (activeSeller) {
+          if (!sellersAggr[activeSeller]) {
+            sellersAggr[activeSeller] = {
               ejecutivo: zone || 'OTRO',
-              nombre: seller,
+              nombre: activeSeller,
               ventas: 0,
               devoluciones: 0
             };
           }
           if (esDevolucion) {
-            sellersAggr[seller].devoluciones += Math.abs(valTotal);
+            sellersAggr[activeSeller].devoluciones += Math.abs(valTotal);
           } else if (valTotal > 0) {
-            sellersAggr[seller].ventas += valTotal;
+            sellersAggr[activeSeller].ventas += valTotal;
           }
         }
 
@@ -482,17 +523,17 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
         }
 
         // 7. Detalle ventas diarias para Supabase — solo ventas reales
-        if (zone && seller && !esDevolucion && valTotal > 0) {
+        if (zone && activeSeller && !esDevolucion && valTotal > 0) {
           const ymdDate = formatDateToYMD(dateVal);
           if (ymdDate) {
-            const dbKey = `${ymdDate}_${proveedor}_${zone}_${seller}`;
+            const dbKey = `${ymdDate}_${proveedor}_${zone}_${activeSeller}`;
             if (!salesDailyDbAggr[dbKey]) {
               salesDailyDbAggr[dbKey] = {
                 fecha: ymdDate,
                 proveedor: proveedor,
                 marca: brand,
                 zona: zone,
-                vendedor: seller,
+                vendedor: activeSeller,
                 ventas: 0,
                 unidades: 0
               };

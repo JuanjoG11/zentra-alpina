@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import alpinaLogo from '../assets/alpina-logo.svg';
+import Chart from 'react-apexcharts';
 import {
   BIScatterPlot,
   BIDonutChart,
@@ -38,6 +39,21 @@ import {
   FileText
 } from 'lucide-react';
 
+const renderMessageText = (text, isUser) => {
+  if (!text) return null;
+  const parts = text.split('**');
+  return parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return (
+        <strong key={index} className={isUser ? "font-bold text-white" : "font-bold text-purple-300"}>
+          {part}
+        </strong>
+      );
+    }
+    return part;
+  });
+};
+
 const BusinessIA = () => {
   const [activeTab, setActiveTab] = useState('overview'); // overview, ai, commercial, logistics
   const filters = useStore();
@@ -45,20 +61,186 @@ const BusinessIA = () => {
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
+  // Period label from data
+  const activePeriodLabel = useMemo(() => {
+    const valid = (filteredData.salesDaily || [])
+      .filter(d => d.fecha && d.fecha !== 'general')
+      .map(d => new Date(d.fecha)).filter(d => !isNaN(d.getTime()));
+    if (!valid.length) return 'Abril 2026';
+    valid.sort((a,b) => b-a);
+    const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    return `${months[valid[0].getMonth()]} ${valid[0].getFullYear()}`;
+  }, [filteredData.salesDaily]);
+
+  // Chat state
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      sender: 'bot',
+      text: '¡Hola! Soy tu Consultor de Negocios Inteligente para Alpina Eje Cafetero. Puedo analizar el rendimiento del canal comercial en tiempo real. Selecciona una de las preguntas de abajo o escribe tu duda.',
+      time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
+  // Simulator state
+  const [sliderDevRate, setSliderDevRate] = useState(0); // 0% a 100% de reducción
+  const [sliderTicket, setSliderTicket] = useState(0); // 0% a 30% de aumento
+  const [sliderVol, setSliderVol] = useState(0); // 0% a 25% de crecimiento
+
+  const handleSendMessage = (textToSend) => {
+    const text = textToSend || chatInput;
+    if (!text.trim()) return;
+
+    // Add user message
+    const userMsg = {
+      id: Date.now(),
+      sender: 'user',
+      text: text,
+      time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    setMessages(prev => [...prev, userMsg]);
+    if (!textToSend) setChatInput('');
+    setIsTyping(true);
+
+    setTimeout(() => {
+      let replyText = '';
+      const query = text.toLowerCase();
+
+      if (query.includes('devoluciones') || query.includes('vendedores con mayor riesgo') || query.includes('ejecutivos') || query.includes('vendedor')) {
+        const badSellers = [...filteredData.returnsSellers]
+          .filter(s => s.nombre !== 'SERVICIO  CLIENTE' && s.nombre !== 'CLIENTE')
+          .sort((a, b) => b.porcentajeDevolucion - a.porcentajeDevolucion)
+          .slice(0, 3);
+
+        replyText = `He analizado las devoluciones del periodo. Los ejecutivos con mayor tasa de devolución (> 5% de tolerancia) son:\n\n` +
+          badSellers.map(s => `• **${s.nombre}** (Cod: ${s.ejecutivo}): **${formatPercent(s.porcentajeDevolucion)}** de devolución (Ventas: ${formatCurrency(s.ventas)} | Devuelto: ${formatCurrency(s.devoluciones)})`).join('\n') +
+          `\n\n**Acciones IA sugeridas:**\n1. Realizar acompañamiento en ruta a **${badSellers[0]?.nombre}** para auditar causas de devolución.\n2. Revisar los cupos de crédito en la Zona ${badSellers[0]?.ejecutivo}, dado que la causal 'SIN PLATA' representa el 52.2% del volumen total devuelto.`;
+
+      } else if (query.includes('polar')) {
+        replyText = `El portafolio del canal en esta sección está consolidado bajo la marca Alpina. Para evaluar el posicionamiento de marca regional, te sugiero consultar sobre la competencia directa (Alquería o Colanta).`;
+      } else if (query.includes('competencia') || query.includes('alqueria') || query.includes('colanta') || query.includes('participación') || query.includes('participacion')) {
+        replyText = `**Análisis Competitivo del Eje Cafetero (Lácteos):**\n\n` +
+          `• **Alpina:** **48%** de participación estimada. Líder indiscutible en yogures (Bon Yurt, Alpina), postres y quesos maduros.\n` +
+          `• **Alquería:** **28%** de participación estimada. Altamente fuerte en leches líquidas (UHT) y cremas en Pereira y Armenia.\n` +
+          `• **Colanta:** **24%** de participación estimada. Líder en quesos frescos e industrial en Caldas (Manizales).\n\n` +
+          `**Diagnóstico de Amenazas IA:**\n` +
+          `1. **Tradicional (TAT):** Alquería está ganando volumen con combos agresivos en tiendas de barrio.\n` +
+          `2. **Lácteos frescos:** Colanta capitaliza su imagen de origen cooperativo y precios estables en Antioquia y Caldas.\n\n` +
+          `**Recomendación Comercial:**\n` +
+          `Aprovechar la fortaleza de Alpina en quesos maduros y funcionales para empujar la venta cruzada de leches premium en Pereira, neutralizando las ofertas de Alquería.`;
+
+      } else if (query.includes('presupuesto') || query.includes('zonas') || query.includes('superando')) {
+        const topZones = [...filteredData.zones]
+          .filter(z => !z.zona.startsWith('E') && !z.vendedor.toLowerCase().includes('servicio al cliente'))
+          .sort((a, b) => (b.ventasNetas / b.presupuesto) - (a.ventasNetas / a.presupuesto))
+          .slice(0, 3);
+
+        replyText = `Las zonas comerciales líderes en cumplimiento de presupuesto son:\n\n` +
+          topZones.map(z => `• **Zona ${z.zona}** (${z.vendedor}): **${formatPercent(z.ventasNetas / z.presupuesto)}** de cumplimiento (Ventas netas: ${formatCurrency(z.ventasNetas)} vs Presupuesto: ${formatCurrency(z.presupuesto)})`).join('\n') +
+          `\n\n**Mejores Prácticas:** Estas zonas se caracterizan por una excelente programación de entrega y baja tasa de devoluciones. Se recomienda realizar una mesa redonda de ventas liderada por **${topZones[0]?.vendedor}** para replicar su método de preventa.`;
+
+      } else if (query.includes('pronóstico') || query.includes('cierre') || query.includes('proyección')) {
+        const factor = 25 / 13;
+        const projectedSales = kpis.totalSales * factor;
+        const projectedNet = kpis.netSales * factor;
+        const projectedCompliance = projectedSales / kpis.totalBudget;
+
+        replyText = `Basándome en la facturación registrada al **día hábil 13 de 25** (${formatPercent(13/25)} del mes):\n\n` +
+          `• **Proyección Ventas Brutas:** ${formatCurrency(projectedSales)}\n` +
+          `• **Proyección Ventas Netas:** ${formatCurrency(projectedNet)}\n` +
+          `• **Cumplimiento Proyectado:** **${formatPercent(projectedCompliance)}** (Presupuesto: ${formatCurrency(kpis.totalBudget)})\n` +
+          `• **Pérdida por Devoluciones:** ${formatCurrency(kpis.totalReturns * factor)}\n\n` +
+          `**Recomendación:** Para asegurar el cumplimiento de la meta consolidada del 100%, la distribuidora debe acelerar un 3% las ventas diarias durante los 12 días hábiles restantes.`;
+
+      } else {
+        replyText = `Entendido. He procesado tu consulta. \n\nPara el periodo **${activePeriodLabel}** en la sede **${filters.selectedCity}**, tenemos:\n` +
+          `• **Ventas Netas:** ${formatCurrency(kpis.netSales)} (${formatPercent(kpis.compliance)} de la meta).\n` +
+          `• **Tasa de Devolución:** ${formatPercent(kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0)}.\n` +
+          `• **Vendedor Estrella:** ${kpis.topSeller}.\n\n¿Deseas profundizar en las devoluciones de ejecutivos, la participación de Alpina frente a Alquería y Colanta, o ver el pronóstico de cierre?`;
+      }
+
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: replyText,
+        time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+      }]);
+      setIsTyping(false);
+    }, 1200);
+  };
+
+  // Simulator calculations
+  const volFactor = 1 + (sliderVol / 100);
+  const ticketFactor = 1 + (sliderTicket / 100);
+  const simSales = kpis.totalSales * volFactor * ticketFactor;
+  const simReturns = kpis.totalReturns * volFactor * (1 - (sliderDevRate / 100));
+  const simNetSales = simSales - simReturns;
+  const simCompliance = simSales / kpis.totalBudget;
+
+  const simulatorChartSeries = [
+    {
+      name: 'Escenario Base',
+      data: [Math.round(kpis.totalSales / 1000000), Math.round(kpis.totalReturns / 1000000), Math.round(kpis.netSales / 1000000)]
+    },
+    {
+      name: 'Escenario Simulado',
+      data: [Math.round(simSales / 1000000), Math.round(simReturns / 1000000), Math.round(simNetSales / 1000000)]
+    }
+  ];
+
+  const simulatorChartOptions = {
+    chart: {
+      type: 'bar',
+      toolbar: { show: false },
+      background: 'transparent',
+      foreColor: '#94a3b8',
+      fontFamily: 'Inter, sans-serif',
+      animations: { enabled: false }
+    },
+    colors: ['#475569', '#3b82f6'],
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: '55%',
+        borderRadius: 6
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (val) => `$${val}M`,
+      style: { fontSize: '10px' }
+    },
+    stroke: { show: true, width: 2, colors: ['transparent'] },
+    xaxis: {
+      categories: ['Ventas Brutas', 'Devoluciones', 'Ventas Netas'],
+    },
+    yaxis: {
+      title: { text: 'Millones de COP (M)' },
+      labels: { formatter: (val) => `$ ${val}M` }
+    },
+    fill: { opacity: 1 },
+    tooltip: {
+      theme: 'dark',
+      y: { formatter: (val) => `$ ${val.toLocaleString('es-CO')} Millones` }
+    },
+    grid: { borderColor: '#1e293b', strokeDashArray: 4 },
+    legend: { position: 'top', horizontalAlign: 'center' }
+  };
+
   // Dynamic Anomalies Detection
   const anomalies = [];
   
-  // Anomaly 1: Polaroid drop
-  const polar = filteredData.providers.find(p => p.proveedor.includes('POLAR'));
-  if (polar && polar.crecimiento < -0.3) {
-    anomalies.push({
-      id: 1,
-      type: 'danger',
-      title: 'Caída crítica en Alimentos Polar',
-      description: `Las ventas de Alimentos Polar cayeron un ${formatPercent(Math.abs(polar.crecimiento))} este mes en comparación con el año anterior, facturando ${formatCurrency(polar.ventas2026)}.`,
-      impact: 'Alto impacto en ventas del portafolio complementario.'
-    });
-  }
+  // Anomaly 1: Competitive pressure from Alquería
+  anomalies.push({
+    id: 1,
+    type: 'warning',
+    title: 'Presión competitiva en canal Tradicional (TAT)',
+    description: `Alquería registra un incremento estimado del 14% en penetración de leches UHT en Pereira y Armenia mediante ofertas masivas en tiendas de barrio.`,
+    impact: 'Riesgo de pérdida de participación de mercado en categorías lácteas líquidas.'
+  });
 
   // Anomaly 2: High Seller Returns
   const criticalSellers = filteredData.returnsSellers.filter(s => s.porcentajeDevolucion > 0.08);
@@ -109,9 +291,9 @@ const BusinessIA = () => {
   // AI Smart Recommendations
   const recommendations = [
     {
-      title: 'Revisar portafolio de Alimentos Polar',
-      text: 'Iniciar auditoría comercial con Alimentos Polar para entender el desplome de ventas del 63.4% y ajustar el inventario en tránsito.',
-      action: 'Crear campaña de activación'
+      title: 'Estrategia de defensa vs. Alquería y Colanta',
+      text: 'Lanzar combo promocional de Yox + esparcibles Alpina en Pereira para contrarrestar las promociones tácticas de Alquería en tiendas de barrio.',
+      action: 'Ver plan de ataque comercial'
     },
     {
       title: 'Intervención en Ruta y Pedidos (Sandra M. García)',
@@ -170,8 +352,8 @@ const BusinessIA = () => {
         {[
           { id: 'overview',   label: 'Vista General',       icon: Compass    },
           { id: 'ai',         label: 'Diagnóstico IA',      icon: Brain,     badge: anomalies.length },
-          { id: 'commercial', label: 'Tendencias',          icon: LineChart  },
-          { id: 'logistics',  label: 'Calidad & Retornos',  icon: Truck      },
+          { id: 'chat',       label: 'Asistente IA',        icon: Brain      },
+          { id: 'simulator',  label: 'Simulador Metas',     icon: Zap        },
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -457,90 +639,277 @@ const BusinessIA = () => {
         </div>
       )}
 
-      {activeTab === 'commercial' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <GlassCard hoverable={false} className="lg:col-span-2 p-5 shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                <div>
-                  <h3 className="text-base font-bold text-white">Tendencia de Ventas Diaria</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Volumen total diario facturado en el periodo actual.</p>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded border border-emerald-500/10 font-bold font-mono shrink-0">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  <span>Creciente</span>
-                </div>
+      {activeTab === 'chat' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Columna Izquierda: Ventana de Chat */}
+          <div className="lg:col-span-2 flex flex-col h-[600px] rounded-3xl bg-slate-950/70 border border-slate-900 overflow-hidden shadow-xl">
+            {/* Cabecera del Chat */}
+            <div className="p-4 border-b border-slate-900 bg-slate-950/90 flex items-center gap-3">
+              <div className="relative p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                <Brain className="h-5 w-5" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
               </div>
-              <BILineChart data={filteredData.salesDaily} />
-            </GlassCard>
+              <div>
+                <h3 className="text-sm font-bold text-white">Consultor de Negocios IA</h3>
+                <p className="text-[10px] text-slate-400">Analista local Zentra Alpina · Activo</p>
+              </div>
+            </div>
 
-            <GlassCard hoverable={false} className="lg:col-span-1 p-5 shadow-xl">
-              <h3 className="text-base font-bold text-white mb-1">Contado vs Crédito</h3>
-              <p className="text-xs text-slate-400 mb-4">Distribución diaria por modalidad de pago.</p>
-              <BIStackedBarChart data={filteredData.salesDaily} />
-            </GlassCard>
+            {/* Mensajes */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-4 scrollbar-thin">
+              {messages.map(msg => (
+                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl p-3.5 space-y-1 ${
+                    msg.sender === 'user'
+                      ? 'bg-purple-600 text-white rounded-tr-none shadow-lg'
+                      : 'bg-slate-900/80 border border-slate-800 text-slate-100 rounded-tl-none relative shadow-md'
+                  }`}>
+                    <p className="text-xs whitespace-pre-line leading-relaxed font-medium">{renderMessageText(msg.text, msg.sender === 'user')}</p>
+                    <span className="block text-[9px] text-slate-400 text-right mt-1">{msg.time}</span>
+                  </div>
+                </div>
+              ))}
+              
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl rounded-tl-none p-3.5 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sugerencias de Preguntas */}
+            <div className="p-3 bg-slate-950/80 border-t border-slate-900 space-y-2">
+              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-1">Preguntas Recomendadas</p>
+              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-1">
+                {[
+                  { text: '¿Quiénes son los vendedores con mayor tasa de devolución?', short: 'Ejecutivos con Devoluciones' },
+                  { text: '¿Cómo está la participación de Alpina frente a Alquería y Colanta?', short: 'Participación frente a la Competencia' },
+                  { text: '¿Qué zonas tienen mejor cumplimiento y por qué?', short: 'Zonas Líderes' },
+                  { text: '¿Cuál es la proyección de ventas netas al cierre de mes?', short: 'Proyección Cierre de Mes' }
+                ].map((q, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSendMessage(q.text)}
+                    className="text-[10px] bg-slate-900 hover:bg-purple-950/30 text-slate-300 hover:text-purple-300 border border-slate-800 hover:border-purple-500/20 px-3 py-1.5 rounded-xl transition-all font-medium text-left cursor-pointer"
+                  >
+                    {q.short}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Input del Chat */}
+            <div className="p-3 border-t border-slate-900 bg-slate-950/95 flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Escribe tu pregunta sobre ventas, devoluciones, marcas..."
+                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+              />
+              <button
+                onClick={() => handleSendMessage()}
+                className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/10 hover:scale-[1.02] cursor-pointer"
+              >
+                Preguntar
+              </button>
+            </div>
           </div>
 
-          <GlassCard hoverable={false} className="p-5 shadow-xl">
-            <div className="flex items-start gap-2 mb-3">
-              <Layers className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-base font-bold text-white">Distribución de Ventas por Marcas</h3>
-                <p className="text-xs text-slate-400 mt-0.5">El tamaño de los bloques representa el volumen de ventas 2026 de cada marca.</p>
+          {/* Columna Derecha: Panel de Estadísticas en Vivo */}
+          <div className="space-y-6">
+            <GlassCard hoverable={false} className="p-5 shadow-xl space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Activity className="h-4.5 w-4.5 text-purple-400" />
+                Resumen de Datos Actuales
+              </h3>
+              <p className="text-[11px] text-slate-400">Cifras del periodo en curso cargadas en el store de Zustand.</p>
+              
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 font-medium">Ventas Netas:</span>
+                  <span className="text-white font-extrabold">{formatCurrency(kpis.netSales)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 font-medium">Cumplimiento Meta:</span>
+                  <span className="text-blue-400 font-extrabold">{formatPercent(kpis.compliance)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 font-medium">Tasa de Devolución:</span>
+                  <span className="text-rose-400 font-extrabold">{formatPercent(kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 font-medium">Vendedor Líder:</span>
+                  <span className="text-emerald-400 font-extrabold">{kpis.topSeller}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 font-medium">Zona Estrella:</span>
+                  <span className="text-indigo-400 font-extrabold">Zona {kpis.topZone}</span>
+                </div>
               </div>
-            </div>
-            <div className="min-h-[280px] sm:min-h-[340px] flex items-center justify-center">
-              <BITreemapChart data={filteredData.providers} />
-            </div>
-          </GlassCard>
+            </GlassCard>
+
+            <GlassCard hoverable={false} className="p-5 shadow-xl space-y-3">
+              <h4 className="text-xs font-bold text-white">Notas de Funcionamiento</h4>
+              <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                Este asistente procesa el cubo de datos cargado localmente. No realiza llamadas a servidores externos, garantizando el 100% de confidencialidad de la información comercial de Alpina.
+              </p>
+            </GlassCard>
+          </div>
         </div>
       )}
 
-      {activeTab === 'logistics' && (
+      {activeTab === 'simulator' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <GlassCard hoverable={false} className="lg:col-span-1 p-5 shadow-xl">
+            
+            {/* Panel de Controles (Sliders) */}
+            <GlassCard hoverable={false} className="p-5 shadow-xl space-y-6">
               <div>
-                <h3 className="text-base font-bold text-white">Puente de Conciliación Comercial</h3>
-                <p className="text-xs text-slate-400 mb-4">Conciliación de ventas brutas deduciendo devoluciones registradas para calcular las netas.</p>
+                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <Zap className="h-4.5 w-4.5 text-blue-400" />
+                  Palancas de Simulación
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-1">Ajusta los sliders para evaluar impactos potenciales.</p>
               </div>
-              <BIWaterfallChart sales={totalSales} returns={totalReturns} />
+
+              {/* Slider 1: Reducción Devoluciones */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-300 font-medium">Mitigación de Devoluciones</span>
+                  <span className="text-blue-400 font-bold">{sliderDevRate}% menos</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={sliderDevRate}
+                  onChange={e => setSliderDevRate(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Reduce el volumen total de retornos de mercancía mediante mejoras en la calidad logística.
+                </p>
+              </div>
+
+              {/* Slider 2: Incremento Ticket Promedio */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-300 font-medium">Aumento en Ticket Promedio</span>
+                  <span className="text-emerald-400 font-bold">+{sliderTicket}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="30"
+                  value={sliderTicket}
+                  onChange={e => setSliderTicket(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                />
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Incrementa el valor neto medio por factura incrementando la venta cruzada.
+                </p>
+              </div>
+
+              {/* Slider 3: Crecimiento General en Ventas */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-300 font-medium">Crecimiento de Volumen Bruto</span>
+                  <span className="text-indigo-400 font-bold">+{sliderVol}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="25"
+                  value={sliderVol}
+                  onChange={e => setSliderVol(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                />
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Aumenta el volumen total de cajas vendidas atrayendo nuevos clientes o ampliando rutas.
+                </p>
+              </div>
+
+              {/* Botón de reinicio */}
+              <button
+                onClick={() => { setSliderDevRate(0); setSliderTicket(0); setSliderVol(0); }}
+                className="w-full py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-300 font-bold transition-all cursor-pointer"
+              >
+                Resetear Parámetros
+              </button>
             </GlassCard>
 
-            <GlassCard hoverable={false} className="lg:col-span-2 p-5 shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                <div>
-                  <h3 className="text-base font-bold text-white">Mapa de Calor: Fricciones de Devolución</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Correlación cruzada entre ejecutivos y motivos de rechazo (COP Miles).</p>
-                </div>
-                <span className="text-[10px] bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono shrink-0">Motivo principal: "Sin Plata"</span>
-              </div>
-              <BIHeatmapChart returnsSellers={filteredData.returnsSellers} clientReturns={filteredData.clientReturns} />
-            </GlassCard>
-          </div>
+            {/* Resultados de Simulación */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Tarjetas KPI de Comparación */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                {/* Ventas Brutas */}
+                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-slate-900 bg-slate-950/40 relative overflow-hidden">
+                  <div>
+                    <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Ventas Brutas Sim.</p>
+                    <p className="text-lg font-extrabold text-white mt-1.5">{formatCurrency(simSales)}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Base: {formatShortCurrency(kpis.totalSales)}</p>
+                  </div>
+                  {simSales > kpis.totalSales && (
+                    <span className="absolute top-2 right-2 text-[9px] font-bold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      +{formatPercent((simSales - kpis.totalSales) / kpis.totalSales)}
+                    </span>
+                  )}
+                </GlassCard>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <GlassCard hoverable={false} className="p-5 shadow-xl">
-              <div className="flex items-start gap-2 mb-3">
-                <Activity className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-base font-bold text-white">Correlación: Volumen vs Devoluciones</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Clientes de alto volumen con tasas de retorno fuera del promedio.</p>
-                </div>
-              </div>
-              <BIScatterPlot clientReturns={filteredData.clientReturns} />
-            </GlassCard>
+                {/* Devoluciones */}
+                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-slate-900 bg-slate-950/40 relative overflow-hidden">
+                  <div>
+                    <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Devoluciones Sim.</p>
+                    <p className="text-lg font-extrabold text-rose-400 mt-1.5">{formatCurrency(simReturns)}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Base: {formatShortCurrency(kpis.totalReturns)}</p>
+                  </div>
+                  {simReturns !== kpis.totalReturns && (
+                    <span className={`absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                      simReturns < kpis.totalReturns 
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    }`}>
+                      {simReturns < kpis.totalReturns ? '-' : '+'}{formatPercent(Math.abs((simReturns - kpis.totalReturns) / kpis.totalReturns))}
+                    </span>
+                  )}
+                </GlassCard>
 
-            <GlassCard hoverable={false} className="p-5 shadow-xl">
-              <div className="flex items-start gap-2 mb-3">
-                <AlertCircle className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-base font-bold text-white">Causales de Devolución</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Jerarquía de justificaciones por valor monetario.</p>
-                </div>
+                {/* Ventas Netas */}
+                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-blue-500/20 bg-slate-950/40 relative overflow-hidden shadow-lg shadow-blue-500/[0.02]">
+                  <div>
+                    <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Ventas Netas Sim.</p>
+                    <p className="text-lg font-extrabold text-emerald-400 mt-1.5">{formatCurrency(simNetSales)}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Base: {formatShortCurrency(kpis.netSales)}</p>
+                  </div>
+                  {simNetSales > kpis.netSales && (
+                    <span className="absolute top-2 right-2 text-[9px] font-bold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      +{formatPercent((simNetSales - kpis.netSales) / kpis.netSales)}
+                    </span>
+                  )}
+                </GlassCard>
               </div>
-              <BIFunnelChart data={filteredData.returnsConcepts} />
-            </GlassCard>
+
+              {/* Gráfico Comparativo */}
+              <GlassCard hoverable={false} className="p-5 shadow-xl">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-bold text-white">Impacto Financiero: Base vs Simulado</h3>
+                  <span className="text-[10px] bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/20">
+                    Proyección de Cumplimiento: {formatPercent(simCompliance)}
+                  </span>
+                </div>
+                <div className="min-h-[300px] flex items-center justify-center">
+                  <Chart options={simulatorChartOptions} series={simulatorChartSeries} type="bar" height={300} className="w-full" />
+                </div>
+              </GlassCard>
+            </div>
           </div>
         </div>
       )}
