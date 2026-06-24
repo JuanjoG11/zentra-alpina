@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
@@ -29,7 +30,8 @@ import {
   AlertCircle,
   ChevronUp,
   ChevronDown,
-  Minus
+  Minus,
+  Monitor
 } from 'lucide-react';
 
 // ─── Semáforo helpers ────────────────────────────────────────────────
@@ -163,6 +165,7 @@ const DailySalesTable = ({ salesDaily }) => {
 const ExecutiveDashboard = () => {
   const dbData = useStore(state => state.dbData);
   const filters = useStore();
+  const navigate = useNavigate();
 
   // Date range filter (local state — no afecta otros módulos)
   const [dateFrom, setDateFrom] = useState('');
@@ -271,8 +274,18 @@ const ExecutiveDashboard = () => {
           </p>
         </div>
 
-        {/* ── Filtro de fechas ── */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Botón Modo TV */}
+          <button
+            onClick={() => navigate('/tv')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold text-sm transition-all shadow-lg hover:shadow-xl"
+            title="Activar modo presentación TV"
+          >
+            <Monitor className="h-4 w-4" />
+            Modo TV
+          </button>
+
+          {/* ── Filtro de fechas ── */}
           <div className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2 shadow-inner">
             <CalendarDays className="h-3.5 w-3.5 text-blue-400 shrink-0" />
             <span className="text-[11px] text-slate-500 font-medium">Desde</span>

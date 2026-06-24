@@ -42,12 +42,18 @@ import {
 
 const renderMessageText = (text, isUser) => {
   if (!text) return null;
-  // Split by newline characters to preserve line breaks
-  const lines = text.split('\\n');
+  // Limpiar markdown que Gemini devuelve: **negrita**, *cursiva*, # títulos
+  const clean = text
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold** → bold
+    .replace(/\*(.+?)\*/g, '$1')        // *italic* → italic
+    .replace(/^#{1,3}\s+/gm, '')        // ## Títulos → sin #
+    .replace(/^\s*[-–]\s/gm, '• ');     // - item → • item
+
+  const lines = clean.split('\n');
   return lines.map((line, idx) => (
-    <span key={idx} className={isUser ? "text-white" : "text-purple-300"}>
+    <span key={idx} className={isUser ? 'text-white' : 'text-slate-100'}>
       {line}
-      {idx < lines.length - 1 && <br/>}
+      {idx < lines.length - 1 && <br />}
     </span>
   ));
 };
@@ -84,8 +90,11 @@ const BusinessIA = () => {
 
   // Chat usa el store — persiste entre tabs y recargas de página
   const messages = chatMessages.length > 0 ? chatMessages : [WELCOME_MSG];
+  // setMessages siempre lee el estado más reciente del store para evitar race conditions
   const setMessages = (updater) => {
-    const next = typeof updater === 'function' ? updater(messages) : updater;
+    const current = useStore.getState().chatMessages;
+    const base = current.length > 0 ? current : [WELCOME_MSG];
+    const next = typeof updater === 'function' ? updater(base) : updater;
     setChatMessages(next);
   };
 
@@ -102,9 +111,9 @@ const BusinessIA = () => {
   // contexto de mercado con etiqueta honesta pero tono de autoridad.
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const handleSendMessage = (textToSend) => {
+  const handleSendMessage = async (textToSend) => {
     const text = textToSend || chatInput;
-    if (!text.trim()) return;
+    if (!text.trim() || isTyping) return;
 
     const userMsg = {
       id: Date.now(),
@@ -117,146 +126,143 @@ const BusinessIA = () => {
     if (!textToSend) setChatInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      let replyText = '';
-      const q = text.toLowerCase();
+    // ── Construir contexto compacto del cubo (menos tokens = menos quota) ──────
+    const devRate = kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0;
+    const workDay = currentWorkDay > 0 ? currentWorkDay
+      : (filteredData.salesDaily || []).filter(d => d.total > 0).length || 1;
+    const proyVentas = kpis.totalSales * (22 / workDay);
+    const proyComp   = kpis.totalBudget > 0 ? proyVentas / kpis.totalBudget : 0;
 
-      // ── DEVOLUCIONES / EJECUTIVOS ────────────────────────────────────────────
-      if (q.includes('devoluciones') || q.includes('riesgo') || q.includes('ejecutivos') || q.includes('vendedor')) {
-        const sellers = [...filteredData.returnsSellers]
-          .filter(s => s.nombre !== 'SERVICIO  CLIENTE' && s.nombre !== 'CLIENTE')
-          .sort((a, b) => b.porcentajeDevolucion - a.porcentajeDevolucion);
-        const top = sellers.slice(0, 3);
-        const devRate = kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0;
-        const over = sellers.filter(s => s.porcentajeDevolucion > 0.05).length;
-        replyText =
-          `Analicé el comportamiento de devoluciones del periodo ${activePeriodLabel} y hay señales que requieren atención.\n\n` +
-          `La tasa global del canal está en ${formatPercent(devRate)}${devRate > 0.06 ? ' — por encima del umbral saludable del 5%. Eso genera fuga real de ingresos que golpea el flujo de caja del distribuidor.' : ' — dentro del rango aceptable, aunque hay ejecutivos que jalan el promedio.'}\n\n` +
-          `🔴 EJECUTIVOS CON MAYOR EXPOSICIÓN:\n` +
-          top.map((s, i) => {
-            const tag = s.porcentajeDevolucion > 0.1 ? '🚨 CRÍTICO' : s.porcentajeDevolucion > 0.05 ? '⚠️ ALERTA' : '✅';
-            return `${i + 1}. ${s.nombre} — ${formatPercent(s.porcentajeDevolucion)} de retorno\n   Ventas: ${formatCurrency(s.ventas)} | Devuelto: ${formatCurrency(s.devoluciones)} ${tag}`;
-          }).join('\n') +
-          `\n\n📊 LO QUE DICEN LOS DATOS:\nEl 52,25% de las devoluciones se registran como "SIN PLATA" y el 11,49% como "LOCAL CERRADO". Esto no es logística fría ni calidad de producto — es programación de rutas y gestión de cartera. ${over} ejecutivo${over !== 1 ? 's superan' : ' supera'} el umbral del 5%.\n\n` +
-          `💡 ACCIONES RECOMENDADAS:\n` +
-          `→ Acompañamiento en ruta con ${top[0]?.nombre || 'el ejecutivo de mayor riesgo'} para auditar el timing y la prospección.\n` +
-          `→ Revisar horarios de visita: "SIN PLATA" suele concentrarse en visitas matutinas a tiendas de barrio antes de que el negocio haya operado.\n` +
-          `→ Cruzar clientes con alta devolución contra historial de cartera — posiblemente se está vendiendo por encima de su capacidad real de pago.`;
+    const topSellers = [...filteredData.returnsSellers]
+      .filter(s => s.nombre !== 'SERVICIO  CLIENTE' && s.nombre !== 'CLIENTE')
+      .sort((a, b) => b.porcentajeDevolucion - a.porcentajeDevolucion)
+      .slice(0, 3);
 
-      // ── COMPETENCIA ──────────────────────────────────────────────────────────
-      } else if (q.includes('polar')) {
-        replyText = `El portafolio activo en este canal está bajo marcas de Alpina Colombia. ¿Quieres que analice el contexto competitivo frente a Alquería o Colanta en el Eje Cafetero?`;
+    const topZones = [...filteredData.zones]
+      .filter(z => z.presupuesto > 0)
+      .sort((a, b) => (b.ventasNetas / b.presupuesto) - (a.ventasNetas / a.presupuesto))
+      .slice(0, 3);
 
-      } else if (q.includes('competencia') || q.includes('alqueria') || q.includes('colanta') || q.includes('participaci')) {
-        replyText =
-          `Este es uno de los temas más estratégicos para Alpina en el Eje Cafetero. Voy a ser muy preciso sobre qué es dato y qué es análisis.\n\n` +
-          `📌 PARTICIPACIÓN NACIONAL (Euromonitor / La República, ref. 2024–2025):\n` +
-          `• Colanta: ~21,9% — Modelo cooperativo, estructura de costos difícil de igualar en precio. Activo en leche líquida y quesos frescos en el Eje Cafetero.\n` +
-          `• Alpina: ~12,0% — Segunda en volumen, referente en premium. Bon Yurt, esparcibles y quesos maduros ganan la decisión de compra incluso contra precios más bajos.\n` +
-          `• Alquería: ~10,6% — Especialista en leche UHT y cremas. Penetración relevante en Pereira y Armenia en canal supermercado.\n` +
-          `• Las tres suman ~44,5% nacional. El resto: marcas regionales, marcas propias de cadenas y hard discount.\n\n` +
-          `⚡ LA AMENAZA REAL EN TAT:\nNo es Alquería ni Colanta — es D1 y Ara. El hard discount lleva años ganando en estratos 2 y 3 con lácteos de marca propia a precios que el canal tradicional no iguala. Pereira y Dosquebradas tienen alta densidad de descuenteros. Ese es el cliente que el TAT de Alpina disputa cada día.\n\n` +
-          `📍 CONTEXTO REGIONAL:\nNo existen datos públicos de participación por ciudad para 2026. Pero la mejor señal de cómo va Alpina en este canal está en el sistema: +21,79% de crecimiento YoY es un canal que está ganando, no cediendo.\n\n` +
-          `💡 LA ESTRATEGIA:\nAlpina no debe pelear precio con Colanta en leche líquida — esa guerra no la gana. La fortaleza está en yogures funcionales, quesos maduros y valor agregado donde el precio premium tiene justificación real. Eso es lo que hay que activar en el TAT.`;
+    const lowZones = [...filteredData.zones]
+      .filter(z => z.presupuesto > 0 && z.ventasNetas / z.presupuesto < 0.7)
+      .slice(0, 2);
 
-      // ── PRESUPUESTO / ZONAS ──────────────────────────────────────────────────
-      } else if (q.includes('presupuesto') || q.includes('zonas') || q.includes('cumplimiento') || q.includes('meta') || q.includes('superando')) {
-        const allZones = [...filteredData.zones].filter(z => z.presupuesto > 0);
-        const topZones = allZones
-          .filter(z => !z.vendedor.toLowerCase().includes('servicio al cliente'))
-          .sort((a, b) => (b.ventasNetas / b.presupuesto) - (a.ventasNetas / a.presupuesto))
-          .slice(0, 3);
-        const lowZones = allZones
-          .filter(z => (z.ventasNetas / z.presupuesto) < 0.7)
-          .sort((a, b) => (a.ventasNetas / a.presupuesto) - (b.ventasNetas / b.presupuesto))
-          .slice(0, 2);
-        const overBudget = allZones.filter(z => z.ventasNetas >= z.presupuesto).length;
-        const avg = allZones.reduce((acc, z) => acc + z.ventasNetas / z.presupuesto, 0) / (allZones.length || 1);
-        replyText =
-          `Revisé el mapa de cumplimiento del periodo ${activePeriodLabel} zona por zona. Esto es lo que encontré:\n\n` +
-          `Cumplimiento promedio del canal: ${formatPercent(avg)}. ${overBudget} zona${overBudget !== 1 ? 's ya superaron su presupuesto' : ' ya superó su presupuesto'}. ${avg >= 0.9 ? 'El canal tiene momentum.' : avg >= 0.7 ? 'El canal avanza pero hay brechas que cerrar antes de fin de mes.' : 'Hay una brecha real que requiere acciones urgentes esta semana.'}\n\n` +
-          `🏆 ZONAS QUE ESTÁN MARCANDO EL RITMO:\n` +
-          topZones.map((z, i) =>
-            `${i + 1}. Zona ${z.zona} — ${z.vendedor}\n   ${formatPercent(z.ventasNetas / z.presupuesto)} | Neto: ${formatCurrency(z.ventasNetas)} vs Meta: ${formatCurrency(z.presupuesto)}`
-          ).join('\n') +
-          (lowZones.length ? `\n\n🔻 ZONAS QUE NECESITAN INTERVENCIÓN:\n` +
-          lowZones.map((z, i) =>
-            `${i + 1}. Zona ${z.zona} — ${z.vendedor}\n   Solo ${formatPercent(z.ventasNetas / z.presupuesto)} | Facturado: ${formatCurrency(z.ventasNetas)} vs Presupuesto: ${formatCurrency(z.presupuesto)}`
-          ).join('\n') : '') +
-          `\n\n💡 MI LECTURA:\nLas zonas líderes tienen algo en común: mejor preventa, menor devolución y cupos de cliente activos y sanos. Antes de subir metas, vale entender qué hace diferente a ${topZones[0]?.vendedor || 'el ejecutivo líder'} y transferirlo. Para zonas en rezago: si el presupuesto fue una proyección de escritorio sin datos reales de cobertura, ajustar la meta es más honesto que exigir lo imposible.`;
+    const topProviders = [...filteredData.providers]
+      .sort((a, b) => b.ventas2026 - a.ventas2026)
+      .slice(0, 4);
 
-      // ── PRONÓSTICO ───────────────────────────────────────────────────────────
-      } else if (q.includes('pronóstico') || q.includes('pronostico') || q.includes('cierre') || q.includes('proyección') || q.includes('proyeccion') || q.includes('fin de mes')) {
-        const salesDays = (filteredData.salesDaily || [])
-          .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime())).length;
-        // Usar día hábil configurado manualmente; si es 0, detectar desde datos
-        const dias = currentWorkDay > 0 ? currentWorkDay : (salesDays > 0 ? salesDays : 13);
-        const totalDias = 22;
-        const restantes = totalDias - dias;
-        const factor = totalDias / Math.max(dias, 1);
-        const pVentas = kpis.totalSales * factor;
-        const pNeto = kpis.netSales * factor;
-        const pDev = kpis.totalReturns * factor;
-        const pComp = kpis.totalBudget > 0 ? pVentas / kpis.totalBudget : 0;
-        const brecha = kpis.totalBudget - pVentas;
-        const diaria = kpis.totalSales / Math.max(dias, 1);
-        const requerida = brecha > 0 ? (kpis.totalBudget - kpis.totalSales) / Math.max(restantes, 1) : 0;
-        const delta = diaria > 0 ? (requerida - diaria) / diaria : 0;
-        replyText =
-          `Con ${dias} días hábiles registrados de ${totalDias} en el mes, aquí está mi proyección de cierre para ${activePeriodLabel}:\n\n` +
-          `📈 PROYECCIÓN AL CIERRE:\n` +
-          `• Ventas Brutas: ${formatCurrency(pVentas)}\n` +
-          `• Devoluciones proyectadas: ${formatCurrency(pDev)}\n` +
-          `• Ventas Netas: ${formatCurrency(pNeto)}\n` +
-          `• Cumplimiento proyectado: ${formatPercent(pComp)} de la meta de ${formatCurrency(kpis.totalBudget)}\n\n` +
-          (brecha > 0
-            ? `⚡ LA BRECHA REAL:\nFaltan ${formatCurrency(brecha)} para el 100%. Con ${restantes} días hábiles disponibles, el canal necesita ${formatCurrency(requerida)} por día — ${delta > 0.01 ? formatPercent(delta) + ' más que el ritmo actual. Es alcanzable si las zonas top mantienen el impulso y se intervienen las que están en rezago.' : 'consistente con el ritmo actual. Si se mantiene, la meta está al alcance.'}\n`
-            : `✅ EL CANAL VA ADELANTE:\nA este ritmo, el canal superaría la meta en ${formatCurrency(Math.abs(brecha))}. El foco ahora es no erosionar ese superávit con devoluciones no controladas en la recta final.\n`) +
-          `\n⚠️ LO QUE PUEDE CAMBIAR ESTA PROYECCIÓN:\nModelo lineal — la última semana del mes suele concentrar el 30–35% del volumen por el efecto de cierre de quincena y urgencias de inventario. Si el equipo activa bien esa dinámica, el resultado real puede superar la proyección. Las devoluciones en los últimos días hábiles son el mayor riesgo — no hay tiempo de compensarlas.`;
+    // Cifras en millones para reducir tokens al mínimo
+    const M = v => `$${(v/1e6).toFixed(1)}M`;
+    const P = v => `${(v*100).toFixed(1)}%`;
 
-      // ── CRECIMIENTO YOY / MARCAS ─────────────────────────────────────────────
-      } else if (q.includes('crecimiento') || q.includes('yoy') || q.includes('marca') || q.includes('proveedor')) {
-        replyText =
-          `El número que más destaca del análisis de este canal es el crecimiento de Alpina Productos Alimenticios: +21,79% año contra año.\n\n` +
-          `En 2025 la línea facturó ${formatCurrency(2790456506)} en este canal. En 2026 llegó a ${formatCurrency(3398429638)}. Eso son más de ${formatCurrency(607973132)} adicionales — en el mismo canal, con la misma estructura de distribución.\n\n` +
-          `🔍 ¿QUÉ EXPLICA ESE CRECIMIENTO?\nNo es cobertura nueva — es profundidad. El canal está vendiendo más por cliente, no necesariamente a más clientes. Eso se confirma en el ticket promedio y en la participación de categorías de valor agregado en el mix de ventas.\n\n` +
-          `💡 LO QUE ESTO SIGNIFICA:\nAlpina tiene momentum real en este canal. El riesgo ahora no es el crecimiento — es sostenerlo. Una tasa de devoluciones fuera de control o una brecha en zonas clave puede erosionar ese resultado más rápido de lo que tardó en construirse. Blindar las zonas top e intervenir las que están en rezago es la prioridad táctica del cierre de mes.`;
+    const cuboContext = `CANAL ALPINA EJE CAFETERO ${activePeriodLabel} DIA_HABIL=${workDay}/22
+VENTAS=${M(kpis.totalSales)} DEV=${M(kpis.totalReturns)}(${P(devRate)}) NETAS=${M(kpis.netSales)} PRESUP=${M(kpis.totalBudget)} CUMPL=${P(kpis.compliance)} YOY=+${P(kpis.growth)} TICKET=$${Math.round(kpis.averageTicket/1000)}K FACT=${kpis.totalFacturas} PROYECC=${M(proyVentas)}/${P(proyComp)}
+EXEC_DEV: ${topSellers.map(s=>`${s.nombre}=${P(s.porcentajeDevolucion)}`).join(',')}
+ZONAS_TOP: ${topZones.map(z=>`${z.zona}/${z.vendedor}=${P(z.ventasNetas/z.presupuesto)}`).join(',')}
+ZONAS_BAJA: ${lowZones.length ? lowZones.map(z=>`${z.zona}=${P(z.ventasNetas/z.presupuesto)}`).join(',') : 'ninguna'}
+PORTAFOLIO: ${topProviders.map(p=>`${p.proveedor}=${M(p.ventas2026)}`).join(',')}
+MVP_EXEC=${kpis.topSeller} MVP_ZONA=${kpis.topZone}`;
 
-      // ── LOGÍSTICA / CALIDAD ──────────────────────────────────────────────────
-      } else if (q.includes('logística') || q.includes('logistica') || q.includes('entrega') || q.includes('ruta') || q.includes('calidad')) {
-        const logQ = kpis.totalSales > 0 ? (kpis.totalSales - kpis.totalReturns) / kpis.totalSales : 0;
-        replyText =
-          `La calidad de entrega del canal en ${activePeriodLabel} está en ${formatPercent(logQ)}. ${logQ >= 0.95 ? 'Por encima del umbral del 95% — el canal opera bien en efectividad de entrega.' : 'Por debajo del umbral del 95% — casi 1 de cada 20 pesos facturados regresa al camión.'}\n\n` +
-          `📦 COMPOSICIÓN DE LAS DEVOLUCIONES:\n` +
-          `• "SIN PLATA": 52,25% — problema de cartera y timing de visita.\n` +
-          `• "LOCAL CERRADO": 11,49% — evitable al 100% con mejor programación de rutas.\n` +
-          `• Ambas causales suman más del 63% y son completamente manejables con información previa.\n\n` +
-          `💡 EL DIAGNÓSTICO:\nEsto no es cold chain ni calidad de producto. Es inteligencia de ruta. Con el historial de pagos del cliente y los horarios reales del punto de venta, esas dos causales se reducen drásticamente. Una mejora del 50% en ellas recuperaría ${formatCurrency(kpis.totalReturns * 0.315)} en ventas netas que hoy se pierden en reproceso.`;
+    // ── Prompt del sistema ──────────────────────────────────────────────────────
+    const systemPrompt = `Eres el Consultor Comercial Inteligente de Zentra Alpina, especializado en el mercado de lácteos del Eje Cafetero colombiano (Pereira, Dosquebradas, Manizales, Armenia, Chinchiná, La Virginia, Cartago y municipios aledaños).
 
-      // ── GENERAL ──────────────────────────────────────────────────────────────
-      } else {
-        const devRate = kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0;
-        const estado = kpis.compliance >= 0.9 ? 'en terreno positivo' : kpis.compliance >= 0.7 ? 'en marcha pero con brechas' : 'con una brecha significativa vs. meta';
-        replyText =
-          `Pulso del canal ${activePeriodLabel}${filters.selectedCity ? ` — ${filters.selectedCity}` : ''}:\n\n` +
-          `El canal está ${estado}. Ventas netas de ${formatCurrency(kpis.netSales)} = ${formatPercent(kpis.compliance)} del presupuesto. Tasa de devolución: ${formatPercent(devRate)}${devRate > 0.06 ? ' — hay trabajo por hacer.' : ' — dentro de rangos manejables.'} Ejecutivo destacado: ${kpis.topSeller || '—'}. Zona estrella: ${kpis.topZone ? `Zona ${kpis.topZone}` : '—'}.\n\n` +
-          `Soy tu consultor comercial del Eje Cafetero. Pregúntame sobre:\n` +
-          `→ Devoluciones y ejecutivos en riesgo\n` +
-          `→ Competencia (Alquería, Colanta, hard discount)\n` +
-          `→ Cumplimiento de metas por zona\n` +
-          `→ Proyección de cierre de mes\n` +
-          `→ Crecimiento YoY y comportamiento de marcas\n` +
-          `→ Calidad logística y perfil de devoluciones`;
+CONOCES A FONDO:
+- El portafolio completo de Alpina Colombia (Bon Yurt, Yogurt Alpina, Alpinito, Avena Alpina, Yogo Yogo, Leche Alpina, Queso Parmesano, YOX, yogures griegos, esparcibles, kumis)
+- La competencia real: Colanta (~21,9% share nacional), Alquería (~10,6%), y especialmente D1/Ara/Justo&Bueno en hard discount ganando espacio en TAT estratos 2-3
+- La dinámica del canal TAT (tienda a tienda) en el Eje Cafetero: ciclos de pago quincenales, comportamiento de tenderos, estacionalidad por temporadas de cosecha cafetera
+- Los causales típicos de devolución en la región: "SIN PLATA" (cartera), "LOCAL CERRADO" (programación de rutas), vencimientos, faltantes
+- Las ciudades: Pereira (MACRO_3), Manizales/Caldas (MACRO_2), Armenia/Quindío (MACRO_1)
+
+REGLAS DE ORO:
+1. Usa SIEMPRE los datos reales del canal que te doy como contexto — son de hoy
+2. Cuando hables de competencia o mercado externo, di explícitamente que es conocimiento del sector (no inventar cifras)
+3. Responde en español colombiano natural — como un asesor senior de ventas, no como un robot
+4. Sé directo, concreto y accionable — nada de rodeos ni disclaimers legales
+5. Si la pregunta mezcla datos del canal + contexto de mercado, responde ambas dimensiones
+6. Máximo 4-6 párrafos o bullets. Sin paja.
+
+${cuboContext}`;
+
+    // ── Llamada al proxy local que habla con Gemini desde Node ────────────────
+    // (Las keys AQ. no funcionan desde browser por CORS — el servidor proxy sí)
+    const PROXY_URL = 'http://localhost:4000/api/gemini';
+
+    // Historial de conversación (últimos 6 mensajes para contexto)
+    const currentMsgs = useStore.getState().chatMessages;
+    const baseMsgs = currentMsgs.length > 0 ? currentMsgs : [WELCOME_MSG];
+    const recentHistory = baseMsgs.slice(-6).filter(m => m.id !== 'welcome');
+    const historyParts = recentHistory.map(m => ({
+      role: m.sender === 'user' ? 'user' : 'model',
+      parts: [{ text: m.text }]
+    }));
+
+    try {
+      const res = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemPrompt,
+          contents: [
+            ...historyParts,
+            { role: 'user', parts: [{ text }] }
+          ]
+        })
+      });
+
+      // Si es 429, reintento automático una sola vez después de 6 segundos
+      if (res.status === 429) {
+        await new Promise(r => setTimeout(r, 6000));
+        const retry = await fetch(PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemPrompt,
+            contents: [...historyParts, { role: 'user', parts: [{ text }] }]
+          })
+        });
+        const retryData = await retry.json();
+        const replyText = retry.ok ? (retryData.text || 'Sin respuesta.') : null;
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          sender: 'bot',
+          text: replyText || 'El servicio de IA está ocupado en este momento. Intenta de nuevo en unos segundos.',
+          time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+        }]);
+        return;
       }
 
+      const data = await res.json();
+      const replyText = res.ok ? (data.text || 'Sin respuesta.') : null;
+      const errorMsg  = !res.ok ? (data.error || `Error ${res.status}`) : null;
+
+      if (replyText) {
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          sender: 'bot',
+          text: replyText,
+          time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+        }]);
+      } else {
+        // Quota agotada — mensaje corto, sin datos crudos
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          sender: 'bot',
+          text: 'El servicio de IA está ocupado en este momento. Intenta de nuevo en unos segundos.',
+          time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
+
+    } catch (err) {
+      console.error('Gemini error:', err);
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'bot',
-        text: replyText,
+        text: 'No pude conectar con el servicio de IA. Verifica que el servidor esté corriendo con npm run dev:all.',
         time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
       }]);
+    } finally {
       setIsTyping(false);
-    }, 1200);
+    }
   };
 
   const clientsInRisk = useMemo(() => {

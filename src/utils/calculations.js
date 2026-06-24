@@ -177,7 +177,6 @@ export const calculateKPIs = (filteredData) => {
   const totalSales = hasDailySales
     ? salesDaily.reduce((sum, d) => sum + (d.total || 0), 0)
     : providers.reduce((sum, p) => sum + p.ventas2026, 0);
-    console.log('calculateKPIs - totalSales:', totalSales, 'hasDailySales:', hasDailySales, 'salesDaily count:', salesDaily?.length, 'providers count:', providers?.length);
 
   // 2. Presupuesto: suma de zonas, o el presupuesto real del mes si no hay zonas
   const PRESUPUESTO_REAL_MES = 4001885288; // Junio 2026 — 22 días hábiles

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
@@ -6,7 +7,7 @@ import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
 import {
   Users, Trophy, ShieldAlert, ArrowUpRight, ArrowDownRight,
-  TrendingUp, MapPin, CheckCircle2, XCircle, AlertCircle
+  TrendingUp, MapPin, CheckCircle2, XCircle, AlertCircle, ExternalLink
 } from 'lucide-react';
 
 // Ciudad de una zona usando el mapa real del cubo
@@ -39,6 +40,7 @@ const complianceMeta = (rate) => {
 const SellersAnalysis = () => {
   const filters = useStore();
   const dbData  = useStore(state => state.dbData);
+  const navigate = useNavigate();
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
@@ -304,7 +306,10 @@ const SellersAnalysis = () => {
 
       {/* ── Tabla vendedores con ciudad ── */}
       <GlassCard hoverable={false}>
-        <h3 className="text-sm font-bold text-white mb-4">Ejecutivos Comerciales · Ventas y Calidad de Entrega</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-white">Ejecutivos Comerciales · Ventas y Calidad de Entrega</h3>
+          <span className="text-[10px] text-slate-500 font-medium">Click en el ejecutivo para ver perfil detallado</span>
+        </div>
         <div className="overflow-x-auto -mx-5 px-5">
           <table className="w-full min-w-[520px] text-left text-xs border-collapse">
             <thead>
@@ -322,8 +327,18 @@ const SellersAnalysis = () => {
                 const meta = CITY_META[s.ciudad] || CITY_META.OTRO;
                 const isAlert = s.porcentajeDevolucion > 0.05;
                 return (
-                  <tr key={i} className={`hover:bg-slate-900/20 transition-colors ${isAlert ? 'bg-rose-950/10' : ''}`}>
-                    <td className="py-2.5 pl-2 font-bold text-slate-200 max-w-[150px] truncate">{s.nombre}</td>
+                  <tr 
+                    key={i} 
+                    className={`hover:bg-slate-900/20 transition-colors cursor-pointer group ${isAlert ? 'bg-rose-950/10' : ''}`}
+                    onClick={() => navigate(`/ejecutivo?seller=${s.ejecutivo}`)}
+                    title="Ver perfil detallado"
+                  >
+                    <td className="py-2.5 pl-2 font-bold text-slate-200 max-w-[150px] truncate">
+                      <div className="flex items-center gap-2">
+                        {s.nombre}
+                        <ExternalLink className="h-3 w-3 text-slate-600 group-hover:text-blue-400 transition-colors" />
+                      </div>
+                    </td>
                     <td className="py-2.5 hidden sm:table-cell">
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.text}`}>
                         {meta.label}
