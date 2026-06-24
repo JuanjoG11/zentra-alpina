@@ -5,11 +5,13 @@ import Topbar from './Topbar';
 import useStore from '../../store/useStore';
 
 const Layout = () => {
-  const { sidebarOpen, toggleSidebar, fetchDataFromSupabase } = useStore();
+  const { sidebarOpen, toggleSidebar, fetchDataFromSupabase, generateNotifications } = useStore();
 
   useEffect(() => {
     fetchDataFromSupabase();
-  }, [fetchDataFromSupabase]);
+    // Generar notificaciones desde los datos persistidos al arrancar
+    generateNotifications();
+  }, [fetchDataFromSupabase, generateNotifications]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans overflow-x-hidden">

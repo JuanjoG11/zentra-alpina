@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { ZONAS_POR_CIUDAD, getFilteredData, calculateKPIs } from '../../utils/calculations';
 import { formatCurrency, formatPercent, formatNumber } from '../../utils/formatters';
@@ -28,6 +29,13 @@ const Topbar = () => {
   const [notifOpen,   setNotifOpen]   = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const navigate = useNavigate();
+
+  const handleNotifClick = (n) => {
+    markAsRead(n.id);
+    setNotifOpen(false);
+    if (n.route) navigate(n.route);
+  };
 
   const handleExportPDF = () => {
     setIsExporting(true);
@@ -446,8 +454,13 @@ const Topbar = () => {
                   )}
                 </div>
                 <div className="max-h-64 overflow-y-auto py-1 divide-y divide-slate-900">
+                  {notifications.length === 0 && (
+                    <div className="py-6 text-center text-xs text-slate-500">
+                      Sin alertas activas en este momento.
+                    </div>
+                  )}
                   {notifications.map(n => (
-                    <div key={n.id} onClick={() => markAsRead(n.id)}
+                    <div key={n.id} onClick={() => handleNotifClick(n)}
                       className={`p-2.5 hover:bg-slate-900/60 transition-colors rounded-lg flex items-start gap-2.5 cursor-pointer ${!n.read ? 'bg-slate-900/20' : ''}`}>
                       <div className="mt-1 shrink-0">
                         {n.type === 'warning' && <span className="h-2 w-2 rounded-full bg-amber-500 block" />}
@@ -461,6 +474,9 @@ const Topbar = () => {
                           <span className="text-[10px] text-slate-500 shrink-0">{n.time}</span>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">{n.message}</p>
+                        {n.route && (
+                          <p className="text-[9px] text-blue-500/70 mt-1 font-medium">Toca para ver →</p>
+                        )}
                       </div>
                     </div>
                   ))}

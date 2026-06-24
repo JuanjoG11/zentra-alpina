@@ -10,7 +10,6 @@ import FocosNumerica from './pages/FocosNumerica';
 import SellersAnalysis from './pages/SellersAnalysis';
 import BusinessIA from './pages/BusinessIA';
 import UploadExcel from './pages/UploadExcel';
-import IndicatorsProfile from './pages/IndicatorsProfile';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('app')!).render(
@@ -26,7 +25,6 @@ ReactDOM.createRoot(document.getElementById('app')!).render(
           <Route path="vendedores" element={<SellersAnalysis />} />
           <Route path="ia" element={<BusinessIA />} />
           <Route path="upload" element={<UploadExcel />} />
-          <Route path="indicadores" element={<IndicatorsProfile />} />
         </Route>
       </Routes>
     </BrowserRouter>

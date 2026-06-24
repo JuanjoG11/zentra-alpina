@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
@@ -52,11 +53,15 @@ const renderMessageText = (text, isUser) => {
 };
 
 const BusinessIA = () => {
-  const [activeTab, setActiveTab] = useState('overview'); // overview, ai, commercial, logistics
+  const [activeTab, setActiveTab] = useState('overview');
   const filters = useStore();
   const dbData  = useStore(state => state.dbData);
+  const chatMessages    = useStore(state => state.chatMessages);
+  const setChatMessages = useStore(state => state.setChatMessages);
+  const currentWorkDay  = useStore(state => state.currentWorkDay);
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
+  const navigate = useNavigate();
 
   // Period label from data
   const activePeriodLabel = useMemo(() => {
@@ -69,15 +74,21 @@ const BusinessIA = () => {
     return `${months[valid[0].getMonth()]} ${valid[0].getFullYear()}`;
   }, [filteredData.salesDaily]);
 
-  // Chat state
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'bot',
-      text: 'Hola. Soy el motor de inteligencia comercial de Zentra Alpina, entrenado sobre los datos reales de tu canal en el Eje Cafetero.\n\nAnalizo devoluciones, zonas, marcas, competencia y proyecciones de cierre en tiempo real — con los datos que tienes cargados en el sistema, no con supuestos.\n\nCuando te hablo del mercado externo, te digo exactamente de dónde viene el dato. Cuando te hablo de tu canal, es 100% información tuya.\n\n¿Qué quieres saber hoy?',
-      time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+  // Mensaje de bienvenida inicial — solo si el chat está vacío
+  const WELCOME_MSG = {
+    id: 'welcome',
+    sender: 'bot',
+    text: 'Hola. Soy el motor de inteligencia comercial de Zentra Alpina, entrenado sobre los datos reales de tu canal en el Eje Cafetero.\n\nAnalizo devoluciones, zonas, marcas, competencia y proyecciones de cierre en tiempo real — con los datos que tienes cargados en el sistema, no con supuestos.\n\nCuando te hablo del mercado externo, te digo exactamente de dónde viene el dato. Cuando te hablo de tu canal, es 100% información tuya.\n\n¿Qué quieres saber hoy?',
+    time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+  };
+
+  // Chat usa el store — persiste entre tabs y recargas de página
+  const messages = chatMessages.length > 0 ? chatMessages : [WELCOME_MSG];
+  const setMessages = (updater) => {
+    const next = typeof updater === 'function' ? updater(messages) : updater;
+    setChatMessages(next);
+  };
+
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
@@ -178,8 +189,9 @@ const BusinessIA = () => {
       } else if (q.includes('pronóstico') || q.includes('pronostico') || q.includes('cierre') || q.includes('proyección') || q.includes('proyeccion') || q.includes('fin de mes')) {
         const salesDays = (filteredData.salesDaily || [])
           .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime())).length;
-        const dias = salesDays > 0 ? salesDays : 13;
-        const totalDias = 25;
+        // Usar día hábil configurado manualmente; si es 0, detectar desde datos
+        const dias = currentWorkDay > 0 ? currentWorkDay : (salesDays > 0 ? salesDays : 13);
+        const totalDias = 22;
         const restantes = totalDias - dias;
         const factor = totalDias / Math.max(dias, 1);
         const pVentas = kpis.totalSales * factor;
@@ -191,7 +203,7 @@ const BusinessIA = () => {
         const requerida = brecha > 0 ? (kpis.totalBudget - kpis.totalSales) / Math.max(restantes, 1) : 0;
         const delta = diaria > 0 ? (requerida - diaria) / diaria : 0;
         replyText =
-          `Con ${dias} días hábiles registrados de ${totalDias} estimados en el mes, aquí está mi proyección de cierre para ${activePeriodLabel}:\n\n` +
+          `Con ${dias} días hábiles registrados de ${totalDias} en el mes, aquí está mi proyección de cierre para ${activePeriodLabel}:\n\n` +
           `📈 PROYECCIÓN AL CIERRE:\n` +
           `• Ventas Brutas: ${formatCurrency(pVentas)}\n` +
           `• Devoluciones proyectadas: ${formatCurrency(pDev)}\n` +
@@ -340,59 +352,116 @@ const BusinessIA = () => {
     legend: { position: 'top', horizontalAlign: 'center' }
   };
 
-  // Dynamic Anomalies Detection
+  // ── ANOMALÍAS DINÁMICAS — 100% desde datos reales ───────────────────
   const anomalies = [];
-  
-  // Anomaly 1: Competitive pressure from Alquería
-  anomalies.push({
-    id: 1,
-    type: 'warning',
-    title: 'Alerta de contexto competitivo (TAT)',
-    description: `Colanta, Alquería y marcas de hard discount (D1, Ara) mantienen presencia activa en el canal tradicional. Sin datos de participación regional verificados, se recomienda monitorear cobertura de clientes activos vs. inactivos en el periodo.`,
-    impact: 'Riesgo de pérdida de góndola si la cobertura TAT no se mantiene consistente.'
-  });
 
-  // Anomaly 2: High Seller Returns
-  const criticalSellers = filteredData.returnsSellers.filter(s => s.porcentajeDevolucion > 0.08);
+  // 1. Ejecutivos con devolución crítica (> 8%) o alta (> 5%)
+  const criticalSellers = filteredData.returnsSellers.filter(
+    s => s.nombre !== 'SERVICIO  CLIENTE' && s.nombre !== 'CLIENTE' && s.porcentajeDevolucion > 0.05
+  );
   criticalSellers.forEach((s, idx) => {
+    const isCritical = s.porcentajeDevolucion > 0.08;
     anomalies.push({
-      id: `seller-${s.ejecutivo || idx}-${idx}`,
-      type: 'warning',
-      title: `Retornos anómalos: ${s.nombre}`,
-      description: `El vendedor ${s.nombre} (Ejecutivo ${s.ejecutivo}) registra una tasa de devoluciones del ${formatPercent(s.porcentajeDevolucion)}, superando el umbral de tolerancia del 5%. Devolvió ${formatCurrency(s.devoluciones)}.`,
-      impact: 'Incremento en costo logístico y reproceso de bodega.'
+      id: `seller-${s.ejecutivo || idx}`,
+      type: isCritical ? 'danger' : 'warning',
+      title: `${isCritical ? '🚨' : '⚠️'} Retornos anómalos: ${s.nombre}`,
+      description: `${s.nombre} (Zona ${s.ejecutivo}) registra ${formatPercent(s.porcentajeDevolucion)} de devoluciones — ${formatCurrency(s.devoluciones)} devueltos sobre ${formatCurrency(s.ventas)} facturados. Supera el umbral del 5%.`,
+      impact: isCritical
+        ? `Pérdida neta de ${formatCurrency(s.devoluciones)} en flujo del distribuidor. Requiere intervención inmediata.`
+        : 'Incremento en costo logístico y reproceso de bodega.',
+      route: '/devoluciones'
     });
   });
 
-  // Anomaly 3: Low Zone Compliance
-  const lowZones = filteredData.zones.filter(z => z.ventasNetas / z.presupuesto < 0.6);
+  // 2. Zonas con cumplimiento < 60%
+  const lowZones = filteredData.zones.filter(
+    z => z.presupuesto > 0 && z.ventasNetas / z.presupuesto < 0.6
+  );
   lowZones.forEach((z, idx) => {
     anomalies.push({
-      id: `zone-${z.zona || idx}-${idx}`,
-      type: 'warning',
-      title: `Bajo cumplimiento comercial: Zona ${z.zona}`,
-      description: `La zona ${z.zona} registra un cumplimiento de meta de apenas el ${formatPercent(z.ventasNetas / z.presupuesto)} con una facturación de ${formatCurrency(z.ventasNetas)} vs un presupuesto de ${formatCurrency(z.presupuesto)}.`,
-      impact: 'Afecta el cumplimiento consolidado del canal.'
+      id: `zone-${z.zona || idx}`,
+      type: 'danger',
+      title: `📉 Bajo cumplimiento: Zona ${z.zona}`,
+      description: `Zona ${z.zona} (${z.vendedor}) lleva solo ${formatPercent(z.ventasNetas / z.presupuesto)} de su meta. Facturó ${formatCurrency(z.ventasNetas)} vs presupuesto de ${formatCurrency(z.presupuesto)}.`,
+      impact: `Brecha de ${formatCurrency(z.presupuesto - z.ventasNetas)} sin recuperar. Afecta el consolidado regional.`,
+      route: '/focos'
     });
   });
 
-  // Dynamic AI Insights List
+  // 3. Si tasa de devolución global supera 6%
+  const globalDevRate = kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0;
+  if (globalDevRate > 0.06) {
+    anomalies.push({
+      id: 'tasa-global',
+      type: 'warning',
+      title: `📦 Tasa de devolución global elevada`,
+      description: `El canal registra ${formatPercent(globalDevRate)} de devolución sobre ventas brutas — por encima del umbral operativo del 6%. Causa principal: "SIN PLATA" concentra más del 52% del volumen devuelto.`,
+      impact: `${formatCurrency(kpis.totalReturns)} en retornos activos. Problema de cartera y timing de ruta, no de calidad de producto.`,
+      route: '/devoluciones'
+    });
+  }
+
+  // 4. Zonas que superaron el 110% de meta (positivo pero relevante)
+  const overAchievedZones = filteredData.zones.filter(
+    z => z.presupuesto > 0 && z.ventasNetas / z.presupuesto >= 1.1
+  );
+  overAchievedZones.slice(0, 2).forEach(z => {
+    anomalies.push({
+      id: `top-zone-${z.zona}`,
+      type: 'success',
+      title: `🏆 Zona estrella: ${z.zona}`,
+      description: `${z.vendedor} alcanzó ${formatPercent(z.ventasNetas / z.presupuesto)} de cumplimiento — ${formatCurrency(z.ventasNetas)} sobre una meta de ${formatCurrency(z.presupuesto)}.`,
+      impact: 'Zona modelo para replicar metodología de preventa y cobertura.',
+      route: '/vendedores'
+    });
+  });
+
+  // 5. Si cumplimiento general está por debajo del 80%
+  if (kpis.compliance < 0.8 && kpis.totalBudget > 0) {
+    anomalies.push({
+      id: 'compliance-low',
+      type: 'danger',
+      title: `🎯 Cumplimiento consolidado en riesgo`,
+      description: `El canal está en ${formatPercent(kpis.compliance)} del presupuesto total. Faltan ${formatCurrency(kpis.totalBudget - kpis.totalSales)} para alcanzar la meta mensual.`,
+      impact: 'Se requiere acelerar el ritmo de ventas diarias para cerrar la brecha antes de fin de mes.',
+      route: '/'
+    });
+  }
+
+  // ── INSIGHTS DINÁMICOS desde datos reales ───────────────────────────
+  const mainProv = [...(filteredData.providers || [])]
+    .sort((a, b) => b.ventas2026 - a.ventas2026)[0];
+  const topDevConcept = [...(filteredData.returnsConcepts || [])]
+    .sort((a, b) => b.porcentaje - a.porcentaje)[0];
+  const topZoneObj = [...(filteredData.zones || [])]
+    .filter(z => z.presupuesto > 0)
+    .sort((a, b) => (b.ventasNetas / b.presupuesto) - (a.ventasNetas / a.presupuesto))[0];
+  const topZone2 = [...(filteredData.zones || [])]
+    .filter(z => z.presupuesto > 0)
+    .sort((a, b) => (b.ventasNetas / b.presupuesto) - (a.ventasNetas / a.presupuesto))[1];
+
   const insights = [
     {
-      title: 'Crecimiento de Alpina Alimentos',
-      text: `El proveedor ALPINA PRODUCTOS ALIMENTICIOS creció un 21,79% YoY, pasando de ${formatCurrency(2790456506)} en 2025 a ${formatCurrency(3398429638)} en 2026. Es el motor principal del crecimiento comercial.`,
+      title: mainProv ? `Crecimiento: ${mainProv.proveedor}` : 'Crecimiento de Alpina',
+      text: mainProv
+        ? `${mainProv.proveedor} acumula ${formatCurrency(mainProv.ventas2026)} en ventas — ${formatPercent(mainProv.crecimiento)} de crecimiento YoY. Es el motor principal del canal.`
+        : 'No hay datos de proveedores disponibles.',
       icon: TrendingUp,
       badgeColor: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
     },
     {
-      title: 'Comportamiento de Devoluciones',
-      text: `La causa principal de devoluciones es "SIN PLATA" con un 52,25%, seguida de "CERRADO" con 11,49%. Esto sugiere que el problema es de liquidez o cobranza en el punto de venta, no de calidad de producto.`,
+      title: 'Perfil de Devoluciones',
+      text: topDevConcept
+        ? `La causal principal es "${topDevConcept.concepto}" con ${formatPercent(topDevConcept.porcentaje)} del total devuelto (${formatCurrency(kpis.totalReturns * topDevConcept.porcentaje)}). Problema de cartera en punto de venta, no de calidad.`
+        : `Devoluciones totales: ${formatCurrency(kpis.totalReturns)} — ${formatPercent(globalDevRate)} sobre ventas brutas.`,
       icon: AlertCircle,
       badgeColor: 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
     },
     {
-      title: 'Análisis de Zonas Estrella',
-      text: `La zona M9458 alcanzó el 111,8% de cumplimiento de meta y la zona M9450 un 110,5%. Ambas zonas aportan conjuntamente ${formatCurrency(167213451)} netos.`,
+      title: 'Zonas Estrella del Periodo',
+      text: topZoneObj
+        ? `${topZoneObj.vendedor} (Zona ${topZoneObj.zona}) lidera con ${formatPercent(topZoneObj.ventasNetas / topZoneObj.presupuesto)} de cumplimiento.${topZone2 ? ` Le sigue ${topZone2.vendedor} (${formatPercent(topZone2.ventasNetas / topZone2.presupuesto)}).` : ''} Juntas aportan ${formatCurrency((topZoneObj.ventasNetas || 0) + (topZone2?.ventasNetas || 0))} netos.`
+        : 'No hay datos de zonas disponibles.',
       icon: Sparkles,
       badgeColor: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
     }
@@ -646,31 +715,41 @@ const BusinessIA = () => {
                 
                 <div className="space-y-4 max-h-[520px] overflow-y-auto pr-2 custom-scrollbar">
                   {anomalies.map((anom) => (
-                    <div 
-                      key={anom.id} 
-                      className={`p-4 rounded-2xl border flex flex-col gap-3 transition-all duration-300 hover:scale-[1.01] ${
+                    <div
+                      key={anom.id}
+                      onClick={() => anom.route && navigate(anom.route)}
+                      className={`p-4 rounded-2xl border flex flex-col gap-3 transition-all duration-300 hover:scale-[1.01] ${anom.route ? 'cursor-pointer' : ''} ${
                         anom.type === 'danger'
-                          ? 'bg-rose-950/20 border-rose-500/20 shadow-md shadow-rose-950/20'
-                          : 'bg-amber-950/20 border-amber-500/20 shadow-md shadow-amber-950/20'
+                          ? 'bg-rose-950/20 border-rose-500/20 shadow-md shadow-rose-950/20 hover:border-rose-500/40'
+                          : anom.type === 'success'
+                          ? 'bg-emerald-950/20 border-emerald-500/20 shadow-md shadow-emerald-950/20 hover:border-emerald-500/40'
+                          : 'bg-amber-950/20 border-amber-500/20 shadow-md shadow-amber-950/20 hover:border-amber-500/40'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                           anom.type === 'danger'
                             ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                            : anom.type === 'success'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                             : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                         }`}>
-                          {anom.type === 'danger' ? 'Crítico' : 'Advertencia'}
+                          {anom.type === 'danger' ? 'Crítico' : anom.type === 'success' ? 'Destacado' : 'Advertencia'}
                         </span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></div>
+                        <div className={`w-1.5 h-1.5 rounded-full animate-ping ${
+                          anom.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
+                        }`}></div>
                       </div>
                       <h4 className="text-xs font-bold text-slate-100">{anom.title}</h4>
                       <p className="text-[10px] text-slate-300 leading-relaxed font-medium">{anom.description}</p>
-                      
+
                       <div className="pt-3 border-t border-slate-900/60 flex flex-col gap-1">
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Impacto Comercial Esperado:</span>
                         <span className="text-[10px] text-slate-200 font-semibold">{anom.impact}</span>
                       </div>
+                      {anom.route && (
+                        <p className="text-[9px] text-blue-500/70 font-medium -mt-1">Toca para ver el detalle →</p>
+                      )}
                     </div>
                   ))}
                   
@@ -858,15 +937,24 @@ const BusinessIA = () => {
           {/* Columna Izquierda: Ventana de Chat */}
           <div className="lg:col-span-2 flex flex-col h-[600px] rounded-3xl bg-slate-950/70 border border-slate-900 overflow-hidden shadow-xl">
             {/* Cabecera del Chat */}
-            <div className="p-4 border-b border-slate-900 bg-slate-950/90 flex items-center gap-3">
-              <div className="relative p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                <Brain className="h-5 w-5" />
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <div className="p-4 border-b border-slate-900 bg-slate-950/90 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="relative p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                  <Brain className="h-5 w-5" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Consultor de Negocios IA</h3>
+                  <p className="text-[10px] text-slate-400">Analista local Zentra Alpina · Activo</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Consultor de Negocios IA</h3>
-                <p className="text-[10px] text-slate-400">Analista local Zentra Alpina · Activo</p>
-              </div>
+              <button
+                onClick={() => setChatMessages([])}
+                className="text-[10px] text-slate-500 hover:text-slate-300 border border-slate-800 hover:border-slate-700 px-2.5 py-1 rounded-lg transition-all"
+                title="Limpiar historial del chat"
+              >
+                Limpiar chat
+              </button>
             </div>
 
             {/* Mensajes */}
@@ -966,6 +1054,12 @@ const BusinessIA = () => {
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-400 font-medium">Zona Estrella:</span>
                   <span className="text-indigo-400 font-extrabold">Zona {kpis.topZone}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-900">
+                  <span className="text-slate-400 font-medium">Día hábil:</span>
+                  <span className="text-amber-400 font-extrabold">
+                    {currentWorkDay > 0 ? `Día ${currentWorkDay} / 22` : 'Auto-detectado'}
+                  </span>
                 </div>
               </div>
             </GlassCard>

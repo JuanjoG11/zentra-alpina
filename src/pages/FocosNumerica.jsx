@@ -10,14 +10,23 @@ import alpinaLogo from '../assets/alpina-logo.svg';
 const FocosNumerica = () => {
   const filters = useStore();
   const dbData = useStore(state => state.dbData);
+  const currentWorkDay = useStore(state => state.currentWorkDay);
   const filteredData = getFilteredData(dbData, filters);
 
-  // ── Constantes del mes ──────────────────────────────────────────────
+  // ── Constantes del mes — conectadas al store ────────────────────────
   const PRESUPUESTO_MES = 4001885288;
-  const DIAS_HABILES    = 25;
-  const DIA_ACTUAL      = 13;
-  const META_DIARIA     = PRESUPUESTO_MES / DIAS_HABILES;
-  const META_ACUMULADA  = META_DIARIA * DIA_ACTUAL;
+  const DIAS_HABILES    = 22; // Días hábiles reales de junio 2026
+
+  // Día actual: usa el configurado manualmente; si es 0, detecta desde datos
+  const detectedDay = useMemo(() => {
+    const days = (dbData.salesDaily || [])
+      .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime()));
+    return days.length > 0 ? days.length : 1;
+  }, [dbData.salesDaily]);
+
+  const DIA_ACTUAL  = currentWorkDay > 0 ? currentWorkDay : detectedDay;
+  const META_DIARIA = PRESUPUESTO_MES / DIAS_HABILES;
+  const META_ACUMULADA = META_DIARIA * DIA_ACTUAL;
 
   // ── useState SIEMPRE antes de useMemo ───────────────────────────────
   const [selectedCity, setSelectedCity] = useState('ALL');

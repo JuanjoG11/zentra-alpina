@@ -180,7 +180,7 @@ export const calculateKPIs = (filteredData) => {
     console.log('calculateKPIs - totalSales:', totalSales, 'hasDailySales:', hasDailySales, 'salesDaily count:', salesDaily?.length, 'providers count:', providers?.length);
 
   // 2. Presupuesto: suma de zonas, o el presupuesto real del mes si no hay zonas
-  const PRESUPUESTO_REAL_MES = 4001885288; // Junio 2026 — 25 días hábiles
+  const PRESUPUESTO_REAL_MES = 4001885288; // Junio 2026 — 22 días hábiles
   const totalBudget = zones.length > 0
     ? zones.reduce((sum, z) => sum + z.presupuesto, 0)
     : PRESUPUESTO_REAL_MES;

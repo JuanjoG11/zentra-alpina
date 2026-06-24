@@ -5,6 +5,8 @@ import { DEFAULT_ZONE_SELLERS } from '../utils/calculations';
 
 const STORAGE_KEY = 'zentra_alpina_dbData';
 const PERIOD_KEY  = 'zentra_alpina_period';
+const CHAT_KEY    = 'zentra_alpina_chat';
+const WORKDAY_KEY = 'zentra_alpina_workday';
 
 // Load persisted cube data from localStorage (survives page refresh)
 const loadPersistedData = () => {
@@ -12,6 +14,14 @@ const loadPersistedData = () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) { /* ignore parse errors */ }
+  return null;
+};
+
+const loadPersistedChat = () => {
+  try {
+    const raw = localStorage.getItem(CHAT_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* ignore */ }
   return null;
 };
 
@@ -24,6 +34,8 @@ const saveToStorage = (dbData, period) => {
 
 const persistedData   = loadPersistedData();
 const persistedPeriod = localStorage.getItem(PERIOD_KEY) || 'junio-2026';
+const persistedChat   = loadPersistedChat();
+const persistedWorkDay = parseInt(localStorage.getItem(WORKDAY_KEY) || '0', 10) || 0;
 
 const hasSupabase = true; // supabase siempre configurado
 
@@ -43,6 +55,12 @@ const useStore = create((set, get) => ({
   isLoadingData: false,
   dataError: null,
 
+  // Día hábil actual del periodo (0 = auto-detectar desde datos)
+  currentWorkDay: persistedWorkDay,
+
+  // Historial del chat del Asistente IA (persiste entre tabs y recargas)
+  chatMessages: persistedChat || [],
+
   // Acciones
   setPeriod: (period) => set({ selectedPeriod: period }),
   setCity: (city) => set({ selectedCity: city }),
@@ -54,6 +72,17 @@ const useStore = create((set, get) => ({
   setDbData: (newData, period) => {
     saveToStorage(newData, period);
     set({ dbData: newData, ...(period ? { selectedPeriod: period } : {}) });
+    // Regenerar notificaciones con los nuevos datos
+    setTimeout(() => get().generateNotifications(), 0);
+  },
+  setCurrentWorkDay: (day) => {
+    const d = Math.max(0, Math.min(31, parseInt(day, 10) || 0));
+    try { localStorage.setItem(WORKDAY_KEY, String(d)); } catch(e) {}
+    set({ currentWorkDay: d });
+  },
+  setChatMessages: (msgs) => {
+    try { localStorage.setItem(CHAT_KEY, JSON.stringify(msgs)); } catch(e) {}
+    set({ chatMessages: msgs });
   },
 
   // Carga de datos desde Supabase
@@ -92,27 +121,42 @@ const useStore = create((set, get) => ({
       }
 
       // Map back to alpinaData schema
+      // Aplicar projectionFactor basado en el día hábil configurado manualmente (o auto-detectado)
+      const TOTAL_BD = 22;
+      const configuredWD = get().currentWorkDay;
+      const detectedDays = new Set(
+        dbSales.filter(s => Number(s.ventas) > 0 && s.fecha)
+          .map(s => s.fecha.substring(0, 10))
+      ).size;
+      const elapsedDays = (configuredWD > 0 && configuredWD <= TOTAL_BD) ? configuredWD : (detectedDays || 1);
+      const projFactor = (elapsedDays >= 3 && elapsedDays < TOTAL_BD) ? TOTAL_BD / elapsedDays : 1;
+
       const providers = dbProviders.map(p => ({
         proveedor: p.proveedor,
         ventas2026: Number(p.ventas2026) || 0,
         ventas2025: Number(p.ventas2025) || 0,
         proyectado2025: Number(p.ventas2025) || 0,
         margen2025: 15,
-        proyectado2026: Number(p.meta) || Number(p.ventas2026) || 0,
+        proyectado2026: Math.round((Number(p.meta) || Number(p.ventas2026) || 0) * projFactor),
         margen2026: Number(p.margen2026) || 15,
         crecimiento: p.ventas2025 > 0 ? (p.ventas2026 - p.ventas2025) / p.ventas2025 : 0.2179
       }));
 
-      const zones = dbZones.map(z => ({
-        zona: z.zona,
-        vendedor: z.vendedor && z.vendedor !== 'Sin Asignar' ? z.vendedor : (DEFAULT_ZONE_SELLERS[z.zona] || 'Sin Asignar'),
-        presupuesto: Number(z.presupuesto) || 0,
-        ventasNetas: Number(z.ventasnetas) || Number(z.ventasNetas) || 0,
-        proyectado: Number(z.ventasnetas) || Number(z.ventasNetas) || 0,
-        porcentajeProyectado: z.presupuesto > 0 ? (Number(z.ventasnetas) || Number(z.ventasNetas) || 0) / Number(z.presupuesto) : 1.0,
-        cambiosPorc: 0.015,
-        facturas: Number(z.facturas) || 0
-      }));
+      const zones = dbZones.map(z => {
+        const net = Number(z.ventasnetas) || Number(z.ventasNetas) || 0;
+        const projected = Math.round(net * projFactor);
+        const budget = Number(z.presupuesto) || 0;
+        return {
+          zona: z.zona,
+          vendedor: z.vendedor && z.vendedor !== 'Sin Asignar' ? z.vendedor : (DEFAULT_ZONE_SELLERS[z.zona] || 'Sin Asignar'),
+          presupuesto: budget,
+          ventasNetas: net,
+          proyectado: projected,
+          porcentajeProyectado: budget > 0 ? projected / budget : 1.0,
+          cambiosPorc: 0.015,
+          facturas: Number(z.facturas) || 0
+        };
+      });
 
       const returnsSellers = dbSellers.map(s => ({
         ejecutivo: s.ejecutivo,
@@ -194,6 +238,8 @@ const useStore = create((set, get) => ({
       selectedPeriod: latestPeriod,
       isLoadingData: false
     });
+    // Regenerar notificaciones con los datos frescos de Supabase
+    setTimeout(() => get().generateNotifications(), 0);
     console.log('Datos de Supabase sincronizados. Ventas brutas:', salesDaily.reduce((s, d) => s + d.total, 0));
     console.log('Devoluciones totales:', returnsDaily.reduce((s, d) => s + d.devoluciones, 0));
     } catch (err) {
@@ -202,41 +248,8 @@ const useStore = create((set, get) => ({
     }
   },
 
-  // Notificaciones
-  notifications: [
-    {
-      id: 1,
-      type: 'warning',
-      title: 'Devoluciones altas',
-      message: 'Sandra M. García tiene 11.4% de devoluciones',
-      time: 'Hace 2h',
-      read: false,
-    },
-    {
-      id: 2,
-      type: 'success',
-      title: 'Meta superada',
-      message: 'Zona M9458 alcanzó 111.8% de cumplimiento',
-      time: 'Hace 3h',
-      read: false,
-    },
-    {
-      id: 3,
-      type: 'info',
-      title: 'Crecimiento Alpina',
-      message: 'Alpina creció 21.79% vs año anterior',
-      time: 'Hace 5h',
-      read: true,
-    },
-    {
-      id: 4,
-      type: 'danger',
-      title: 'Alquería ganando terreno',
-      message: 'Alquería incrementó 14% en leches UHT en Pereira',
-      time: 'Hace 6h',
-      read: false,
-    },
-  ],
+  // Notificaciones — generadas dinámicamente desde los datos reales
+  notifications: [],
   markAsRead: (id) =>
     set((state) => ({
       notifications: state.notifications.map((n) =>
@@ -244,6 +257,105 @@ const useStore = create((set, get) => ({
       ),
     })),
   unreadCount: () => get().notifications.filter((n) => !n.read).length,
+
+  // Genera notificaciones inteligentes desde los datos del canal
+  generateNotifications: () => {
+    const { dbData } = get();
+    if (!dbData) return;
+
+    const { zones = [], returnsSellers = [], providers = [], salesDaily = [] } = dbData;
+    const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    const notifs = [];
+
+    // 1. Ejecutivos con devolución > 8% (crítico) o > 5% (alerta)
+    const badSellers = returnsSellers
+      .filter(s => s.nombre !== 'SERVICIO  CLIENTE' && s.nombre !== 'CLIENTE' && s.porcentajeDevolucion > 0.05)
+      .sort((a, b) => b.porcentajeDevolucion - a.porcentajeDevolucion)
+      .slice(0, 2);
+    badSellers.forEach((s, i) => {
+      const pct = (s.porcentajeDevolucion * 100).toFixed(1);
+      notifs.push({
+        id: `dev-${s.ejecutivo || i}`,
+        type: s.porcentajeDevolucion > 0.08 ? 'danger' : 'warning',
+        title: s.porcentajeDevolucion > 0.08 ? 'Devolución crítica' : 'Devolución alta',
+        message: `${s.nombre} registra ${pct}% de devoluciones`,
+        route: '/devoluciones',
+        time: now,
+        read: false
+      });
+    });
+
+    // 2. Zonas que superaron la meta (celebrar)
+    const topZones = zones
+      .filter(z => z.presupuesto > 0 && z.ventasNetas / z.presupuesto >= 1.0)
+      .sort((a, b) => (b.ventasNetas / b.presupuesto) - (a.ventasNetas / a.presupuesto))
+      .slice(0, 2);
+    topZones.forEach(z => {
+      const pct = ((z.ventasNetas / z.presupuesto) * 100).toFixed(1);
+      notifs.push({
+        id: `meta-${z.zona}`,
+        type: 'success',
+        title: 'Meta superada',
+        message: `Zona ${z.zona} (${z.vendedor}) alcanzó ${pct}% de cumplimiento`,
+        route: '/vendedores',
+        time: now,
+        read: false
+      });
+    });
+
+    // 3. Zonas por debajo del 60% (urgente)
+    const criticalZones = zones
+      .filter(z => z.presupuesto > 0 && z.ventasNetas / z.presupuesto < 0.6)
+      .sort((a, b) => (a.ventasNetas / a.presupuesto) - (b.ventasNetas / b.presupuesto))
+      .slice(0, 1);
+    criticalZones.forEach(z => {
+      const pct = ((z.ventasNetas / z.presupuesto) * 100).toFixed(1);
+      notifs.push({
+        id: `zona-baja-${z.zona}`,
+        type: 'danger',
+        title: 'Zona en alerta crítica',
+        message: `Zona ${z.zona} solo lleva ${pct}% del presupuesto`,
+        route: '/focos',
+        time: now,
+        read: false
+      });
+    });
+
+    // 4. Crecimiento YoY del proveedor principal
+    const mainProv = providers
+      .filter(p => p.proveedor.toUpperCase().includes('ALPINA'))
+      .sort((a, b) => b.ventas2026 - a.ventas2026)[0];
+    if (mainProv && mainProv.crecimiento > 0) {
+      const pct = (mainProv.crecimiento * 100).toFixed(2);
+      notifs.push({
+        id: 'crecimiento-alpina',
+        type: 'info',
+        title: 'Crecimiento Alpina',
+        message: `${mainProv.proveedor} creció +${pct}% vs año anterior`,
+        route: '/proveedores',
+        time: now,
+        read: true
+      });
+    }
+
+    // 5. Tasa de devolución global alta (> 6%)
+    const totalSales = salesDaily.reduce((s, d) => s + (d.total || 0), 0);
+    const totalReturns = returnsSellers.reduce((s, r) => s + (r.devoluciones || 0), 0);
+    const globalDevRate = totalSales > 0 ? totalReturns / totalSales : 0;
+    if (globalDevRate > 0.06) {
+      notifs.push({
+        id: 'tasa-dev-global',
+        type: 'warning',
+        title: 'Tasa de devolución elevada',
+        message: `El canal registra ${(globalDevRate * 100).toFixed(1)}% de devolución global`,
+        route: '/devoluciones',
+        time: now,
+        read: false
+      });
+    }
+
+    set({ notifications: notifs.slice(0, 6) }); // máximo 6 notificaciones activas
+  },
 
   // Indicadores configurables (perfil de indicadores)
   indicators: [

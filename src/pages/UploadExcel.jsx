@@ -173,7 +173,7 @@ import {
 } from 'lucide-react';
 
 // Helper for client-side processing of CUBO_DE_VENTAS data
-const processSheetsClientSide = (parsedFiles, selectedSheets) => {
+const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay = 0) => {
   const providersAggr = {};   // key: nmProveedor
   const brandsAggr = {};      // key: nmTpMarca
   const salesDailyAggr = {};
@@ -568,12 +568,16 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
   }
 
 
-  // Proyección: 25 días hábiles en el mes, vamos en el día 13
-  const TOTAL_BUSINESS_DAYS = 25;
-  const elapsedDays = Object.keys(salesDailyAggr).length || 1;
+  // Proyección: 22 días hábiles en el mes
+  // Si el usuario configuró un día hábil manualmente, usarlo. Si no, contar días del cubo.
+  const TOTAL_BUSINESS_DAYS = 22;
+  const detectedDays = Object.keys(salesDailyAggr).length || 1;
+  const elapsedDays = (configuredWorkDay > 0 && configuredWorkDay <= TOTAL_BUSINESS_DAYS)
+    ? configuredWorkDay
+    : detectedDays;
   // Solo proyectar si tenemos datos suficientes y no pasamos del total de días
   let projectionFactor = 1;
-  if (elapsedDays >= 5 && elapsedDays < TOTAL_BUSINESS_DAYS) {
+  if (elapsedDays >= 3 && elapsedDays < TOTAL_BUSINESS_DAYS) {
     projectionFactor = TOTAL_BUSINESS_DAYS / elapsedDays;
   }
 
@@ -714,7 +718,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets) => {
 };
 
 const UploadExcel = () => {
-  const { addNotification, fetchDataFromSupabase } = useStore();
+  const { addNotification, fetchDataFromSupabase, currentWorkDay, setCurrentWorkDay } = useStore();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadStep, setUploadStep] = useState(0);
@@ -758,8 +762,8 @@ const UploadExcel = () => {
       await new Promise(resolve => setTimeout(resolve, 800));
       setUploadStep(3);
 
-      // Execute client-side aggregation
-      const processedData = processSheetsClientSide(targetParsed, targetSelected);
+      // Execute client-side aggregation — pasar el día hábil configurado para proyección correcta
+      const processedData = processSheetsClientSide(targetParsed, targetSelected, useStore.getState().currentWorkDay);
       if (!processedData) {
         throw new Error('No se detectaron datos válidos en las hojas seleccionadas.');
       }
@@ -1306,6 +1310,47 @@ const UploadExcel = () => {
 
         {/* Informative Side Panel */}
         <div className="space-y-6">
+          <GlassCard hoverable={false} className="border-emerald-500/20 bg-emerald-500/[0.01] p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <RefreshCw className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Día Hábil del Periodo</h3>
+                <p className="text-[10px] text-slate-400">Indica en qué día hábil del mes están los datos cargados</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              La proyección de cierre de mes en la IA se basa en este número. Si el cubo tiene datos hasta el día 13, ingresa <strong className="text-white">13</strong>. Si pon <strong className="text-white">0</strong> para que se auto-detecte desde las fechas del cubo.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="0"
+                max="31"
+                value={currentWorkDay}
+                onChange={e => setCurrentWorkDay(e.target.value)}
+                className="w-20 bg-slate-900 border border-slate-700 focus:border-emerald-500/60 rounded-xl px-3 py-2 text-sm font-bold text-white text-center focus:outline-none transition-colors"
+                placeholder="0"
+              />
+              <div className="flex-1">
+                <p className="text-xs text-slate-300 font-semibold">
+                  {currentWorkDay === 0
+                    ? 'Auto-detectando desde fechas del cubo'
+                    : `Día hábil ${currentWorkDay} de 22 del mes`}
+                </p>
+                {currentWorkDay > 0 && (
+                  <div className="mt-1.5 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min((currentWorkDay / 22) * 100, 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </GlassCard>
+
           <GlassCard hoverable={false} className="border-blue-950/40 bg-blue-950/[0.01]">
             <h3 className="text-sm font-bold text-white mb-3">Integración de Archivos</h3>
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
