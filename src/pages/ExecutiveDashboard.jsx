@@ -42,14 +42,14 @@ const trafficLight = (pct) => {
 };
 
 // ─── Daily Sales Table ────────────────────────────────────────────────
-const PRESUPUESTO_JUNIO = 4001885288;
-const DIAS_HABILES_MES  = 25;
-const DIA_HABIL_ACTUAL  = 13;
-const META_DIARIA       = PRESUPUESTO_JUNIO / DIAS_HABILES_MES;          // ~$160.075.412
-const META_ACUMULADA    = META_DIARIA * DIA_HABIL_ACTUAL;                // Meta al día 13
+const PRESUPUESTO_JUNIO   = 4001885288;
+const TOTAL_BUSINESS_DAYS = 22;
 
-const DailySalesTable = ({ salesDaily }) => {
+const DailySalesTable = ({ salesDaily, workDay }) => {
   const [showAll, setShowAll] = useState(false);
+
+  const META_DIARIA    = PRESUPUESTO_JUNIO / TOTAL_BUSINESS_DAYS;
+  const META_ACUMULADA = META_DIARIA * workDay;
 
   const rows = [...salesDaily]
     .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime()))
@@ -74,7 +74,7 @@ const DailySalesTable = ({ salesDaily }) => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              Acumulado real · Día hábil {DIA_HABIL_ACTUAL}/{DIAS_HABILES_MES}
+              Acumulado real · Día hábil {workDay}/{TOTAL_BUSINESS_DAYS}
             </p>
             <p className="text-lg font-extrabold text-white mt-0.5">{formatCurrency(totalAcumulado)}</p>
             <p className="text-[10px] text-slate-400 mt-0.5">
@@ -95,7 +95,7 @@ const DailySalesTable = ({ salesDaily }) => {
                 style={{ width: `${Math.min(vsMetaAcum * 100, 100)}%` }}
               />
             </div>
-            <p className="text-[10px] text-slate-500">{DIA_HABIL_ACTUAL} de {DIAS_HABILES_MES} días hábiles</p>
+            <p className="text-[10px] text-slate-500">{workDay} de {TOTAL_BUSINESS_DAYS} días hábiles</p>
           </div>
         </div>
       </div>
@@ -166,6 +166,7 @@ const ExecutiveDashboard = () => {
   const dbData = useStore(state => state.dbData);
   const filters = useStore();
   const navigate = useNavigate();
+  const currentWorkDay = useStore(state => state.currentWorkDay);
 
   // Date range filter (local state — no afecta otros módulos)
   const [dateFrom, setDateFrom] = useState('');
@@ -211,6 +212,17 @@ const ExecutiveDashboard = () => {
 
   // Clear date filter
   const clearDates = () => { setDateFrom(''); setDateTo(''); };
+
+  // workDay: usa el configurado manualmente o lo detecta desde datos
+  const workDay = useMemo(() => {
+    if (currentWorkDay > 0) return currentWorkDay;
+    const days = new Set(
+      (filteredData.salesDaily || [])
+        .filter(d => d.fecha && d.fecha !== 'general' && d.total > 0)
+        .map(d => d.fecha)
+    ).size;
+    return days || 1;
+  }, [currentWorkDay, filteredData.salesDaily]);
 
   const kpiCards = [
     {
@@ -438,7 +450,7 @@ const ExecutiveDashboard = () => {
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500 inline-block"/>Crítico</span>
             </div>
           </div>
-          <DailySalesTable salesDaily={filteredData.salesDaily} />
+          <DailySalesTable salesDaily={filteredData.salesDaily} workDay={workDay} />
         </GlassCard>
 
         {/* Ranking zonas */}

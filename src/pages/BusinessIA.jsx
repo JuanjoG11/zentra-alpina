@@ -183,9 +183,13 @@ REGLAS DE ORO:
 
 ${cuboContext}`;
 
-    // ── Llamada al proxy local que habla con Gemini desde Node ────────────────
-    // (Las keys AQ. no funcionan desde browser por CORS — el servidor proxy sí)
-    const PROXY_URL = 'http://localhost:4000/api/gemini';
+    // ── Llamada al proxy Gemini ────────────────────────────────────────────────
+    // En Vercel: /api/gemini (serverless function)
+    // En dev local: localhost:4000/api/gemini (etl_server)
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const PROXY_URL = isLocal
+      ? (import.meta.env.VITE_GEMINI_PROXY_URL || 'http://localhost:4000/api/gemini')
+      : '/api/gemini';
 
     // Historial de conversación (últimos 6 mensajes para contexto)
     const currentMsgs = useStore.getState().chatMessages;
