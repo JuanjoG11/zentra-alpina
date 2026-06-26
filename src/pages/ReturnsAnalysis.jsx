@@ -65,8 +65,7 @@ const ReturnsAnalysis = () => {
   const sortedExpiryConcepts = [...filteredData.expiryConcepts]
     .sort((a, b) => b.porcentaje - a.porcentaje);
     
-  // Calculate total returns (general + expiry)
-  // Compute total Rechazos (general returns) based on filtered client returns to respect city filter
+  // Rechazos: suma directa de clientReturns (fuente completa, igual que calculateKPIs)
   const totalGeneralReturns = filteredData.clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
   const totalExpiryReturns = filteredData.expiryDaily.reduce((sum, r) => sum + r.devoluciones, 0);
   const totalAllReturns = totalGeneralReturns + totalExpiryReturns;

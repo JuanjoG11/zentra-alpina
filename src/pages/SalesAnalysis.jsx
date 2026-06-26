@@ -235,7 +235,7 @@ const SalesAnalysis = () => {
         </GlassCard>
       </div>
 
-      {/* Pareto 80/20 Table */}
+      {/* Pareto 80/20 Section removed */}
       <GlassCard hoverable={false}>
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
           <div>
@@ -260,15 +260,15 @@ const SalesAnalysis = () => {
                 <th className="pb-3 hidden md:table-cell">Vendedor</th>
                 <th className="pb-3 text-right">Ventas</th>
                 <th className="pb-3 text-right hidden sm:table-cell">Presupuesto</th>
-                <th className="pb-3 text-right">Cumpl.</th>
-                <th className="pb-3 text-right hidden sm:table-cell">Part. %</th>
+                <th className="pb-3 text-right">Cambio %</th>
+                <th className="pb-3 text-right hidden sm:table-cell">Proyección (Pesos)</th>
                 <th className="pb-3 text-right hidden md:table-cell">Acum. %</th>
                 <th className="pb-3 pr-2 text-center">Clase</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/60">
               {paretoData.map((item, idx) => {
-                const complianceRate = item.presupuesto > 0 ? item.ventasNetas / item.presupuesto : 0;
+                const changeRate = item.presupuesto > 0 ? (item.ventasNetas - item.presupuesto) / item.presupuesto : 0;
                 return (
                   <tr key={idx} className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}>
                     <td className="py-2.5 pl-2 font-bold text-slate-200">{item.zona}</td>
@@ -277,11 +277,11 @@ const SalesAnalysis = () => {
                     <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(item.ventasNetas)}</td>
                     <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatShortCurrency(item.presupuesto)}</td>
                     <td className="py-2.5 text-right">
-                      <span className={`font-bold ${complianceRate >= 1.0 ? 'text-emerald-400' : complianceRate >= 0.8 ? 'text-amber-400' : 'text-rose-400'}`}>
-                        {formatPercent(complianceRate)}
+                      <span className={`font-bold ${changeRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {formatPercent(changeRate)}
                       </span>
                     </td>
-                    <td className="py-2.5 text-right text-slate-300 hidden sm:table-cell">{formatPercent(item.share)}</td>
+                    <td className="py-2.5 text-right text-slate-300 hidden sm:table-cell">{formatCurrency(item.share * item.presupuesto)}</td>
                     <td className="py-2.5 text-right text-slate-400 hidden md:table-cell">{formatPercent(item.accumShare)}</td>
                     <td className="py-2.5 pr-2 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${item.isCore ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-slate-800/80 text-slate-500'}`}>

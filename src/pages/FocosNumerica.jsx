@@ -287,7 +287,7 @@ const FocosNumerica = () => {
                   <th className="pb-3 pr-4 hidden sm:table-cell">Universo</th>
                   <th className="pb-3 pr-4">Meta</th>
                   <th className="pb-3 pr-4">Impactados</th>
-                  <th className="pb-3 pr-4">% Numérica</th>
+                  <th className="pb-3 pr-4">Cobertura</th>
                   <th className="pb-3 pr-2">Faltan</th>
                 </tr>
               </thead>
