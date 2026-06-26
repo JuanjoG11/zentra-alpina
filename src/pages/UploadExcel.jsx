@@ -441,13 +441,14 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
 
         // 2. Sales Daily — solo ventas reales (motivo vacío y valor positivo)
         if (!esDevolucion && valTotal > 0) {
-          if (!salesDailyAggr[formattedDate]) {
-            salesDailyAggr[formattedDate] = { contado: 0, credito: 0 };
+          const dayZoneKey = `${formattedDate}_${zone || 'OTRO'}`;
+          if (!salesDailyAggr[dayZoneKey]) {
+            salesDailyAggr[dayZoneKey] = { fecha: formattedDate, zona: zone || 'OTRO', contado: 0, credito: 0 };
           }
           if (formaPago === '1' || formaPago.toUpperCase().includes('CONTADO')) {
-            salesDailyAggr[formattedDate].contado += valTotal;
+            salesDailyAggr[dayZoneKey].contado += valTotal;
           } else {
-            salesDailyAggr[formattedDate].credito += valTotal;
+            salesDailyAggr[dayZoneKey].credito += valTotal;
           }
         }
 
@@ -509,15 +510,14 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
           
           const esCambio = motivoNormalizado.split(' ').includes('me') || motivoStr.toLowerCase().includes('m.e');
           
-          // DEBUG: Log para verificar detección
-          if (motivoStr && (motivoNormalizado.split(' ').includes('me') || motivoStr.toLowerCase().includes('m.e'))) {
-            console.log('🔍 Motivo de cambio detectado:', motivoStr, '| Normalizado:', motivoNormalizado, '| Es cambio:', esCambio);
-          }
-          
+          const dayZoneKey = `${formattedDate}_${zone || 'OTRO'}`;
           if (esCambio) {
             // Agrupar en categorías de cambios (usando variables expiry por compatibilidad de base de datos)
             expiryConceptsAggr[motivoStr] = (expiryConceptsAggr[motivoStr] || 0) + absVal;
-            expiryDailyAggr[formattedDate] = (expiryDailyAggr[formattedDate] || 0) + absVal;
+            if (!expiryDailyAggr[dayZoneKey]) {
+              expiryDailyAggr[dayZoneKey] = { fecha: formattedDate, zona: zone || 'OTRO', devoluciones: 0 };
+            }
+            expiryDailyAggr[dayZoneKey].devoluciones += absVal;
             
             const clientKey = `${zone}_${clientName}_${motivoStr}`;
             if (!expiryClientReturnsAggr[clientKey]) {
@@ -532,7 +532,10 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
           } else {
             // Rechazos (todos los demás motivos de devolución)
             conceptsAggr[motivoStr] = (conceptsAggr[motivoStr] || 0) + absVal;
-            returnsDailyAggr[formattedDate] = (returnsDailyAggr[formattedDate] || 0) + absVal;
+            if (!returnsDailyAggr[dayZoneKey]) {
+              returnsDailyAggr[dayZoneKey] = { fecha: formattedDate, zona: zone || 'OTRO', devoluciones: 0 };
+            }
+            returnsDailyAggr[dayZoneKey].devoluciones += absVal;
             
             const clientKey = `${zone}_${clientName}_${motivoStr}`;
             if (!clientReturnsAggr[clientKey]) {
@@ -615,7 +618,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   // Proyección: 22 días hábiles en el mes
   // Si el usuario configuró un día hábil manualmente, usarlo. Si no, contar días del cubo.
   const TOTAL_BUSINESS_DAYS = 22;
-  const detectedDays = Object.keys(salesDailyAggr).length || 1;
+  const uniqueSalesDates = new Set(Object.values(salesDailyAggr).map(d => d.fecha));
+  const detectedDays = uniqueSalesDates.size || 1;
   const elapsedDays = (configuredWorkDay > 0 && configuredWorkDay <= TOTAL_BUSINESS_DAYS)
     ? configuredWorkDay
     : detectedDays;
@@ -643,11 +647,12 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     };
   }).sort((a, b) => b.ventas2026 - a.ventas2026);
 
-  const salesDaily = Object.entries(salesDailyAggr).map(([fecha, data]) => {
+  const salesDaily = Object.values(salesDailyAggr).map(data => {
     const cont = Math.round(data.contado);
     const cred = Math.round(data.credito);
     return {
-      fecha,
+      fecha: data.fecha,
+      zona: data.zona,
       contado: cont,
       credito: cred,
       total: cont + cred
@@ -692,10 +697,11 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     };
   }).sort((a, b) => b.porcentaje - a.porcentaje);
 
-  const returnsDaily = Object.entries(returnsDailyAggr).map(([fecha, val]) => {
+  const returnsDaily = Object.values(returnsDailyAggr).map(data => {
     return {
-      fecha,
-      devoluciones: Math.round(val)
+      fecha: data.fecha,
+      zona: data.zona,
+      devoluciones: Math.round(data.devoluciones)
     };
   }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
@@ -717,10 +723,11 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     };
   }).sort((a, b) => b.porcentaje - a.porcentaje);
 
-  const expiryDaily = Object.entries(expiryDailyAggr).map(([fecha, val]) => {
+  const expiryDaily = Object.values(expiryDailyAggr).map(data => {
     return {
-      fecha,
-      devoluciones: Math.round(val)
+      fecha: data.fecha,
+      zona: data.zona,
+      devoluciones: Math.round(data.devoluciones)
     };
   }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
@@ -753,8 +760,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   // DIAGNÓSTICO — abre la consola del navegador (F12) para ver
   // ============================================================
   const totalVentasBrutas = Object.values(salesDailyAggr).reduce((s, d) => s + d.contado + d.credito, 0);
-  const totalDevoluciones = Object.values(returnsDailyAggr).reduce((s, v) => s + v, 0);
-  const totalDevVencimiento = Object.values(expiryDailyAggr).reduce((s, v) => s + v, 0);
+  const totalDevoluciones = Object.values(returnsDailyAggr).reduce((s, d) => s + d.devoluciones, 0);
+  const totalDevVencimiento = Object.values(expiryDailyAggr).reduce((s, d) => s + d.devoluciones, 0);
   const totalProveedores   = Object.values(providersAggr).reduce((s, p) => s + p.ventas2026, 0);
   console.group('=== DIAGNÓSTICO CUBO ===');
   console.log('Filas procesadas            :', processedRowsCount);
@@ -766,16 +773,16 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   console.log('Suma proveedores            :', totalProveedores.toLocaleString('es-CO'));
   console.log('Proveedores detectados      :', Object.keys(providersAggr));
   console.log('Marcas detectadas           :', Object.keys(brandsAggr));
-  console.log('Días con ventas             :', Object.keys(salesDailyAggr).length);
-  console.log('Días con Rechazos           :', Object.keys(returnsDailyAggr).length);
-  console.log('Días con Cambios            :', Object.keys(expiryDailyAggr).length);
+  console.log('Días con ventas             :', new Set(Object.values(salesDailyAggr).map(d => d.fecha)).size);
+  console.log('Días con Rechazos           :', new Set(Object.values(returnsDailyAggr).map(d => d.fecha)).size);
+  console.log('Días con Cambios            :', new Set(Object.values(expiryDailyAggr).map(d => d.fecha)).size);
   console.groupEnd();
   // ============================================================
 
   // DEBUG SUMMARY: totals after processing
   const debugPos = Object.values(salesDailyAggr).reduce((s,d)=>s+d.contado+d.credito,0);
-  const debugNeg = Object.values(returnsDailyAggr).reduce((s,v)=>s+v,0);
-  const debugExp = Object.values(expiryDailyAggr).reduce((s,v)=>s+v,0);
+  const debugNeg = Object.values(returnsDailyAggr).reduce((s,d)=>s+d.devoluciones,0);
+  const debugExp = Object.values(expiryDailyAggr).reduce((s,d)=>s+d.devoluciones,0);
   console.log('DEBUG SUMMARY - Positive sales:', debugPos, 'Rechazos:', debugNeg, 'Cambios:', debugExp);
         
   return {
@@ -949,7 +956,12 @@ const UploadExcel = () => {
             const chunkSize = 400;
             for (let i = 0; i < dedupedReturns.length; i += chunkSize) {
               const chunk = dedupedReturns.slice(i, i + chunkSize);
-              const { error: errReturns } = await supabase.from('returns_daily').insert(chunk);
+              // Remove zona field if it does not exist in the Supabase schema
+              const adjustedChunk = chunk.map(row => {
+                const { zona, ...rest } = row;
+                return rest;
+              });
+              const { error: errReturns } = await supabase.from('returns_daily').insert(adjustedChunk);
               if (errReturns) throw new Error('Error al cargar devoluciones diarias: ' + errReturns.message);
             }
           }

@@ -87,6 +87,30 @@ export const DEFAULT_ZONE_SELLERS = {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
+const aggregateSalesDailyByDate = (list) => {
+  const map = {};
+  list.forEach(item => {
+    if (!map[item.fecha]) {
+      map[item.fecha] = { fecha: item.fecha, contado: 0, credito: 0, total: 0 };
+    }
+    map[item.fecha].contado += item.contado || 0;
+    map[item.fecha].credito += item.credito || 0;
+    map[item.fecha].total += item.total || 0;
+  });
+  return Object.values(map).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+};
+
+const aggregateReturnsDailyByDate = (list) => {
+  const map = {};
+  list.forEach(item => {
+    if (!map[item.fecha]) {
+      map[item.fecha] = { fecha: item.fecha, devoluciones: 0 };
+    }
+    map[item.fecha].devoluciones += item.devoluciones || 0;
+  });
+  return Object.values(map).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+};
+
 export const getFilteredData = (arg1, arg2) => {
   let dbData;
   let filters;
@@ -127,8 +151,17 @@ export const getFilteredData = (arg1, arg2) => {
       returnsSellers = returnsSellers.filter(s => zonasPermitidas.has(s.ejecutivo));
       clientReturns  = clientReturns.filter(c => zonasPermitidas.has(c.ejecutivo));
       expiryClientReturns = expiryClientReturns.filter(c => zonasPermitidas.has(c.ejecutivo));
-      // salesDaily no tiene zona directamente — se deja sin filtrar por ciudad
-      // (el total viene de todos, el filtro de zona lo acota si se necesita más granularidad)
+      
+      // Filter daily lists by city zones if zone information is present
+      if (salesDaily.some(d => d.zona)) {
+        salesDaily = salesDaily.filter(d => d.zona && zonasPermitidas.has(d.zona));
+      }
+      if (returnsDaily.some(d => d.zona)) {
+        returnsDaily = returnsDaily.filter(d => d.zona && zonasPermitidas.has(d.zona));
+      }
+      if (expiryDaily.some(d => d.zona)) {
+        expiryDaily = expiryDaily.filter(d => d.zona && zonasPermitidas.has(d.zona));
+      }
     }
   }
 
@@ -155,6 +188,15 @@ export const getFilteredData = (arg1, arg2) => {
   // ── Filtro por zona ───────────────────────────────────────────────────────
   if (selectedZone !== 'Todas') {
     zones = zones.filter(z => z.zona === selectedZone);
+    if (salesDaily.some(d => d.zona)) {
+      salesDaily = salesDaily.filter(d => d.zona === selectedZone);
+    }
+    if (returnsDaily.some(d => d.zona)) {
+      returnsDaily = returnsDaily.filter(d => d.zona === selectedZone);
+    }
+    if (expiryDaily.some(d => d.zona)) {
+      expiryDaily = expiryDaily.filter(d => d.zona === selectedZone);
+    }
   }
 
   // ── Filtro por vendedor ───────────────────────────────────────────────────
@@ -172,18 +214,35 @@ export const getFilteredData = (arg1, arg2) => {
       c.ejecutivo === selectedSeller ||
       c.cliente.toLowerCase().includes(selectedSeller.toLowerCase())
     );
+
+    const sellerZones = new Set(
+      baseData.zones
+        .filter(z => z.vendedor === selectedSeller || z.zona === selectedSeller)
+        .map(z => z.zona)
+    );
+    if (sellerZones.size > 0) {
+      if (salesDaily.some(d => d.zona)) {
+        salesDaily = salesDaily.filter(d => d.zona && sellerZones.has(d.zona));
+      }
+      if (returnsDaily.some(d => d.zona)) {
+        returnsDaily = returnsDaily.filter(d => d.zona && sellerZones.has(d.zona));
+      }
+      if (expiryDaily.some(d => d.zona)) {
+        expiryDaily = expiryDaily.filter(d => d.zona && sellerZones.has(d.zona));
+      }
+    }
   }
 
   return { 
     providers, 
-    salesDaily, 
+    salesDaily: aggregateSalesDailyByDate(salesDaily), 
     zones, 
     returnsSellers, 
     returnsConcepts, 
-    returnsDaily, 
+    returnsDaily: aggregateReturnsDailyByDate(returnsDaily), 
     clientReturns,
     expiryConcepts,
-    expiryDaily,
+    expiryDaily: aggregateReturnsDailyByDate(expiryDaily),
     expiryClientReturns
   };
 };

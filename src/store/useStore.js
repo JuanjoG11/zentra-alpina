@@ -180,19 +180,23 @@ const useStore = create((set, get) => ({
         // Format to M/D/YYYY
         const dObj = new Date(rawDate + 'T00:00:00');
         const formattedDate = `${dObj.getMonth() + 1}/${dObj.getDate()}/${dObj.getFullYear()}`;
+        const zone = s.zona || 'OTRO';
 
-        if (!dailySalesMap[formattedDate]) {
-          dailySalesMap[formattedDate] = 0;
+        const key = `${formattedDate}_${zone}`;
+        if (!dailySalesMap[key]) {
+          dailySalesMap[key] = { fecha: formattedDate, zona: zone, total: 0 };
         }
-        dailySalesMap[formattedDate] += ventas;
+        dailySalesMap[key].total += ventas;
       });
 
-      const salesDaily = Object.entries(dailySalesMap).map(([fecha, total]) => {
+      const salesDaily = Object.values(dailySalesMap).map(d => {
         // Estimate cash/credit ratio (e.g. 89% Contado, 11% Crédito as observed in real data)
+        const total = d.total;
         const contado = Math.round(total * 0.89);
         const credito = Math.round(total * 0.11);
         return {
-          fecha,
+          fecha: d.fecha,
+          zona: d.zona,
           contado,
           credito,
           total
@@ -239,16 +243,18 @@ const useStore = create((set, get) => ({
         ? localData.expiryClientReturns 
         : (alpinaData.expiryClientReturns || []);
 
-      // returnsDaily: prefer DB table, else build from sellers aggregates
+      // returnsDaily: prefer localData with zone details if same period, else prefer DB table, else build from sellers aggregates
       let returnsDaily;
-      if (dbReturnsDaily && dbReturnsDaily.length > 0) {
+      if (isSamePeriod && localData && localData.returnsDaily && localData.returnsDaily.length > 0) {
+        returnsDaily = localData.returnsDaily;
+      } else if (dbReturnsDaily && dbReturnsDaily.length > 0) {
         returnsDaily = dbReturnsDaily.map(rd => ({ fecha: rd.fecha, devoluciones: Number(rd.devoluciones) || 0 }));
       } else {
         // Fallback: spread seller total returns evenly across the observed sales days
         const totalDevSellers = dbSellers.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0);
-        const salesDays = Object.keys(dailySalesMap);
-        const perDay = salesDays.length > 0 ? Math.round(totalDevSellers / salesDays.length) : 0;
-        returnsDaily = salesDays.map(fecha => ({ fecha, devoluciones: perDay }));
+        const uniqueSalesDates = Array.from(new Set(salesDaily.map(sd => sd.fecha)));
+        const perDay = uniqueSalesDates.length > 0 ? Math.round(totalDevSellers / uniqueSalesDates.length) : 0;
+        returnsDaily = uniqueSalesDates.map(fecha => ({ fecha, devoluciones: perDay }));
       }
 
       // Update store with fetched data and latest period
