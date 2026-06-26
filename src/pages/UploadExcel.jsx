@@ -186,6 +186,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const clientReturnsAggr = {};
   const expiryClientReturnsAggr = {}; // Nueva: devoluciones por vencimiento de clientes
   const salesDailyDbAggr = {};
+  const productDistribAggr = {}; // key: nbProducto — distribución por producto/marca/familia
   
   const clientsPerCity = {
     'ARMENIA': new Set(),
@@ -372,6 +373,12 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const motivoKeys = ['motivo','idmotivo','concepto'];
   const paymentKeys = ['nbFormaPago','forma_pago','formaPago','tipo_pago'];
   const clientKeys = ['nmRazonSocial','nombre1','nombre2','apellido1','apellido2','cliente','razon_social','nm_razon_social','Cliente','Razón Social','Nombre Cliente'];
+  // Columnas de distribución numérica por producto
+  const nbProductoKeys   = ['nbProducto','nb_producto','codigo_producto','codproducto'];
+  const nmProductoKeys   = ['nmProducto','nm_producto','nombre_producto','nomproducto','producto'];
+  const tpProductoKeys   = ['tpProducto','tp_producto','tipo_producto','tipoproducto'];
+  const nmTpMarcaKeys    = ['nmTpMarca','nm_tp_marca','nmtpmarca','marca','brand'];
+  const nmTpFamiliaKeys  = ['nmTpFamilia','nm_tp_familia','nmtpfamilia','familia','family'];
 
   let processedRowsCount = 0;
 
@@ -562,6 +569,26 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
             cityKey = 'PEREIRA';
           }
           clientsPerCity[cityKey].add(clientName);
+        }
+
+        // 7b. Distribución numérica por producto — solo ventas reales (no devoluciones)
+        if (!esDevolucion && valTotal > 0) {
+          const nbProd   = String(getRowValue(row, nbProductoKeys)  || '').trim() || 'SIN_COD';
+          const nmProd   = String(getRowValue(row, nmProductoKeys)  || '').trim() || 'Sin nombre';
+          const tpProd   = String(getRowValue(row, tpProductoKeys)  || '').trim() || '';
+          const nmMarca  = String(getRowValue(row, nmTpMarcaKeys)   || brand || '').trim() || 'OTROS';
+          const nmFam    = String(getRowValue(row, nmTpFamiliaKeys) || '').trim() || 'Sin familia';
+          const prodKey  = `${nmMarca}||${nmFam}||${nbProd}`;
+          if (!productDistribAggr[prodKey]) {
+            productDistribAggr[prodKey] = {
+              nbProducto: nbProd, nmProducto: nmProd, tpProducto: tpProd,
+              nmTpMarca: nmMarca, nmTpFamilia: nmFam,
+              ventas: 0, facturas: new Set(), unidades: 0
+            };
+          }
+          productDistribAggr[prodKey].ventas    += valTotal;
+          productDistribAggr[prodKey].unidades  += 1;
+          if (facturaStr) productDistribAggr[prodKey].facturas.add(facturaStr);
         }
 
         // 7. Detalle ventas diarias para Supabase — solo ventas reales
@@ -785,6 +812,20 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const debugExp = Object.values(expiryDailyAggr).reduce((s,d)=>s+d.devoluciones,0);
   console.log('DEBUG SUMMARY - Positive sales:', debugPos, 'Rechazos:', debugNeg, 'Cambios:', debugExp);
         
+  // Formatear distribución numérica de productos
+  const totalProductVentas = Object.values(productDistribAggr).reduce((s, p) => s + p.ventas, 0);
+  const productDistrib = Object.values(productDistribAggr).map(p => ({
+    nbProducto:  p.nbProducto,
+    nmProducto:  p.nmProducto,
+    tpProducto:  p.tpProducto,
+    nmTpMarca:   p.nmTpMarca,
+    nmTpFamilia: p.nmTpFamilia,
+    ventas:      Math.round(p.ventas),
+    facturas:    p.facturas.size,
+    unidades:    p.unidades,
+    participacion: totalProductVentas > 0 ? Number((p.ventas / totalProductVentas).toFixed(4)) : 0
+  })).sort((a, b) => b.ventas - a.ventas);
+
   return {
     providers,
     salesDaily,
@@ -797,6 +838,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     expiryDaily,
     expiryClientReturns,
     cityClients,
+    productDistrib,
     salesDailyDb
   };
 };
@@ -979,9 +1021,10 @@ const UploadExcel = () => {
             existing.expiryClientReturns = processedData.expiryClientReturns || [];
             existing.returnsConcepts = processedData.returnsConcepts || [];
             existing.clientReturns = processedData.clientReturns || [];
+            existing.productDistrib = processedData.productDistrib || [];
             localStorage.setItem('zentra_alpina_dbData', JSON.stringify(existing));
             localStorage.setItem('zentra_alpina_period', latestPeriod);
-            console.log('✅ Datos de cambios/rechazos persistidos en localStorage antes de sync');
+            console.log('✅ Datos de cambios/rechazos/distribución persistidos en localStorage antes de sync');
           } catch (e) { console.warn('Error al persistir datos locales:', e); }
 
           // Sincronizar store local con los datos reales leídos de la DB

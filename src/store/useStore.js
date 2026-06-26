@@ -243,6 +243,10 @@ const useStore = create((set, get) => ({
         ? localData.expiryClientReturns 
         : (alpinaData.expiryClientReturns || []);
 
+      const productDistrib = (isSamePeriod && localData && localData.productDistrib && localData.productDistrib.length > 0)
+        ? localData.productDistrib
+        : (alpinaData.productDistrib || []);
+
       // returnsDaily: prefer localData with zone details if same period, else prefer DB table, else build from sellers aggregates
       let returnsDaily;
       if (isSamePeriod && localData && localData.returnsDaily && localData.returnsDaily.length > 0) {
@@ -268,7 +272,8 @@ const useStore = create((set, get) => ({
         returnsDaily,
         expiryConcepts,
         expiryDaily,
-        expiryClientReturns
+        expiryClientReturns,
+        productDistrib
       };
       saveToStorage(newDbData, latestPeriod);
       set({

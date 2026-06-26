@@ -4,17 +4,18 @@ import useStore from '../../store/useStore';
 import alpinaLogo from '../../assets/alpina-logo.svg';
 import {
   BarChart3, TrendingUp, RefreshCw, Truck, Users,
-  Brain, Upload, ChevronLeft, ChevronRight, Sparkles, X
+  Brain, Upload, ChevronLeft, ChevronRight, Sparkles, X, LayoutGrid
 } from 'lucide-react';
 
 const menuSections = [
   {
     label: 'Analítica',
     items: [
-      { name: 'Dashboard Ejecutivo', path: '/',            icon: BarChart3  },
-      { name: 'Análisis de Ventas',  path: '/ventas',      icon: TrendingUp },
-      { name: 'Devoluciones',        path: '/devoluciones', icon: RefreshCw  },
-      { name: 'Focos Numérica',      path: '/focos',        icon: Sparkles   },
+      { name: 'Dashboard Ejecutivo',    path: '/',              icon: BarChart3   },
+      { name: 'Análisis de Ventas',     path: '/ventas',        icon: TrendingUp  },
+      { name: 'Devoluciones',           path: '/devoluciones',  icon: RefreshCw   },
+      { name: 'Focos Numérica',         path: '/focos',         icon: Sparkles    },
+      { name: 'Distribución Numérica',  path: '/distribucion',  icon: LayoutGrid  },
     ]
   },
   {
