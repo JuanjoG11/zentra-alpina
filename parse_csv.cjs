@@ -136,6 +136,9 @@ try {
   const returnsConcepts = [];
   const returnsDaily = [];
   const clientReturns = [];
+  const expiryConcepts = [];
+  const expiryDaily = [];
+  const expiryClientReturns = [];
   let section = '';
 
   devLines.forEach(line => {
@@ -188,10 +191,20 @@ try {
       const concepto = parts[0];
       const pctStr = parts[1];
       if (concepto && concepto !== 'Total general') {
-        returnsConcepts.push({
-          concepto: concepto,
-          porcentaje: parsePercent(pctStr)
-        });
+        const norm = concepto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\./g, '').trim();
+        const esCambio = norm.split(' ').includes('me') || concepto.toLowerCase().includes('m.e');
+        
+        if (esCambio) {
+          expiryConcepts.push({
+            concepto: concepto,
+            porcentaje: parsePercent(pctStr)
+          });
+        } else {
+          returnsConcepts.push({
+            concepto: concepto,
+            porcentaje: parsePercent(pctStr)
+          });
+        }
       }
     } else if (section === 'daily') {
       const fecha = parts[0];
@@ -208,12 +221,24 @@ try {
       const concepto = parts[2];
       const valor = parseMoney(parts[3]);
       if (ejecutivo && ejecutivo !== 'EJECUTIVO' && ejecutivo !== 'Total general' && valor > 0) {
-        clientReturns.push({
-          ejecutivo,
-          cliente,
-          concepto,
-          valor
-        });
+        const norm = concepto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\./g, '').trim();
+        const esCambio = norm.split(' ').includes('me') || concepto.toLowerCase().includes('m.e');
+        
+        if (esCambio) {
+          expiryClientReturns.push({
+            ejecutivo,
+            cliente,
+            concepto,
+            valor
+          });
+        } else {
+          clientReturns.push({
+            ejecutivo,
+            cliente,
+            concepto,
+            valor
+          });
+        }
       }
     }
   });
@@ -225,7 +250,10 @@ try {
     returnsSellers,
     returnsConcepts,
     returnsDaily,
-    clientReturns
+    clientReturns,
+    expiryConcepts,
+    expiryDaily,
+    expiryClientReturns
   };
 
   const outputFilePath = path.join(__dirname, 'src', 'data', 'alpina-data.js');

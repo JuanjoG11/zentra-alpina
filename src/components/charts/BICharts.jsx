@@ -210,81 +210,6 @@ export const BIDonutChart = ({ data = [] }) => {
   return <Chart options={options} series={series} type="donut" height={340} />;
 };
 
-// 5. HEATMAP CHART - Returns by concept & seller (using ECharts)
-export const BIHeatmapChart = ({ returnsSellers = [], clientReturns = [] }) => {
-  // Let's create a heatmap of concepts vs sellers
-  const concepts = ['SIN PLATA', 'CERRADO', 'BODEGA', 'ERROR DEL VENDEDOR', 'EXTRARUTA', 'ESTADO', 'SEPARADO', 'INCOMPLETO'];
-  // Take top 8 sellers
-  const sellers = returnsSellers.slice(0, 8).map(s => s.nombre);
-  
-  // Create matrix: [conceptIndex, sellerIndex, value]
-  const matrix = [];
-  concepts.forEach((concept, cIdx) => {
-    sellers.forEach((seller, sIdx) => {
-      // Find return total for this seller & concept
-      const sellerCode = returnsSellers.find(s => s.nombre === seller)?.ejecutivo;
-      const totalVal = clientReturns
-        .filter(c => c.ejecutivo === sellerCode && c.concepto.includes(concept))
-        .reduce((sum, c) => sum + c.valor, 0);
-      
-      matrix.push([sIdx, cIdx, Math.round(totalVal / 1000)]); // Value in thousands
-    });
-  });
-
-  const option = {
-    backgroundColor: 'transparent',
-    tooltip: {
-      position: 'top',
-      formatter: (params) => {
-        return `${sellers[params.value[0]]}<br/>${concepts[params.value[1]]}: ${formatCurrency(params.value[2] * 1000)}`;
-      }
-    },
-    grid: { height: '70%', top: '10%', bottom: '20%', left: '15%', right: '5%' },
-    xAxis: {
-      type: 'category',
-      data: sellers,
-      splitArea: { show: true },
-      axisLabel: { color: '#94a3b8', interval: 0, rotate: 30 }
-    },
-    yAxis: {
-      type: 'category',
-      data: concepts,
-      splitArea: { show: true },
-      axisLabel: { color: '#94a3b8' }
-    },
-    visualMap: {
-      min: 0,
-      max: 15000, // max is ~15M COP (in thousands = 15000)
-      calculable: true,
-      orient: 'horizontal',
-      left: 'center',
-      bottom: '0%',
-      textStyle: { color: '#94a3b8' },
-      inRange: {
-        color: ['#1e293b', '#2563eb', '#dc2626'] // slate -> blue -> red
-      }
-    },
-    series: [
-      {
-        name: 'Devoluciones',
-        type: 'heatmap',
-        data: matrix,
-        label: {
-          show: false
-        },
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
-          }
-        }
-      }
-    ]
-  };
-
-  return <ReactECharts option={option} style={{ height: '320px', width: '100%' }} />;
-};
-
 // 6. TREEMAP CHART - Provider Sales distribution (using ECharts)
 export const BITreemapChart = ({ data = [] }) => {
   const treeData = data.map(item => ({
@@ -346,7 +271,45 @@ export const BITreemapChart = ({ data = [] }) => {
     ]
   };
 
-  return <ReactECharts option={option} style={{ height: '320px', width: '100%' }} />;
+  return <ReactECharts option={option} notMerge={true} lazyUpdate={true} style={{ height: '320px', width: '100%' }} />;
+};
+
+// 5. HEATMAP CHART - Returns by concept & seller (using ECharts)
+export const BIHeatmapChart = ({ returnsSellers = [], clientReturns = [] }) => {
+  if (!returnsSellers?.length || !clientReturns?.length) return null;
+
+  const concepts = ['SIN PLATA', 'CERRADO', 'BODEGA', 'ERROR DEL VENDEDOR', 'EXTRARUTA', 'ESTADO', 'SEPARADO', 'INCOMPLETO'];
+  const sellers = returnsSellers.slice(0, 8).map(s => s.nombre);
+
+  const matrix = [];
+  concepts.forEach((concept, cIdx) => {
+    sellers.forEach((seller, sIdx) => {
+      const sellerCode = returnsSellers.find(s => s.nombre === seller)?.ejecutivo;
+      const totalVal = clientReturns
+        .filter(c => c.ejecutivo === sellerCode && c.concepto?.includes(concept))
+        .reduce((sum, c) => sum + c.valor, 0);
+      matrix.push([sIdx, cIdx, Math.round(totalVal / 1000)]);
+    });
+  });
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      position: 'top',
+      formatter: (params) => `${sellers[params.value[0]]}<br/>${concepts[params.value[1]]}: ${formatCurrency(params.value[2] * 1000)}`
+    },
+    grid: { height: '70%', top: '10%', bottom: '20%', left: '15%', right: '5%' },
+    xAxis: { type: 'category', data: sellers, splitArea: { show: true }, axisLabel: { color: '#94a3b8', interval: 0, rotate: 30 } },
+    yAxis: { type: 'category', data: concepts, splitArea: { show: true }, axisLabel: { color: '#94a3b8' } },
+    visualMap: { min: 0, max: 15000, calculable: true, orient: 'horizontal', left: 'center', bottom: '0%', textStyle: { color: '#94a3b8' }, inRange: { color: ['#1e293b', '#2563eb', '#dc2626'] } },
+    series: [{
+      name: 'Devoluciones', type: 'heatmap', data: matrix,
+      label: { show: false },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+    }]
+  };
+
+  return <ReactECharts option={option} notMerge={true} lazyUpdate={true} style={{ height: '320px', width: '100%' }} />;
 };
 
 // 7. GAUGE CHART - Compliance indicator

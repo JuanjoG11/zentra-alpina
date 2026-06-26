@@ -180,8 +180,11 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const zonesAggr = {};
   const sellersAggr = {};
   const conceptsAggr = {};
+  const expiryConceptsAggr = {}; // Nueva: conceptos de vencimiento
   const returnsDailyAggr = {};
+  const expiryDailyAggr = {}; // Nueva: devoluciones por vencimiento diarias
   const clientReturnsAggr = {};
+  const expiryClientReturnsAggr = {}; // Nueva: devoluciones por vencimiento de clientes
   const salesDailyDbAggr = {};
   
   const clientsPerCity = {
@@ -493,19 +496,55 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         // 5. Devoluciones: conceptos y diario
         if (esDevolucion) {
           const absVal = Math.abs(valTotal);
-          conceptsAggr[motivoStr] = (conceptsAggr[motivoStr] || 0) + absVal;
-          returnsDailyAggr[formattedDate] = (returnsDailyAggr[formattedDate] || 0) + absVal;
-
-          const clientKey = `${zone}_${clientName}_${motivoStr}`;
-          if (!clientReturnsAggr[clientKey]) {
-            clientReturnsAggr[clientKey] = {
-              ejecutivo: zone || 'OTRO',
-              cliente: clientName,
-              concepto: motivoStr,
-              valor: 0
-            };
+          
+          // Detectar si es cambio (devolución por M.E.)
+          // Normalizar: quitar acentos, convertir a minúsculas, quitar puntos y espacios extras
+          const motivoNormalizado = motivoStr
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+            .replace(/\./g, '') // Quitar puntos
+            .replace(/\s+/g, ' ') // Normalizar espacios múltiples a uno solo
+            .trim();
+          
+          const esCambio = motivoNormalizado.split(' ').includes('me') || motivoStr.toLowerCase().includes('m.e');
+          
+          // DEBUG: Log para verificar detección
+          if (motivoStr && (motivoNormalizado.split(' ').includes('me') || motivoStr.toLowerCase().includes('m.e'))) {
+            console.log('🔍 Motivo de cambio detectado:', motivoStr, '| Normalizado:', motivoNormalizado, '| Es cambio:', esCambio);
           }
-          clientReturnsAggr[clientKey].valor += absVal;
+          
+          if (esCambio) {
+            // Agrupar en categorías de cambios (usando variables expiry por compatibilidad de base de datos)
+            expiryConceptsAggr[motivoStr] = (expiryConceptsAggr[motivoStr] || 0) + absVal;
+            expiryDailyAggr[formattedDate] = (expiryDailyAggr[formattedDate] || 0) + absVal;
+            
+            const clientKey = `${zone}_${clientName}_${motivoStr}`;
+            if (!expiryClientReturnsAggr[clientKey]) {
+              expiryClientReturnsAggr[clientKey] = {
+                ejecutivo: zone || 'OTRO',
+                cliente: clientName,
+                concepto: motivoStr,
+                valor: 0
+              };
+            }
+            expiryClientReturnsAggr[clientKey].valor += absVal;
+          } else {
+            // Rechazos (todos los demás motivos de devolución)
+            conceptsAggr[motivoStr] = (conceptsAggr[motivoStr] || 0) + absVal;
+            returnsDailyAggr[formattedDate] = (returnsDailyAggr[formattedDate] || 0) + absVal;
+            
+            const clientKey = `${zone}_${clientName}_${motivoStr}`;
+            if (!clientReturnsAggr[clientKey]) {
+              clientReturnsAggr[clientKey] = {
+                ejecutivo: zone || 'OTRO',
+                cliente: clientName,
+                concepto: motivoStr,
+                valor: 0
+              };
+            }
+            clientReturnsAggr[clientKey].valor += absVal;
+          }
         }
 
         // 6. Clientes por ciudad
@@ -552,6 +591,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   console.log('processSheetsClientSide - salesDaily count:', Object.keys(salesDailyAggr).length);
   console.log('processSheetsClientSide - zones count:', Object.keys(zonesAggr).length);
   console.log('processSheetsClientSide - returnsSellers count:', Object.keys(sellersAggr).length);
+  console.log('processSheetsClientSide - returnsConcepts count:', Object.keys(conceptsAggr).length);
+  console.log('processSheetsClientSide - expiryConcepts count:', Object.keys(expiryConceptsAggr).length);
 
   if (processedRowsCount === 0) {
     return {
@@ -562,6 +603,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
       returnsConcepts: [],
       returnsDaily: [],
       clientReturns: [],
+      expiryConcepts: [],
+      expiryDaily: [],
+      expiryClientReturns: [],
       cityClients: {},
       salesDailyDb: []
     };
@@ -664,6 +708,31 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     };
   }).sort((a, b) => b.valor - a.valor);
 
+  // Procesar devoluciones por vencimiento
+  const totalExpiryValue = Object.values(expiryConceptsAggr).reduce((a, b) => a + b, 0);
+  const expiryConcepts = Object.entries(expiryConceptsAggr).map(([concept, val]) => {
+    return {
+      concepto: concept,
+      porcentaje: totalExpiryValue > 0 ? Number((val / totalExpiryValue).toFixed(4)) : 0.0
+    };
+  }).sort((a, b) => b.porcentaje - a.porcentaje);
+
+  const expiryDaily = Object.entries(expiryDailyAggr).map(([fecha, val]) => {
+    return {
+      fecha,
+      devoluciones: Math.round(val)
+    };
+  }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+  const expiryClientReturns = Object.values(expiryClientReturnsAggr).map(cr => {
+    return {
+      ejecutivo: cr.ejecutivo,
+      cliente: cr.cliente,
+      concepto: cr.concepto,
+      valor: Math.round(cr.valor)
+    };
+  }).sort((a, b) => b.valor - a.valor);
+
   const cityClients = {
     'ARMENIA': clientsPerCity['ARMENIA'].size,
     'MANIZALES': clientsPerCity['MANIZALES'].size,
@@ -685,24 +754,29 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   // ============================================================
   const totalVentasBrutas = Object.values(salesDailyAggr).reduce((s, d) => s + d.contado + d.credito, 0);
   const totalDevoluciones = Object.values(returnsDailyAggr).reduce((s, v) => s + v, 0);
+  const totalDevVencimiento = Object.values(expiryDailyAggr).reduce((s, v) => s + v, 0);
   const totalProveedores   = Object.values(providersAggr).reduce((s, p) => s + p.ventas2026, 0);
   console.group('=== DIAGNÓSTICO CUBO ===');
   console.log('Filas procesadas            :', processedRowsCount);
   console.log('Ventas brutas (vlrAntesIva) :', totalVentasBrutas.toLocaleString('es-CO'));
-  console.log('Devoluciones (negativos)    :', totalDevoluciones.toLocaleString('es-CO'));
-  console.log('Ventas netas esperadas      :', (totalVentasBrutas - totalDevoluciones).toLocaleString('es-CO'));
+  console.log('Rechazos                    :', totalDevoluciones.toLocaleString('es-CO'));
+  console.log('Cambios                     :', totalDevVencimiento.toLocaleString('es-CO'));
+  console.log('Total devoluciones          :', (totalDevoluciones + totalDevVencimiento).toLocaleString('es-CO'));
+  console.log('Ventas netas esperadas      :', (totalVentasBrutas - totalDevoluciones - totalDevVencimiento).toLocaleString('es-CO'));
   console.log('Suma proveedores            :', totalProveedores.toLocaleString('es-CO'));
   console.log('Proveedores detectados      :', Object.keys(providersAggr));
   console.log('Marcas detectadas           :', Object.keys(brandsAggr));
   console.log('Días con ventas             :', Object.keys(salesDailyAggr).length);
-  console.log('Días con devoluciones       :', Object.keys(returnsDailyAggr).length);
+  console.log('Días con Rechazos           :', Object.keys(returnsDailyAggr).length);
+  console.log('Días con Cambios            :', Object.keys(expiryDailyAggr).length);
   console.groupEnd();
   // ============================================================
 
   // DEBUG SUMMARY: totals after processing
   const debugPos = Object.values(salesDailyAggr).reduce((s,d)=>s+d.contado+d.credito,0);
   const debugNeg = Object.values(returnsDailyAggr).reduce((s,v)=>s+v,0);
-  console.log('DEBUG SUMMARY - Positive sales:', debugPos, 'Total returns:', debugNeg);
+  const debugExp = Object.values(expiryDailyAggr).reduce((s,v)=>s+v,0);
+  console.log('DEBUG SUMMARY - Positive sales:', debugPos, 'Rechazos:', debugNeg, 'Cambios:', debugExp);
         
   return {
     providers,
@@ -712,6 +786,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     returnsConcepts,
     returnsDaily,
     clientReturns,
+    expiryConcepts,
+    expiryDaily,
+    expiryClientReturns,
     cityClients,
     salesDailyDb
   };
@@ -879,6 +956,21 @@ const UploadExcel = () => {
           
           console.log('Sincronización con base de datos completada con éxito.');
           isDbUpload = true;
+
+          // Persistir datos de cambios (expiry) en localStorage ANTES de re-sincronizar,
+          // porque estos datos solo vienen del Excel y no tienen tablas propias en Supabase.
+          try {
+            const existingRaw = localStorage.getItem('zentra_alpina_dbData');
+            const existing = existingRaw ? JSON.parse(existingRaw) : {};
+            existing.expiryConcepts = processedData.expiryConcepts || [];
+            existing.expiryDaily = processedData.expiryDaily || [];
+            existing.expiryClientReturns = processedData.expiryClientReturns || [];
+            existing.returnsConcepts = processedData.returnsConcepts || [];
+            existing.clientReturns = processedData.clientReturns || [];
+            localStorage.setItem('zentra_alpina_dbData', JSON.stringify(existing));
+            localStorage.setItem('zentra_alpina_period', latestPeriod);
+            console.log('✅ Datos de cambios/rechazos persistidos en localStorage antes de sync');
+          } catch (e) { console.warn('Error al persistir datos locales:', e); }
 
           // Sincronizar store local con los datos reales leídos de la DB
           await fetchDataFromSupabase();

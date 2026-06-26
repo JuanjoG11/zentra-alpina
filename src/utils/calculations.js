@@ -115,6 +115,9 @@ export const getFilteredData = (arg1, arg2) => {
   let returnsConcepts= [...(baseData.returnsConcepts|| [])];
   let returnsDaily   = [...(baseData.returnsDaily   || [])];
   let clientReturns  = [...(baseData.clientReturns  || [])];
+  let expiryConcepts = [...(baseData.expiryConcepts || [])];
+  let expiryDaily    = [...(baseData.expiryDaily    || [])];
+  let expiryClientReturns = [...(baseData.expiryClientReturns || [])];
 
   // ── Filtro por CIUDAD (usando el mapa real de zonas del cubo) ──────────────
   if (selectedCity && selectedCity !== 'Todas') {
@@ -123,6 +126,7 @@ export const getFilteredData = (arg1, arg2) => {
       zones          = zones.filter(z => zonasPermitidas.has(z.zona));
       returnsSellers = returnsSellers.filter(s => zonasPermitidas.has(s.ejecutivo));
       clientReturns  = clientReturns.filter(c => zonasPermitidas.has(c.ejecutivo));
+      expiryClientReturns = expiryClientReturns.filter(c => zonasPermitidas.has(c.ejecutivo));
       // salesDaily no tiene zona directamente — se deja sin filtrar por ciudad
       // (el total viene de todos, el filtro de zona lo acota si se necesita más granularidad)
     }
@@ -164,9 +168,24 @@ export const getFilteredData = (arg1, arg2) => {
       c.ejecutivo === selectedSeller ||
       c.cliente.toLowerCase().includes(selectedSeller.toLowerCase())
     );
+    expiryClientReturns = expiryClientReturns.filter(c =>
+      c.ejecutivo === selectedSeller ||
+      c.cliente.toLowerCase().includes(selectedSeller.toLowerCase())
+    );
   }
 
-  return { providers, salesDaily, zones, returnsSellers, returnsConcepts, returnsDaily, clientReturns };
+  return { 
+    providers, 
+    salesDaily, 
+    zones, 
+    returnsSellers, 
+    returnsConcepts, 
+    returnsDaily, 
+    clientReturns,
+    expiryConcepts,
+    expiryDaily,
+    expiryClientReturns
+  };
 };
 
 export const calculateKPIs = (filteredData) => {

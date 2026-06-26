@@ -199,10 +199,45 @@ const useStore = create((set, get) => ({
         };
       }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-      // Use returns_daily from DB if available (populated by ETL upload).
-      // Fall back to returns_sellers sum if returns_daily is empty (old DB state).
-      const returnsConcepts = alpinaData.returnsConcepts;
-      const clientReturns = alpinaData.clientReturns;
+      // Determine the most recent period from salesDaily and update selectedPeriod
+      const latestDate = dbSales.reduce((max, row) => {
+        const date = new Date(row.fecha && !row.fecha.includes('T') ? row.fecha + 'T00:00:00' : row.fecha);
+        return date > max ? date : max;
+      }, new Date(0));
+      
+      const monthNames = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      ];
+      // Format latestPeriod as "monthname-YYYY" to be completely consistent with the rest of the application
+      const latestPeriod = `${monthNames[latestDate.getMonth()]}-${latestDate.getFullYear()}`;
+
+      // Try to preserve concepts, clientReturns, expiryConcepts, expiryDaily, expiryClientReturns
+      // from local persisted data if the period matches.
+      const currentPeriod = localStorage.getItem(PERIOD_KEY);
+      const isSamePeriod = currentPeriod && currentPeriod.toLowerCase().trim() === latestPeriod.toLowerCase().trim();
+      
+      const localData = loadPersistedData();
+      
+      const returnsConcepts = (isSamePeriod && localData && localData.returnsConcepts && localData.returnsConcepts.length > 0) 
+        ? localData.returnsConcepts 
+        : alpinaData.returnsConcepts;
+        
+      const clientReturns = (isSamePeriod && localData && localData.clientReturns && localData.clientReturns.length > 0) 
+        ? localData.clientReturns 
+        : alpinaData.clientReturns;
+        
+      const expiryConcepts = (isSamePeriod && localData && localData.expiryConcepts && localData.expiryConcepts.length > 0) 
+        ? localData.expiryConcepts 
+        : (alpinaData.expiryConcepts || []);
+        
+      const expiryDaily = (isSamePeriod && localData && localData.expiryDaily && localData.expiryDaily.length > 0) 
+        ? localData.expiryDaily 
+        : (alpinaData.expiryDaily || []);
+        
+      const expiryClientReturns = (isSamePeriod && localData && localData.expiryClientReturns && localData.expiryClientReturns.length > 0) 
+        ? localData.expiryClientReturns 
+        : (alpinaData.expiryClientReturns || []);
 
       // returnsDaily: prefer DB table, else build from sellers aggregates
       let returnsDaily;
@@ -216,32 +251,29 @@ const useStore = create((set, get) => ({
         returnsDaily = salesDays.map(fecha => ({ fecha, devoluciones: perDay }));
       }
 
-    // Determine the most recent period from salesDaily and update selectedPeriod
-    const latestDate = dbSales.reduce((max, row) => {
-      const date = new Date(row.fecha);
-      return date > max ? date : max;
-    }, new Date(0));
-    const latestPeriod = latestDate.toISOString().substring(0, 7); // YYYY-MM
-    // Update store with fetched data and latest period
-    const newDbData = {
-      providers,
-      salesDaily,
-      zones,
-      returnsSellers,
-      returnsConcepts,
-      clientReturns,
-      returnsDaily
-    };
-    saveToStorage(newDbData, latestPeriod);
-    set({
-      dbData: newDbData,
-      selectedPeriod: latestPeriod,
-      isLoadingData: false
-    });
-    // Regenerar notificaciones con los datos frescos de Supabase
-    setTimeout(() => get().generateNotifications(), 0);
-    console.log('Datos de Supabase sincronizados. Ventas brutas:', salesDaily.reduce((s, d) => s + d.total, 0));
-    console.log('Devoluciones totales:', returnsDaily.reduce((s, d) => s + d.devoluciones, 0));
+      // Update store with fetched data and latest period
+      const newDbData = {
+        providers,
+        salesDaily,
+        zones,
+        returnsSellers,
+        returnsConcepts,
+        clientReturns,
+        returnsDaily,
+        expiryConcepts,
+        expiryDaily,
+        expiryClientReturns
+      };
+      saveToStorage(newDbData, latestPeriod);
+      set({
+        dbData: newDbData,
+        selectedPeriod: latestPeriod,
+        isLoadingData: false
+      });
+      // Regenerar notificaciones con los datos frescos de Supabase
+      setTimeout(() => get().generateNotifications(), 0);
+      console.log('Datos de Supabase sincronizados. Ventas brutas:', salesDaily.reduce((s, d) => s + d.total, 0));
+      console.log('Devoluciones totales:', returnsDaily.reduce((s, d) => s + d.devoluciones, 0));
     } catch (err) {
       console.error('Error al sincronizar datos con Supabase:', err);
       set({ dataError: err.message, isLoadingData: false });

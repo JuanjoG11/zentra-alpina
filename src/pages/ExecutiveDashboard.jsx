@@ -248,14 +248,14 @@ const ExecutiveDashboard = () => {
       trend: kpis.compliance >= 1 ? 'up' : 'down'
     },
     {
-      title: 'Devoluciones',
+      title: 'Rechazos',
       value: formatCurrency(kpis.totalReturns),
       subtitle: `${formatPercent(kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0)} del total bruto`,
       icon: TrendingDown,
       color: 'from-rose-500/20 to-pink-500/20',
       iconColor: 'text-rose-400',
       badge: kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0,
-      badgeLabel: 'tasa de devolución',
+      badgeLabel: 'tasa de rechazo',
       trend: 'alert'
     },
     {
@@ -345,7 +345,7 @@ const ExecutiveDashboard = () => {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-rose-500/30 bg-rose-500/5 animate-pulse">
           <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
           <p className="text-sm text-rose-300 font-medium">
-            Alerta: la tasa de devoluciones supera el umbral crítico del 3,5% — actualmente en <strong>{formatPercent(devRate)}</strong>.
+            Alerta: la tasa de rechazo supera el umbral crítico del 3,5% — actualmente en <strong>{formatPercent(devRate)}</strong>.
           </p>
         </div>
       )}
