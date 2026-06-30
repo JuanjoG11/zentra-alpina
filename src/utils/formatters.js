@@ -52,6 +52,12 @@ export const formatNumber = (val) => {
   return formatter.format(val);
 };
 
+export const formatKg = (val) => {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  const kg = val >= 1000 ? val / 1000 : val; // If value appears to be in grams, convert to kg
+  return `${kg.toFixed(2)} kg`;
+};
+
 export const formatDate = (dateStr) => {
   if (!dateStr) return '';
   // dateStr is typically e.g. "4/1/2026"

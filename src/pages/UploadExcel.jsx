@@ -379,6 +379,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const tpProductoKeys   = ['tpProducto','tp_producto','tipo_producto','tipoproducto'];
   const nmTpMarcaKeys    = ['nmTpMarca','nm_tp_marca','nmtpmarca','marca','brand'];
   const nmTpFamiliaKeys  = ['nmTpFamilia','nm_tp_familia','nmtpfamilia','familia','family'];
+  const pesoTotalKeys    = ['pesoTotal','peso_total','pesototal','peso','pesototalgramos','peso_total_gramos','peso total'];
 
   let processedRowsCount = 0;
 
@@ -407,7 +408,10 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
           activeSeller = DEFAULT_ZONE_SELLERS[zone] || 'Sin Asignar';
         }
         const proveedor = getRowValue(row, proveedorKeys) || 'SIN PROVEEDOR';
-        const brand = getRowValue(row, brandKeys) || 'OTROS';
+        let brand = getRowValue(row, brandKeys) || 'OTROS';
+        if (brand && String(brand).toUpperCase().includes('FINESSE')) {
+          brand = 'FINESSE';
+        }
 
         // Motivo y valor (vlrAntesIva)
         const motivo = getRowValue(row, motivoKeys);
@@ -505,7 +509,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         if (esDevolucion) {
           const absVal = Math.abs(valTotal);
           
-          // Detectar si es cambio (devolución por M.E.)
+          // Detectar si es devolución por vencimiento (DEV. M.E. POR VENCIMIENTO)
           // Normalizar: quitar acentos, convertir a minúsculas, quitar puntos y espacios extras
           const motivoNormalizado = motivoStr
             .toLowerCase()
@@ -515,10 +519,15 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
             .replace(/\s+/g, ' ') // Normalizar espacios múltiples a uno solo
             .trim();
           
-          const esCambio = motivoNormalizado.split(' ').includes('me') || motivoStr.toLowerCase().includes('m.e');
+          const esVencimiento = motivoNormalizado.includes('vencimiento');
+          
+          // DEBUG: Log para verificar detección
+          if (motivoStr && motivoNormalizado.includes('venc')) {
+            console.log('🔍 Motivo detectado:', motivoStr, '| Normalizado:', motivoNormalizado, '| Es vencimiento:', esVencimiento);
+          }
           
           const dayZoneKey = `${formattedDate}_${zone || 'OTRO'}`;
-          if (esCambio) {
+          if (esVencimiento) {
             // Agrupar en categorías de cambios (usando variables expiry por compatibilidad de base de datos)
             expiryConceptsAggr[motivoStr] = (expiryConceptsAggr[motivoStr] || 0) + absVal;
             if (!expiryDailyAggr[dayZoneKey]) {
@@ -576,8 +585,12 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
           const nbProd   = String(getRowValue(row, nbProductoKeys)  || '').trim() || 'SIN_COD';
           const nmProd   = String(getRowValue(row, nmProductoKeys)  || '').trim() || 'Sin nombre';
           const tpProd   = String(getRowValue(row, tpProductoKeys)  || '').trim() || '';
-          const nmMarca  = String(getRowValue(row, nmTpMarcaKeys)   || brand || '').trim() || 'OTROS';
+          let nmMarca  = String(getRowValue(row, nmTpMarcaKeys)   || brand || '').trim() || 'OTROS';
+          if (nmMarca.toUpperCase().includes('FINESSE')) {
+            nmMarca = 'FINESSE';
+          }
           const nmFam    = String(getRowValue(row, nmTpFamiliaKeys) || '').trim() || 'Sin familia';
+          const pesoTotal = parseSpanishFloat(getRowValue(row, pesoTotalKeys)) || 0;
           const prodKey  = `${nmMarca}||${nmFam}||${nbProd}||${zone || 'OTRO'}||${activeSeller || 'Sin Asignar'}`;
           if (!productDistribAggr[prodKey]) {
             productDistribAggr[prodKey] = {
@@ -585,12 +598,16 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
               nmTpMarca: nmMarca, nmTpFamilia: nmFam,
               zona: zone || 'OTRO',
               vendedor: activeSeller || 'Sin Asignar',
-              ventas: 0, facturas: new Set(), unidades: 0
+              ventas: 0, facturas: new Set(), unidades: 0,
+              clientes: new Set(),
+              pesoTotalGramos: 0
             };
           }
           productDistribAggr[prodKey].ventas    += valTotal;
           productDistribAggr[prodKey].unidades  += 1;
+          productDistribAggr[prodKey].pesoTotalGramos += pesoTotal;
           if (facturaStr) productDistribAggr[prodKey].facturas.add(facturaStr);
+          if (clientName) productDistribAggr[prodKey].clientes.add(clientName);
         }
 
         // 7. Detalle ventas diarias para Supabase — solo ventas reales
@@ -827,7 +844,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     ventas:      Math.round(p.ventas),
     facturas:    p.facturas.size,
     unidades:    p.unidades,
-    participacion: totalProductVentas > 0 ? Number((p.ventas / totalProductVentas).toFixed(4)) : 0
+    clientesCount: p.clientes ? p.clientes.size : 0,
+    participacion: totalProductVentas > 0 ? Number((p.ventas / totalProductVentas).toFixed(4)) : 0,
+    pesoTotal:   p.pesoTotalGramos || 0
   })).sort((a, b) => b.ventas - a.ventas);
 
   return {

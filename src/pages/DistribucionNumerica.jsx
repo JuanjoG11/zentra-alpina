@@ -362,35 +362,40 @@ const DistribucionNumerica = () => {
             const color = BRAND_COLORS[bi % BRAND_COLORS.length];
             return (
               <div key={b.marca}>
-                <button onClick={() => toggleBrand(b.marca)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/40 transition-colors text-left group">
-                  {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-slate-500 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />}
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                  <span className="flex-1 text-sm font-semibold text-slate-200 truncate">{b.marca}</span>
-                  <span className="text-[10px] text-slate-500 hidden sm:block">{b.productos} productos · {b.facturas.toLocaleString('es-CO')} facturas</span>
-                  <span className="text-xs font-bold ml-4 shrink-0" style={{ color }}>{formatPercent(b.participacion)}</span>
-                  <span className="text-xs text-slate-300 ml-3 shrink-0">{formatCurrency(b.ventas)}</span>
+              <button onClick={() => toggleBrand(b.marca)} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800/50 transition-colors text-left group">
+                  <span
+                    className="w-3.5 h-3.5 rounded-full shrink-0 transition-all duration-200 ring-2 ring-offset-1 ring-offset-slate-950"
+                    style={{
+                      backgroundColor: color,
+                      boxShadow: isExpanded ? `0 0 8px ${color}` : 'none'
+                    }}
+                  />
+                  <span className="flex-1 text-sm font-bold text-white truncate">{b.marca}</span>
+                  <span className="text-xs text-slate-300 hidden sm:block">{b.productos} productos · {b.facturas.toLocaleString('es-CO')} facturas</span>
+                  <span className="text-sm font-bold ml-4 shrink-0" style={{ color }}>{formatPercent(b.participacion)}</span>
+                  <span className="text-sm text-slate-100 font-semibold ml-3 shrink-0">{formatCurrency(b.ventas)}</span>
                 </button>
                 {isExpanded && Object.entries(familiasTree).sort(([,a],[,b]) => b.reduce((s,p)=>s+p.ventas,0) - a.reduce((s,p)=>s+p.ventas,0)).map(([familia, prods]) => {
                   const famVentas = prods.reduce((s, p) => s + p.ventas, 0);
                   return (
                     <div key={familia} className="ml-8 mt-0.5">
-                      <div className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-slate-400 border-l border-slate-800 ml-1">
-                        <Layers className="h-3 w-3 text-slate-600 shrink-0" />
-                        <span className="font-semibold text-slate-300">{familia}</span>
-                        <span className="text-slate-600">—</span>
-                        <span>{prods.length} productos</span>
-                        <span className="ml-auto font-semibold text-slate-300">{formatCurrency(famVentas)}</span>
+                      <div className="flex items-center gap-2 px-4 py-2 text-xs text-slate-200 border-l-2 border-slate-700 ml-1">
+                        <Layers className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="font-semibold text-slate-100">{familia}</span>
+                        <span className="text-slate-500">—</span>
+                        <span className="text-slate-300">{prods.length} productos</span>
+                        <span className="ml-auto font-bold text-slate-100">{formatCurrency(famVentas)}</span>
                       </div>
-                      <div className="ml-5 border-l border-slate-800/60 space-y-0.5 pb-1">
+                      <div className="ml-5 border-l-2 border-slate-800/60 space-y-0.5 pb-1">
                         {[...prods].sort((a,b)=>b.ventas-a.ventas).slice(0,15).map(p => (
-                          <div key={p.nbProducto} className="flex items-center gap-2 px-3 py-1 text-[10px] text-slate-500 hover:text-slate-300 hover:bg-slate-900/40 rounded transition-colors">
-                            <span className="font-mono text-slate-600 w-14 shrink-0 truncate">{p.nbProducto}</span>
-                            <span className="flex-1 truncate">{p.nmProducto}</span>
-                            {p.tpProducto && <span className="text-[9px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded shrink-0">{p.tpProducto}</span>}
-                            <span className="text-slate-400 font-semibold shrink-0">{formatCurrency(p.ventas)}</span>
+                          <div key={p.nbProducto} className="flex items-center gap-3 px-4 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/40 rounded transition-colors">
+                            <span className="font-mono text-slate-400 w-14 shrink-0 truncate">{p.nbProducto}</span>
+                            <span className="flex-1 truncate text-slate-200">{p.nmProducto}</span>
+                            {p.tpProducto && <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded shrink-0">{p.tpProducto}</span>}
+                            <span className="text-slate-100 font-semibold shrink-0">{formatCurrency(p.ventas)}</span>
                           </div>
                         ))}
-                        {prods.length > 15 && <p className="text-[10px] text-slate-700 px-3 py-0.5">+{prods.length - 15} más productos…</p>}
+                        {prods.length > 15 && <p className="text-xs text-slate-500 px-3 py-0.5">+{prods.length - 15} más productos…</p>}
                       </div>
                     </div>
                   );
@@ -444,16 +449,16 @@ const DistribucionNumerica = () => {
                 <tr 
                   key={`${p.nbProducto}-${i}`} 
                   onClick={() => setSelectedProduct(p)} 
-                  className="hover:bg-slate-900/40 cursor-pointer transition-colors group"
+                  className="hover:bg-slate-800/40 cursor-pointer transition-colors group"
                 >
-                  <td className="py-2 pr-3 font-mono text-slate-600 text-[10px]">{p.nbProducto}</td>
-                  <td className="py-2 pr-3 text-slate-200 font-medium max-w-[200px] truncate group-hover:text-blue-400 transition-colors">{p.nmProducto}</td>
-                  <td className="py-2 pr-3 hidden md:table-cell">{p.tpProducto && <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">{p.tpProducto}</span>}</td>
-                  <td className="py-2 pr-3 text-slate-400 hidden sm:table-cell truncate max-w-[120px]">{p.nmTpMarca}</td>
-                  <td className="py-2 pr-3 text-slate-500 hidden lg:table-cell truncate max-w-[140px]">{p.nmTpFamilia}</td>
-                  <td className="py-2 pr-3 text-right text-slate-200 font-semibold tabular-nums">{formatCurrency(p.ventas)}</td>
-                  <td className="py-2 pr-3 text-right text-slate-400 tabular-nums">{p.facturas.toLocaleString('es-CO')}</td>
-                  <td className="py-2 text-right"><span className={`font-bold text-[10px] ${p.participacion >= 0.05 ? 'text-blue-400' : p.participacion >= 0.01 ? 'text-slate-300' : 'text-slate-600'}`}>{(p.participacion * 100).toFixed(1)}%</span></td>
+                  <td className="py-2.5 pr-3 font-mono text-slate-400 text-[11px]">{p.nbProducto}</td>
+                  <td className="py-2.5 pr-3 text-slate-100 font-medium max-w-[200px] truncate group-hover:text-blue-400 transition-colors">{p.nmProducto}</td>
+                  <td className="py-2.5 pr-3 hidden md:table-cell">{p.tpProducto && <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">{p.tpProducto}</span>}</td>
+                  <td className="py-2.5 pr-3 text-slate-200 hidden sm:table-cell truncate max-w-[120px]">{p.nmTpMarca}</td>
+                  <td className="py-2.5 pr-3 text-slate-300 hidden lg:table-cell truncate max-w-[140px]">{p.nmTpFamilia}</td>
+                  <td className="py-2.5 pr-3 text-right text-white font-semibold tabular-nums">{formatCurrency(p.ventas)}</td>
+                  <td className="py-2.5 pr-3 text-right text-slate-200 tabular-nums">{p.facturas.toLocaleString('es-CO')}</td>
+                  <td className="py-2.5 text-right"><span className={`font-bold text-xs ${p.participacion >= 0.05 ? 'text-blue-400' : p.participacion >= 0.01 ? 'text-slate-200' : 'text-slate-400'}`}>{(p.participacion * 100).toFixed(1)}%</span></td>
                 </tr>
               ))}
             </tbody>
