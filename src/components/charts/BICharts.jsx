@@ -276,41 +276,134 @@ export const BITreemapChart = ({ data = [] }) => {
 
 // 5. HEATMAP CHART - Returns by concept & seller (using ECharts)
 export const BIHeatmapChart = ({ returnsSellers = [], clientReturns = [] }) => {
+  const [hoveredSeller, setHoveredSeller] = React.useState(null);
   if (!returnsSellers?.length || !clientReturns?.length) return null;
 
-  const concepts = ['SIN PLATA', 'CERRADO', 'BODEGA', 'ERROR DEL VENDEDOR', 'EXTRARUTA', 'ESTADO', 'SEPARADO', 'INCOMPLETO'];
-  const sellers = returnsSellers.slice(0, 8).map(s => s.nombre);
-
-  const matrix = [];
-  concepts.forEach((concept, cIdx) => {
-    sellers.forEach((seller, sIdx) => {
-      const sellerCode = returnsSellers.find(s => s.nombre === seller)?.ejecutivo;
-      const totalVal = clientReturns
-        .filter(c => c.ejecutivo === sellerCode && c.concepto?.includes(concept))
-        .reduce((sum, c) => sum + c.valor, 0);
-      matrix.push([sIdx, cIdx, Math.round(totalVal / 1000)]);
-    });
-  });
-
-  const option = {
-    backgroundColor: 'transparent',
-    tooltip: {
-      position: 'top',
-      formatter: (params) => `${sellers[params.value[0]]}<br/>${concepts[params.value[1]]}: ${formatCurrency(params.value[2] * 1000)}`
-    },
-    grid: { height: '70%', top: '10%', bottom: '20%', left: '15%', right: '5%' },
-    xAxis: { type: 'category', data: sellers, splitArea: { show: true }, axisLabel: { color: '#94a3b8', interval: 0, rotate: 30 } },
-    yAxis: { type: 'category', data: concepts, splitArea: { show: true }, axisLabel: { color: '#94a3b8' } },
-    visualMap: { min: 0, max: 15000, calculable: true, orient: 'horizontal', left: 'center', bottom: '0%', textStyle: { color: '#94a3b8' }, inRange: { color: ['#1e293b', '#2563eb', '#dc2626'] } },
-    series: [{
-      name: 'Devoluciones', type: 'heatmap', data: matrix,
-      label: { show: false },
-      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
-    }]
+  const CONCEPTS = ['INCOMPLETO', 'SEPARADO', 'ESTADO', 'EXTRARUTA', 'ERROR DEL VENDEDOR', 'BODEGA', 'CERRADO', 'SIN PLATA'];
+  const CONCEPT_COLORS = {
+    'INCOMPLETO':        { bg: '#3b82f6', text: '#93c5fd' },
+    'SEPARADO':          { bg: '#8b5cf6', text: '#c4b5fd' },
+    'ESTADO':            { bg: '#06b6d4', text: '#67e8f9' },
+    'EXTRARUTA':         { bg: '#f59e0b', text: '#fcd34d' },
+    'ERROR DEL VENDEDOR':{ bg: '#ef4444', text: '#fca5a5' },
+    'BODEGA':            { bg: '#10b981', text: '#6ee7b7' },
+    'CERRADO':           { bg: '#f97316', text: '#fdba74' },
+    'SIN PLATA':         { bg: '#ec4899', text: '#f9a8d4' },
   };
 
-  return <ReactECharts option={option} notMerge={true} lazyUpdate={true} style={{ height: '320px', width: '100%' }} />;
+  // Aggregate per seller
+  const sellers = returnsSellers.slice(0, 8).map(s => {
+    const sellerCode = s.ejecutivo;
+    const conceptBreakdown = {};
+    let total = 0;
+    CONCEPTS.forEach(concept => {
+      const val = clientReturns
+        .filter(c => c.ejecutivo === sellerCode && c.concepto?.toUpperCase().includes(concept))
+        .reduce((sum, c) => sum + c.valor, 0);
+      if (val > 0) { conceptBreakdown[concept] = val; total += val; }
+    });
+    // Include uncategorised
+    const categorised = Object.values(conceptBreakdown).reduce((a, b) => a + b, 0);
+    const raw = clientReturns.filter(c => c.ejecutivo === sellerCode).reduce((sum, c) => sum + c.valor, 0);
+    const other = raw - categorised;
+    if (other > 100) { conceptBreakdown['OTROS'] = other; total += other; }
+    return { nombre: s.nombre, total, conceptBreakdown };
+  }).filter(s => s.total > 0).sort((a, b) => b.total - a.total);
+
+  if (!sellers.length) return null;
+
+  const maxTotal = sellers[0]?.total || 1;
+
+  return (
+    <div className="space-y-3">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
+        {CONCEPTS.map(c => (
+          <span key={c} className="flex items-center gap-1 text-[10px] font-semibold" style={{ color: CONCEPT_COLORS[c]?.text || '#94a3b8' }}>
+            <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: CONCEPT_COLORS[c]?.bg || '#94a3b8' }} />
+            {c}
+          </span>
+        ))}
+      </div>
+
+      {/* Rows */}
+      {sellers.map((seller, idx) => {
+        const barWidth = (seller.total / maxTotal) * 100;
+        const isHovered = hoveredSeller === idx;
+        const segments = Object.entries(seller.conceptBreakdown).sort((a, b) => b[1] - a[1]);
+
+        return (
+          <div
+            key={idx}
+            className="rounded-xl border transition-all duration-200 cursor-default"
+            style={{
+              background: isHovered ? 'rgba(30,41,59,0.8)' : 'rgba(15,23,42,0.5)',
+              borderColor: isHovered ? 'rgba(99,102,241,0.4)' : 'rgba(30,41,59,0.6)',
+            }}
+            onMouseEnter={() => setHoveredSeller(idx)}
+            onMouseLeave={() => setHoveredSeller(null)}
+          >
+            <div className="px-4 pt-3 pb-1 flex items-center justify-between gap-3">
+              {/* Rank + Name */}
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-[11px] font-black w-5 text-center flex-shrink-0" style={{ color: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#475569' }}>
+                  #{idx + 1}
+                </span>
+                <p className="text-xs font-bold text-slate-200 truncate">{seller.nombre}</p>
+              </div>
+              {/* Total */}
+              <span className="text-sm font-black text-rose-400 flex-shrink-0">
+                {formatShortCurrency(seller.total)}
+              </span>
+            </div>
+
+            {/* Stacked bar */}
+            <div className="px-4 pb-1 mt-1">
+              <div className="w-full h-4 rounded-lg overflow-hidden bg-slate-900 flex" style={{ width: '100%' }}>
+                {segments.map(([concept, val], sIdx) => {
+                  const segWidth = (val / seller.total) * barWidth;
+                  const color = concept === 'OTROS'
+                    ? '#475569'
+                    : (CONCEPT_COLORS[concept]?.bg || '#64748b');
+                  return (
+                    <div
+                      key={sIdx}
+                      className="h-full transition-all duration-300 relative group/seg"
+                      style={{ width: `${segWidth}%`, background: color, minWidth: segWidth > 0.5 ? '3px' : '0px' }}
+                      title={`${concept}: ${formatShortCurrency(val)}`}
+                    />
+                  );
+                })}
+                {/* Grey remainder */}
+                <div className="flex-1 h-full bg-slate-900/60" />
+              </div>
+            </div>
+
+            {/* Concept pills — only on hover */}
+            {isHovered && (
+              <div className="px-4 pb-3 pt-1 flex flex-wrap gap-1.5">
+                {segments.map(([concept, val]) => {
+                  const color = concept === 'OTROS' ? '#475569' : (CONCEPT_COLORS[concept]?.bg || '#64748b');
+                  const textColor = concept === 'OTROS' ? '#94a3b8' : (CONCEPT_COLORS[concept]?.text || '#94a3b8');
+                  return (
+                    <span
+                      key={concept}
+                      className="px-2 py-0.5 rounded-full text-[9px] font-bold border"
+                      style={{ background: `${color}20`, color: textColor, borderColor: `${color}40` }}
+                    >
+                      {concept}: {formatShortCurrency(val)}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 };
+
 
 // 7. GAUGE CHART - Compliance indicator
 export const BIGaugeChart = ({ val = 0 }) => {

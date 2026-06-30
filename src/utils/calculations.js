@@ -36,6 +36,31 @@ export const ZONA_CIUDAD_MAP = {
   P7005: 'PEREIRA',                        // ANSERMANUEVO
 };
 
+export const SUPERMARKET_ZONES = [
+  'M9450', 'M9451', 'M9550', 'M9560', 'M9600',
+  'P7000', 'P7001', 'P7002', 'P7008', 'P7009', 'P7010',
+];
+
+export const SPECIAL_ZONES = ['E7000', 'E7001'];
+
+export const ZONE_TYPE_MAP = {
+  // Supermercados
+  'M9450': 'SUPERMERCADOS',
+  'M9451': 'SUPERMERCADOS',
+  'M9550': 'SUPERMERCADOS',
+  'M9560': 'SUPERMERCADOS',
+  'M9600': 'SUPERMERCADOS',
+  'P7000': 'SUPERMERCADOS',
+  'P7001': 'SUPERMERCADOS',
+  'P7002': 'SUPERMERCADOS',
+  'P7008': 'SUPERMERCADOS',
+  'P7009': 'SUPERMERCADOS',
+  'P7010': 'SUPERMERCADOS',
+  // Zonas especiales
+  'E7000': 'ZONAS ESPECIALES',
+  'E7001': 'ZONAS ESPECIALES',
+};
+
 // Zonas que pertenecen a cada ciudad (para filtrado rápido)
 export const ZONAS_POR_CIUDAD = {
   ARMENIA:   Object.entries(ZONA_CIUDAD_MAP).filter(([,c]) => c === 'ARMENIA').map(([z]) => z),

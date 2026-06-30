@@ -1,6 +1,6 @@
 import React from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONE_TYPE_MAP } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import { BIAreaChart, BIStackedBarChart, BILineChart } from '../components/charts/BICharts';
@@ -28,6 +28,24 @@ const SalesAnalysis = () => {
   const dbData = useStore(state => state.dbData);
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
+
+const channelTicket = React.useMemo(() => {
+  const sums = {
+    SUPERMERCADOS: { sales: 0, facturas: 0 },
+    'ZONAS ESPECIALES': { sales: 0, facturas: 0 }
+  };
+  filteredData.zones.forEach(z => {
+    const type = ZONE_TYPE_MAP[z.zona] || 'OTRO';
+    if (sums[type]) {
+      sums[type].sales += z.ventasNetas || 0;
+      sums[type].facturas += z.facturas || 0;
+    }
+  });
+  return {
+    SUPERMERCADOS: sums.SUPERMERCADOS.facturas ? sums.SUPERMERCADOS.sales / sums.SUPERMERCADOS.facturas : 0,
+    'ZONAS ESPECIALES': sums['ZONAS ESPECIALES'].facturas ? sums['ZONAS ESPECIALES'].sales / sums['ZONAS ESPECIALES'].facturas : 0
+  };
+}, [filteredData.zones]);
 
   // Pareto 80/20 Analysis - Sort zones by net sales
   const sortedZones = [...filteredData.zones]
@@ -199,17 +217,31 @@ const SalesAnalysis = () => {
             <CreditCard className="h-6 w-6" />
           </div>
         </GlassCard>
-
-        <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-          <div>
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ticket Promedio</p>
-            <h3 className="text-2xl font-bold text-blue-400 mt-1">{formatCurrency(kpis.averageTicket)}</h3>
-            <p className="text-[10px] text-slate-500 mt-1">Venta por factura emitida</p>
+        
+        <div className="md:col-span-1 grid grid-cols-1 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
+              <div>
+                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ticket Promedio - Supermercados</p>
+                <h3 className="text-2xl font-bold text-blue-400 mt-1">{formatCurrency(channelTicket.SUPERMERCADOS)}</h3>
+                <p className="text-[10px] text-slate-500 mt-1">Venta por factura emitida (Super)</p>
+              </div>
+              <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
+                <Layers className="h-6 w-6" />
+              </div>
+            </GlassCard>
+            <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
+              <div>
+                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ticket Promedio - Zonas Especiales</p>
+                <h3 className="text-2xl font-bold text-blue-400 mt-1">{formatCurrency(channelTicket['ZONAS ESPECIALES'])}</h3>
+                <p className="text-[10px] text-slate-500 mt-1">Venta por factura emitida (Especial)</p>
+              </div>
+              <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
+                <Layers className="h-6 w-6" />
+              </div>
+            </GlassCard>
           </div>
-          <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
-            <Layers className="h-6 w-6" />
-          </div>
-        </GlassCard>
+        </div>
       </div>
 
       {/* Accumulated Sales and Stacked Composition */}
@@ -256,6 +288,7 @@ const SalesAnalysis = () => {
             <thead>
               <tr className="border-b border-slate-800 text-slate-500 font-semibold">
                 <th className="pb-3 pl-2">Zona</th>
+                <th className="pb-3 hidden sm:table-cell">Canal</th>
                 <th className="pb-3">Eje</th>
                 <th className="pb-3 hidden md:table-cell">Vendedor</th>
                 <th className="pb-3 text-right">Ventas</th>
@@ -263,7 +296,7 @@ const SalesAnalysis = () => {
                 <th className="pb-3 text-right">Cambio %</th>
                 <th className="pb-3 text-right hidden sm:table-cell">Proyección (Pesos)</th>
                 <th className="pb-3 text-right hidden md:table-cell">Acum. %</th>
-                <th className="pb-3 pr-2 text-center">Clase</th>
+                
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/60">
@@ -272,6 +305,7 @@ const SalesAnalysis = () => {
                 return (
                   <tr key={idx} className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}>
                     <td className="py-2.5 pl-2 font-bold text-slate-200">{item.zona}</td>
+                    <td className="py-2.5 hidden sm:table-cell">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
                     <td className="py-2.5"><CityBadge zona={item.zona} /></td>
                     <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
                     <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(item.ventasNetas)}</td>
@@ -283,11 +317,6 @@ const SalesAnalysis = () => {
                     </td>
                     <td className="py-2.5 text-right text-slate-300 hidden sm:table-cell">{formatCurrency(item.share * item.presupuesto)}</td>
                     <td className="py-2.5 text-right text-slate-400 hidden md:table-cell">{formatPercent(item.accumShare)}</td>
-                    <td className="py-2.5 pr-2 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${item.isCore ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-slate-800/80 text-slate-500'}`}>
-                        {item.isCore ? 'A' : 'B/C'}
-                      </span>
-                    </td>
                   </tr>
                 );
               })}
