@@ -217,39 +217,37 @@ const useStore = create((set, get) => ({
       const latestPeriod = `${monthNames[latestDate.getMonth()]}-${latestDate.getFullYear()}`;
 
       // Try to preserve concepts, clientReturns, expiryConcepts, expiryDaily, expiryClientReturns
-      // from local persisted data if the period matches.
-      const currentPeriod = localStorage.getItem(PERIOD_KEY);
-      const isSamePeriod = currentPeriod && currentPeriod.toLowerCase().trim() === latestPeriod.toLowerCase().trim();
+      // from local persisted data.
       
       const localData = loadPersistedData();
       
-      const returnsConcepts = (isSamePeriod && localData && localData.returnsConcepts && localData.returnsConcepts.length > 0) 
+      const returnsConcepts = (localData && localData.returnsConcepts && localData.returnsConcepts.length > 0) 
         ? localData.returnsConcepts 
         : alpinaData.returnsConcepts;
         
-      const clientReturns = (isSamePeriod && localData && localData.clientReturns && localData.clientReturns.length > 0) 
+      const clientReturns = (localData && localData.clientReturns && localData.clientReturns.length > 0) 
         ? localData.clientReturns 
         : alpinaData.clientReturns;
         
-      const expiryConcepts = (isSamePeriod && localData && localData.expiryConcepts && localData.expiryConcepts.length > 0) 
+      const expiryConcepts = (localData && localData.expiryConcepts && localData.expiryConcepts.length > 0) 
         ? localData.expiryConcepts 
         : (alpinaData.expiryConcepts || []);
         
-      const expiryDaily = (isSamePeriod && localData && localData.expiryDaily && localData.expiryDaily.length > 0) 
+      const expiryDaily = (localData && localData.expiryDaily && localData.expiryDaily.length > 0) 
         ? localData.expiryDaily 
         : (alpinaData.expiryDaily || []);
         
-      const expiryClientReturns = (isSamePeriod && localData && localData.expiryClientReturns && localData.expiryClientReturns.length > 0) 
+      const expiryClientReturns = (localData && localData.expiryClientReturns && localData.expiryClientReturns.length > 0) 
         ? localData.expiryClientReturns 
         : (alpinaData.expiryClientReturns || []);
 
-      const productDistrib = (isSamePeriod && localData && localData.productDistrib && localData.productDistrib.length > 0)
+      const productDistrib = (localData && localData.productDistrib && localData.productDistrib.length > 0)
         ? localData.productDistrib
         : (alpinaData.productDistrib || []);
 
-      // returnsDaily: prefer localData with zone details if same period, else prefer DB table, else build from sellers aggregates
+      // returnsDaily: prefer localData with zone details if present, else prefer DB table, else build from sellers aggregates
       let returnsDaily;
-      if (isSamePeriod && localData && localData.returnsDaily && localData.returnsDaily.length > 0) {
+      if (localData && localData.returnsDaily && localData.returnsDaily.length > 0) {
         returnsDaily = localData.returnsDaily;
       } else if (dbReturnsDaily && dbReturnsDaily.length > 0) {
         returnsDaily = dbReturnsDaily.map(rd => ({ fecha: rd.fecha, devoluciones: Number(rd.devoluciones) || 0 }));

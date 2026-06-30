@@ -4,6 +4,7 @@ import { formatCurrency, formatPercent, formatNumber } from '../utils/formatters
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
 import { LayoutGrid, Tag, Layers, TrendingUp, Search, ChevronDown, ChevronRight, ShoppingBag } from 'lucide-react';
+import { ZONAS_POR_CIUDAD } from '../utils/calculations';
 
 const BRAND_COLORS = [
   '#38bdf8','#818cf8','#34d399','#f59e0b','#f472b6',
@@ -13,6 +14,10 @@ const BRAND_COLORS = [
 
 const DistribucionNumerica = () => {
   const dbData = useStore(state => state.dbData);
+  const selectedCity = useStore(state => state.selectedCity);
+  const selectedZone = useStore(state => state.selectedZone);
+  const selectedSeller = useStore(state => state.selectedSeller);
+
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('ventas');
   const [sortDir, setSortDir] = useState('desc');
@@ -20,7 +25,63 @@ const DistribucionNumerica = () => {
   const [selectedBrand, setSelectedBrand] = useState('Todas');
   const [selectedFamily, setSelectedFamily] = useState('Todas');
 
-  const products = useMemo(() => dbData?.productDistrib || [], [dbData]);
+  const rawProducts = useMemo(() => dbData?.productDistrib || [], [dbData]);
+
+  const filteredRawProducts = useMemo(() => {
+    let list = rawProducts;
+    
+    // Filter by global city/sede
+    if (selectedCity && selectedCity !== 'Todas') {
+      const zonasPermitidas = new Set(ZONAS_POR_CIUDAD[selectedCity] || []);
+      list = list.filter(p => p.zona && zonasPermitidas.has(p.zona));
+    }
+    
+    // Filter by global zone
+    if (selectedZone && selectedZone !== 'Todas') {
+      list = list.filter(p => p.zona === selectedZone);
+    }
+    
+    // Filter by global seller
+    if (selectedSeller && selectedSeller !== 'Todas') {
+      list = list.filter(p => p.vendedor === selectedSeller);
+    }
+    
+    return list;
+  }, [rawProducts, selectedCity, selectedZone, selectedSeller]);
+
+  const products = useMemo(() => {
+    // If the data does not contain zone information (e.g. old data or mock data), 
+    // fall back to showing rawProducts directly to avoid returning empty list
+    const hasZoneInfo = rawProducts.some(p => p.zona);
+    if (!hasZoneInfo) return rawProducts;
+
+    const map = {};
+    filteredRawProducts.forEach(p => {
+      const key = `${p.nmTpMarca}||${p.nmTpFamilia}||${p.nbProducto}`;
+      if (!map[key]) {
+        map[key] = {
+          nbProducto: p.nbProducto,
+          nmProducto: p.nmProducto,
+          tpProducto: p.tpProducto,
+          nmTpMarca: p.nmTpMarca,
+          nmTpFamilia: p.nmTpFamilia,
+          ventas: 0,
+          facturas: 0,
+          unidades: 0
+        };
+      }
+      map[key].ventas += p.ventas || 0;
+      map[key].facturas += p.facturas || 0;
+      map[key].unidades += p.unidades || 0;
+    });
+
+    const totalVentas = Object.values(map).reduce((s, p) => s + p.ventas, 0);
+
+    return Object.values(map).map(p => ({
+      ...p,
+      participacion: totalVentas > 0 ? p.ventas / totalVentas : 0
+    }));
+  }, [rawProducts, filteredRawProducts]);
 
   const brands = useMemo(() => ['Todas', ...Array.from(new Set(products.map(p => p.nmTpMarca))).sort()], [products]);
   const families = useMemo(() => {
@@ -170,17 +231,13 @@ const DistribucionNumerica = () => {
         ))}
       </div>
       <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
-          <input type="text" placeholder="Buscar producto, código o marca…" value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-2 outline-none focus:border-blue-500/50 transition-colors" />
-        </div>
+        <span className="text-xs text-slate-400 font-medium">Filtrar marcas y familias:</span>
         <select value={selectedBrand} onChange={e => { setSelectedBrand(e.target.value); setSelectedFamily('Todas'); }}
-          className="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2">
+          className="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-blue-500/50 outline-none cursor-pointer">
           {brands.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
         <select value={selectedFamily} onChange={e => setSelectedFamily(e.target.value)}
-          className="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2">
+          className="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-blue-500/50 outline-none cursor-pointer">
           {families.map(f => <option key={f} value={f}>{f}</option>)}
         </select>
       </div>
@@ -250,10 +307,28 @@ const DistribucionNumerica = () => {
         </div>
       </GlassCard>
       <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
             <h3 className="text-sm font-bold text-white">Detalle de Productos</h3>
             <p className="text-xs text-slate-500 mt-0.5">{filtered.length.toLocaleString('es-CO')} productos · haz clic en columna para ordenar</p>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Buscar por producto, código o marca…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg pl-8 pr-10 py-2 outline-none focus:border-blue-500/50 transition-colors"
+            />
+            {search && (
+              <button 
+                onClick={() => setSearch('')} 
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 text-xs font-semibold transition-colors"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
         <div className="overflow-x-auto -mx-5 px-5">

@@ -578,11 +578,13 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
           const tpProd   = String(getRowValue(row, tpProductoKeys)  || '').trim() || '';
           const nmMarca  = String(getRowValue(row, nmTpMarcaKeys)   || brand || '').trim() || 'OTROS';
           const nmFam    = String(getRowValue(row, nmTpFamiliaKeys) || '').trim() || 'Sin familia';
-          const prodKey  = `${nmMarca}||${nmFam}||${nbProd}`;
+          const prodKey  = `${nmMarca}||${nmFam}||${nbProd}||${zone || 'OTRO'}||${activeSeller || 'Sin Asignar'}`;
           if (!productDistribAggr[prodKey]) {
             productDistribAggr[prodKey] = {
               nbProducto: nbProd, nmProducto: nmProd, tpProducto: tpProd,
               nmTpMarca: nmMarca, nmTpFamilia: nmFam,
+              zona: zone || 'OTRO',
+              vendedor: activeSeller || 'Sin Asignar',
               ventas: 0, facturas: new Set(), unidades: 0
             };
           }
@@ -820,6 +822,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     tpProducto:  p.tpProducto,
     nmTpMarca:   p.nmTpMarca,
     nmTpFamilia: p.nmTpFamilia,
+    zona:        p.zona,
+    vendedor:    p.vendedor,
     ventas:      Math.round(p.ventas),
     facturas:    p.facturas.size,
     unidades:    p.unidades,
