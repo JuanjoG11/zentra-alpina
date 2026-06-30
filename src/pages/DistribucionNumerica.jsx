@@ -3,8 +3,8 @@ import useStore from '../store/useStore';
 import { formatCurrency, formatPercent, formatNumber } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
-import { LayoutGrid, Tag, Layers, TrendingUp, Search, ChevronDown, ChevronRight, ShoppingBag } from 'lucide-react';
-import { ZONAS_POR_CIUDAD } from '../utils/calculations';
+import { LayoutGrid, Tag, Layers, TrendingUp, Search, ChevronDown, ChevronRight, ShoppingBag, X } from 'lucide-react';
+import { ZONAS_POR_CIUDAD, ZONA_CIUDAD_MAP } from '../utils/calculations';
 
 const BRAND_COLORS = [
   '#38bdf8','#818cf8','#34d399','#f59e0b','#f472b6',
@@ -24,6 +24,7 @@ const DistribucionNumerica = () => {
   const [expandedBrands, setExpandedBrands] = useState({});
   const [selectedBrand, setSelectedBrand] = useState('Todas');
   const [selectedFamily, setSelectedFamily] = useState('Todas');
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const rawProducts = useMemo(() => dbData?.productDistrib || [], [dbData]);
 
@@ -82,6 +83,99 @@ const DistribucionNumerica = () => {
       participacion: totalVentas > 0 ? p.ventas / totalVentas : 0
     }));
   }, [rawProducts, filteredRawProducts]);
+
+  // Filter raw transactions of the selected product (under the active global filter scope)
+  const productDetails = useMemo(() => {
+    if (!selectedProduct) return null;
+    return filteredRawProducts.filter(p => p.nbProducto === selectedProduct.nbProducto);
+  }, [filteredRawProducts, selectedProduct]);
+
+  // Aggregate metrics and chart data for the selected product modal
+  const productStats = useMemo(() => {
+    if (!productDetails || productDetails.length === 0) return null;
+
+    const totalSales = productDetails.reduce((sum, p) => sum + p.ventas, 0);
+    const totalUnits = productDetails.reduce((sum, p) => sum + p.unidades, 0);
+    const totalInvoices = productDetails.reduce((sum, p) => sum + p.facturas, 0);
+    const avgPrice = totalUnits > 0 ? totalSales / totalUnits : 0;
+
+    // 1. Sede Distribution (Manizales/Armenia/Pereira)
+    const sedeMap = { ARMENIA: 0, MANIZALES: 0, PEREIRA: 0 };
+    productDetails.forEach(p => {
+      const city = ZONA_CIUDAD_MAP[p.zona] || 'OTRO';
+      if (sedeMap[city] !== undefined) {
+        sedeMap[city] += p.ventas;
+      }
+    });
+
+    const activeSedes = Object.entries(sedeMap)
+      .map(([name, sales]) => ({ name, sales }))
+      .filter(s => s.sales > 0);
+
+    // Donut chart configurations
+    const donutOptions = {
+      chart: { type: 'donut', background: 'transparent', fontFamily: 'Inter, sans-serif' },
+      colors: BRAND_COLORS,
+      labels: activeSedes.map(s => s.name === 'MANIZALES' ? 'Eje Caldas' : s.name === 'ARMENIA' ? 'Eje Quindío' : 'Eje Pereira'),
+      dataLabels: { enabled: false },
+      legend: { show: true, position: 'bottom', fontSize: '10px', labels: { colors: '#94a3b8' } },
+      tooltip: { theme: 'dark', y: { formatter: (val) => formatCurrency(val) } },
+      plotOptions: { pie: { donut: { size: '60%', labels: { show: true, total: { show: true, label: 'Ventas', color: '#94a3b8', formatter: () => formatShortCurrency(totalSales) } } } } }
+    };
+    const donutSeries = activeSedes.map(s => Math.round(s.sales));
+
+    // 2. Top Zones (up to 5)
+    const zoneMap = {};
+    productDetails.forEach(p => {
+      zoneMap[p.zona] = (zoneMap[p.zona] || 0) + p.ventas;
+    });
+    const zoneList = Object.entries(zoneMap)
+      .map(([zona, sales]) => ({ zona, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
+
+    const barOptions = {
+      chart: { type: 'bar', background: 'transparent', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+      plotOptions: { bar: { horizontal: true, borderRadius: 4, dataLabels: { position: 'top' } } },
+      colors: ['#38bdf8'],
+      dataLabels: { enabled: true, formatter: (val) => formatShortCurrency(val), style: { fontSize: '9px', colors: ['#94a3b8'] }, offsetX: 8 },
+      xaxis: { categories: zoneList.map(z => z.zona), labels: { show: false } },
+      yaxis: { labels: { style: { fontSize: '10px', colors: '#94a3b8' } } },
+      tooltip: { theme: 'dark', y: { formatter: (val) => formatCurrency(val) } },
+      grid: { show: false }
+    };
+    const barSeries = [{ name: 'Ventas', data: zoneList.map(z => Math.round(z.sales)) }];
+
+    // 3. Top Sellers
+    const sellerMap = {};
+    productDetails.forEach(p => {
+      sellerMap[p.vendedor] = (sellerMap[p.vendedor] || 0) + p.ventas;
+    });
+    const sellerList = Object.entries(sellerMap)
+      .map(([seller, sales]) => ({ seller, sales }))
+      .sort((a, b) => b.sales - a.sales);
+
+    return {
+      totalSales,
+      totalUnits,
+      totalInvoices,
+      avgPrice,
+      activeSedes,
+      donutOptions,
+      donutSeries,
+      zoneList,
+      barOptions,
+      barSeries,
+      sellerList
+    };
+  }, [productDetails]);
+
+  // Format short values for nested graphs
+  function formatShortCurrency(val) {
+    if (val >= 1e6) return `$${(val / 1e6).toFixed(1)}M`;
+    if (val >= 1e3) return `$${(val / 1e3).toFixed(0)}K`;
+    return `$${val}`;
+  }
 
   const brands = useMemo(() => ['Todas', ...Array.from(new Set(products.map(p => p.nmTpMarca))).sort()], [products]);
   const families = useMemo(() => {
@@ -347,9 +441,13 @@ const DistribucionNumerica = () => {
             </thead>
             <tbody className="divide-y divide-slate-900/60">
               {filtered.slice(0, 200).map((p, i) => (
-                <tr key={`${p.nbProducto}-${i}`} className="hover:bg-slate-900/20 transition-colors">
+                <tr 
+                  key={`${p.nbProducto}-${i}`} 
+                  onClick={() => setSelectedProduct(p)} 
+                  className="hover:bg-slate-900/40 cursor-pointer transition-colors group"
+                >
                   <td className="py-2 pr-3 font-mono text-slate-600 text-[10px]">{p.nbProducto}</td>
-                  <td className="py-2 pr-3 text-slate-200 font-medium max-w-[200px] truncate">{p.nmProducto}</td>
+                  <td className="py-2 pr-3 text-slate-200 font-medium max-w-[200px] truncate group-hover:text-blue-400 transition-colors">{p.nmProducto}</td>
                   <td className="py-2 pr-3 hidden md:table-cell">{p.tpProducto && <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">{p.tpProducto}</span>}</td>
                   <td className="py-2 pr-3 text-slate-400 hidden sm:table-cell truncate max-w-[120px]">{p.nmTpMarca}</td>
                   <td className="py-2 pr-3 text-slate-500 hidden lg:table-cell truncate max-w-[140px]">{p.nmTpFamilia}</td>
@@ -363,6 +461,117 @@ const DistribucionNumerica = () => {
           {filtered.length > 200 && <p className="text-[11px] text-slate-600 text-center py-3">Mostrando 200 de {filtered.length.toLocaleString('es-CO')} productos. Usa el buscador para filtrar.</p>}
         </div>
       </GlassCard>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && productStats && (
+        <div 
+          onClick={() => setSelectedProduct(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative flex flex-col gap-6 text-slate-300"
+          >
+            {/* Close Button */}
+            <button 
+              onClick={() => setSelectedProduct(null)} 
+              className="absolute right-4 top-4 text-slate-500 hover:text-slate-200 transition-colors p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Header */}
+            <div>
+              <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                Ficha de Producto
+              </span>
+              <h2 className="text-xl font-bold text-white mt-3">{selectedProduct.nmProducto}</h2>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-400">
+                <span>Código: <strong className="font-mono text-slate-300">{selectedProduct.nbProducto}</strong></span>
+                <span>·</span>
+                <span>Marca: <strong className="text-slate-300">{selectedProduct.nmTpMarca}</strong></span>
+                <span>·</span>
+                <span>Familia: <strong className="text-slate-300">{selectedProduct.nmTpFamilia}</strong></span>
+                {selectedProduct.tpProducto && (
+                  <>
+                    <span>·</span>
+                    <span>Tipo: <strong className="text-slate-300">{selectedProduct.tpProducto}</strong></span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* KPIs Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Ventas del Producto', value: formatCurrency(productStats.totalSales), color: 'text-blue-400' },
+                { label: 'Unidades Vendidas', value: formatNumber(productStats.totalUnits), color: 'text-amber-400' },
+                { label: 'Impacto (Facturas)', value: formatNumber(productStats.totalInvoices), color: 'text-emerald-400' },
+                { label: 'Precio Promedio Unitario', value: formatCurrency(productStats.avgPrice), color: 'text-purple-400' }
+              ].map((kpi, idx) => (
+                <div key={idx} className="bg-slate-950/40 border border-slate-800/80 rounded-xl p-3.5 flex flex-col gap-1">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{kpi.label}</span>
+                  <span className={`text-lg font-bold ${kpi.color} mt-0.5`}>{kpi.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Sede Donut */}
+              <div className="bg-slate-950/40 border border-slate-800/80 rounded-xl p-5 flex flex-col">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Ventas por Sede (Eje)</h4>
+                <div className="flex-1 flex items-center justify-center min-h-[220px]">
+                  {productStats.activeSedes.length > 0 ? (
+                    <Chart options={productStats.donutOptions} series={productStats.donutSeries} type="donut" width="100%" height={220} />
+                  ) : (
+                    <p className="text-slate-600 text-xs">Sin ventas en el periodo filtrado</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Zones Bar */}
+              <div className="bg-slate-950/40 border border-slate-800/80 rounded-xl p-5 flex flex-col">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Top 5 Zonas (Mayor Venta)</h4>
+                <div className="flex-1 flex items-center justify-center min-h-[220px]">
+                  {productStats.zoneList.length > 0 ? (
+                    <Chart options={productStats.barOptions} series={productStats.barSeries} type="bar" width="100%" height={220} />
+                  ) : (
+                    <p className="text-slate-600 text-xs">Sin ventas en el periodo filtrado</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sellers List */}
+            <div className="bg-slate-950/40 border border-slate-800/80 rounded-xl p-5">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Detalle de Ventas por Vendedor</h4>
+              <div className="overflow-x-auto max-h-[200px] overflow-y-auto pr-1">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-wider text-[9px] font-semibold">
+                      <th className="pb-2 pr-3">Vendedor</th>
+                      <th className="pb-2 pr-3 text-right">Ventas</th>
+                      <th className="pb-2 text-right">Porcentaje de Venta</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40">
+                    {productStats.sellerList.map((seller, idx) => (
+                      <tr key={idx} className="hover:bg-slate-900/10">
+                        <td className="py-2 pr-3 text-slate-300 font-medium">{seller.seller}</td>
+                        <td className="py-2 pr-3 text-right text-slate-200 font-semibold">{formatCurrency(seller.sales)}</td>
+                        <td className="py-2 text-right text-blue-400 font-bold">
+                          {((seller.sales / productStats.totalSales) * 100).toFixed(1)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
