@@ -158,14 +158,14 @@ const channelTicket = React.useMemo(() => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">Análisis de Ventas</h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Análisis de Ventas</h1>
+        <p className="text-slate-400 text-xs md:text-sm mt-1">
           Profundice en el comportamiento de facturación comercial, métodos de pago, forecast y rankings de zona.
         </p>
       </div>
 
       {/* ── Resumen por eje comercial ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {[
           { city: 'PEREIRA',   label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
           { city: 'MANIZALES', label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
@@ -177,17 +177,17 @@ const channelTicket = React.useMemo(() => {
             <GlassCard key={city} hoverable={false} className={`border ${border} relative overflow-hidden`}>
               <div className={`absolute inset-0 ${bg} opacity-25 pointer-events-none rounded-2xl`} />
               <div className="relative flex items-center justify-between">
-                <div>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest ${text}`}>{label}</p>
-                  <p className="text-xl font-extrabold text-white mt-1">{formatShortCurrency(v)}</p>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest ${text}`}>{label}</p>
+                  <p className="text-lg md:text-xl font-extrabold text-white mt-1">{formatShortCurrency(v)}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <div className="w-20 h-1 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-16 md:w-20 h-1 bg-slate-800 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${text.replace('text-', 'bg-')}`} style={{ width: `${share * 100}%` }} />
                     </div>
                     <span className={`text-[10px] font-bold ${text}`}>{formatPercent(share)}</span>
                   </div>
                 </div>
-                <MapPin className={`h-8 w-8 opacity-10 ${text}`} />
+                <MapPin className={`h-6 w-6 md:h-8 md:w-8 opacity-10 ${text} shrink-0 ml-2`} />
               </div>
             </GlassCard>
           );
@@ -195,52 +195,55 @@ const channelTicket = React.useMemo(() => {
       </div>
 
       {/* Credit & Cash Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
         <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-          <div>
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ventas de Contado</p>
-            <h3 className="text-2xl font-bold text-emerald-400 mt-1">{formatCurrency(cashTotal)}</h3>
-            <p className="text-[10px] text-slate-500 mt-1">{formatPercent(1 - creditPercentage)} del total comercial</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas de Contado</p>
+            <h3 className="text-xl md:text-2xl font-bold text-emerald-400 mt-1">{formatShortCurrency(cashTotal)}</h3>
+            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(1 - creditPercentage)} del total comercial</p>
           </div>
-          <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
-            <DollarSign className="h-6 w-6" />
+          <div className="p-2.5 md:p-3 bg-emerald-500/10 text-emerald-400 rounded-lg md:rounded-xl shrink-0">
+            <DollarSign className="h-5 w-5 md:h-6 md:w-6" />
           </div>
         </GlassCard>
 
         <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-          <div>
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ventas a Crédito</p>
-            <h3 className="text-2xl font-bold text-amber-400 mt-1">{formatCurrency(creditTotal)}</h3>
-            <p className="text-[10px] text-slate-500 mt-1">{formatPercent(creditPercentage)} del total comercial</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas a Crédito</p>
+            <h3 className="text-xl md:text-2xl font-bold text-amber-400 mt-1">{formatShortCurrency(creditTotal)}</h3>
+            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(creditPercentage)} del total comercial</p>
           </div>
-          <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
-            <CreditCard className="h-6 w-6" />
+          <div className="p-2.5 md:p-3 bg-amber-500/10 text-amber-400 rounded-lg md:rounded-xl shrink-0">
+            <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
           </div>
         </GlassCard>
         
-        <div className="md:col-span-1 grid grid-cols-1 gap-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-              <div>
-                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ticket Promedio - Supermercados</p>
-                <h3 className="text-2xl font-bold text-blue-400 mt-1">{formatCurrency(channelTicket.SUPERMERCADOS)}</h3>
-                <p className="text-[10px] text-slate-500 mt-1">Venta por factura emitida (Super)</p>
+        <div className="md:col-span-2 lg:col-span-1 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+          <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-900/20 border-slate-800">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ticket Super</p>
+                <h3 className="text-lg md:text-xl font-bold text-blue-400 mt-1">{formatShortCurrency(channelTicket.SUPERMERCADOS)}</h3>
               </div>
-              <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
-                <Layers className="h-6 w-6" />
+              <div className="p-2 md:p-2.5 bg-blue-500/10 text-blue-400 rounded-lg shrink-0">
+                <Layers className="h-4 w-4 md:h-5 md:w-5" />
               </div>
-            </GlassCard>
-            <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-              <div>
-                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ticket Promedio - Zonas Especiales</p>
-                <h3 className="text-2xl font-bold text-blue-400 mt-1">{formatCurrency(channelTicket['ZONAS ESPECIALES'])}</h3>
-                <p className="text-[10px] text-slate-500 mt-1">Venta por factura emitida (Especial)</p>
+            </div>
+            <p className="text-[9px] md:text-[10px] text-slate-500">Venta por factura (Super)</p>
+          </GlassCard>
+          
+          <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-900/20 border-slate-800">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ticket Especial</p>
+                <h3 className="text-lg md:text-xl font-bold text-blue-400 mt-1">{formatShortCurrency(channelTicket['ZONAS ESPECIALES'])}</h3>
               </div>
-              <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
-                <Layers className="h-6 w-6" />
+              <div className="p-2 md:p-2.5 bg-blue-500/10 text-blue-400 rounded-lg shrink-0">
+                <Layers className="h-4 w-4 md:h-5 md:w-5" />
               </div>
-            </GlassCard>
-          </div>
+            </div>
+            <p className="text-[9px] md:text-[10px] text-slate-500">Venta por factura (Especial)</p>
+          </GlassCard>
         </div>
       </div>
 

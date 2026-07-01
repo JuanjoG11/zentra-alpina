@@ -7,7 +7,6 @@ import SalesAnalysis from './pages/SalesAnalysis';
 import ReturnsAnalysis from './pages/ReturnsAnalysis';
 import ProvidersAnalysis from './pages/ProvidersAnalysis';
 import FocosNumerica from './pages/FocosNumerica';
-import DistribucionNumerica from './pages/DistribucionNumerica';
 import SellersAnalysis from './pages/SellersAnalysis';
 import BusinessIA from './pages/BusinessIA';
 import UploadExcel from './pages/UploadExcel';
@@ -24,7 +23,6 @@ ReactDOM.createRoot(document.getElementById('app')!).render(
           <Route path="ventas" element={<SalesAnalysis />} />
           <Route path="devoluciones" element={<ReturnsAnalysis />} />
           <Route path="focos" element={<FocosNumerica />} />
-          <Route path="distribucion" element={<DistribucionNumerica />} />
           <Route path="proveedores" element={<ProvidersAnalysis />} />
           <Route path="vendedores" element={<SellersAnalysis />} />
           <Route path="ia" element={<BusinessIA />} />

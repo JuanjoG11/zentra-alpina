@@ -1299,13 +1299,13 @@ const UploadExcel = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">Cargar Archivos de Ventas</h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Cargar Archivos de Ventas</h1>
+        <p className="text-slate-400 text-xs md:text-sm mt-1">
           Suba sus reportes Excel (Ventas, Devoluciones, Proveedores o Zonas). El pipeline ETL procesará, limpiará y normalizará los datos automáticamente en Supabase.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         
         {/* Upload Panel */}
         <div className="lg:col-span-2 space-y-6">

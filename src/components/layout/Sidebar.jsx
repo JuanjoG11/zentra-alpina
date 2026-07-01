@@ -4,7 +4,7 @@ import useStore from '../../store/useStore';
 import alpinaLogo from '../../assets/alpina-logo.svg';
 import {
   BarChart3, TrendingUp, RefreshCw, Truck, Users,
-  Brain, Upload, ChevronLeft, ChevronRight, Sparkles, X, LayoutGrid
+  Brain, Upload, ChevronLeft, ChevronRight, Sparkles, X
 } from 'lucide-react';
 
 const menuSections = [
@@ -15,7 +15,6 @@ const menuSections = [
       { name: 'Análisis de Ventas',     path: '/ventas',        icon: TrendingUp  },
       { name: 'Devoluciones',           path: '/devoluciones',  icon: RefreshCw   },
       { name: 'Focos Numérica',         path: '/focos',         icon: Sparkles    },
-      { name: 'Distribución Numérica',  path: '/distribucion',  icon: LayoutGrid  },
     ]
   },
   {

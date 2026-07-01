@@ -136,14 +136,14 @@ const SellersAnalysis = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">Rendimiento de Vendedores</h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Rendimiento de Vendedores</h1>
+        <p className="text-slate-400 text-xs md:text-sm mt-1">
           Zonas y ejecutivos agrupados por eje comercial — Pereira · Caldas · Quindío
         </p>
       </div>
 
       {/* ── Resumen por eje ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {cityTotals.map(({ city, ventas, presupuesto, zonas, meta }) => {
           const rate = presupuesto > 0 ? ventas / presupuesto : 0;
           const cm = complianceMeta(rate);
@@ -178,7 +178,7 @@ const SellersAnalysis = () => {
       </div>
 
       {/* ── Highlights ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         <GlassCard hoverable={false} className="flex items-center gap-4">
           <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl shrink-0">
             <Trophy className="h-5 w-5" />

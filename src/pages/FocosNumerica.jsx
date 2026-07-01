@@ -4,7 +4,7 @@ import { getFilteredData, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD } from '../utils/cal
 import { formatCurrency, formatPercent, formatShortCurrency, formatNumber, formatKg } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
-import { BarChart3, CircleDollarSign, Sparkles, Search } from 'lucide-react';
+import { BarChart3, CircleDollarSign, Sparkles, Search, X } from 'lucide-react';
 import alpinaLogo from '../assets/alpina-logo.svg';
 
 const BRAND_COLORS = [
@@ -112,6 +112,7 @@ const FocosNumerica = () => {
   const [productSortDir, setProductSortDir] = useState('desc');
   const [expandedBrands, setExpandedBrands] = useState({});
   const [expandedFamilies, setExpandedFamilies] = useState({});
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const toggleBrand = (b) => setExpandedBrands(prev => ({ ...prev, [b]: !prev[b] }));
   const toggleFamily = (k) => setExpandedFamilies(prev => ({ ...prev, [k]: !prev[k] }));
 
@@ -408,6 +409,112 @@ const FocosNumerica = () => {
       .filter(Boolean);
   }, [hierarchyData, productSearch]);
 
+  // ── Product Details Modal ───────────────────────────────────────────
+  const rawProductDetails = useMemo(() => {
+    if (!selectedProduct) return null;
+    const rawProds = dbData.productDistrib || [];
+    
+    let filteredProds = rawProds;
+    if (selectedCity && selectedCity !== 'ALL') {
+      const zonasPermitidas = new Set(ZONAS_POR_CIUDAD[selectedCity] || []);
+      filteredProds = filteredProds.filter(p => p.zona && zonasPermitidas.has(p.zona));
+    }
+    if (filters.selectedZone && filters.selectedZone !== 'Todas') {
+      filteredProds = filteredProds.filter(p => p.zona === filters.selectedZone);
+    }
+    if (filters.selectedSeller && filters.selectedSeller !== 'Todas') {
+      filteredProds = filteredProds.filter(p => p.vendedor === filters.selectedSeller);
+    }
+    
+    return filteredProds.filter(p => p.nbProducto === selectedProduct.nbProducto);
+  }, [dbData.productDistrib, selectedProduct, selectedCity, filters]);
+
+  const productStats = useMemo(() => {
+    if (!rawProductDetails || rawProductDetails.length === 0) return null;
+
+    const totalSales = rawProductDetails.reduce((sum, p) => sum + (p.ventas || 0), 0);
+    const totalUnits = rawProductDetails.reduce((sum, p) => sum + (p.unidades || 0), 0);
+    const totalInvoices = rawProductDetails.reduce((sum, p) => sum + (p.facturas || 0), 0);
+    const totalClients = rawProductDetails.reduce((sum, p) => sum + (p.clientesCount || 0), 0);
+    const avgPrice = totalUnits > 0 ? totalSales / totalUnits : 0;
+
+    // Sede Distribution
+    const sedeMap = { ARMENIA: 0, MANIZALES: 0, PEREIRA: 0 };
+    rawProductDetails.forEach(p => {
+      const city = ZONA_CIUDAD_MAP[p.zona] || 'OTRO';
+      if (sedeMap[city] !== undefined) {
+        sedeMap[city] += p.ventas || 0;
+      }
+    });
+
+    const activeSedes = Object.entries(sedeMap)
+      .map(([name, sales]) => ({ name, sales }))
+      .filter(s => s.sales > 0);
+
+    const donutOptions = {
+      chart: { type: 'donut', background: 'transparent', fontFamily: 'Inter, sans-serif' },
+      colors: BRAND_COLORS,
+      labels: activeSedes.map(s => s.name === 'MANIZALES' ? 'Eje Caldas' : s.name === 'ARMENIA' ? 'Eje Quindío' : 'Eje Risaralda'),
+      dataLabels: { enabled: false },
+      legend: { show: true, position: 'bottom', fontSize: '10px', labels: { colors: '#94a3b8' } },
+      tooltip: { theme: 'dark', y: { formatter: (val) => formatCurrency(val) } },
+      plotOptions: { pie: { donut: { size: '60%', labels: { show: true, total: { show: true, label: 'Ventas', color: '#94a3b8', formatter: () => formatShortCurrency(totalSales) } } } } }
+    };
+    const donutSeries = activeSedes.map(s => Math.round(s.sales));
+
+    // Top Zones
+    const zoneMap = {};
+    rawProductDetails.forEach(p => {
+      zoneMap[p.zona] = (zoneMap[p.zona] || 0) + (p.ventas || 0);
+    });
+    const zoneList = Object.entries(zoneMap)
+      .map(([zona, sales]) => ({ zona, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
+
+    const barOptions = {
+      chart: { type: 'bar', background: 'transparent', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+      plotOptions: { bar: { horizontal: true, borderRadius: 4, dataLabels: { position: 'top' } } },
+      colors: ['#38bdf8'],
+      dataLabels: { enabled: true, formatter: (val) => formatShortCurrency(val), style: { fontSize: '9px', colors: ['#94a3b8'] }, offsetX: 8 },
+      xaxis: { categories: zoneList.map(z => z.zona), labels: { show: false } },
+      yaxis: { labels: { style: { fontSize: '10px', colors: '#94a3b8' } } },
+      tooltip: { theme: 'dark', y: { formatter: (val) => formatCurrency(val) } },
+      grid: { show: false }
+    };
+    const barSeries = [{ name: 'Ventas', data: zoneList.map(z => Math.round(z.sales)) }];
+
+    // Top Sellers
+    const sellerMap = {};
+    rawProductDetails.forEach(p => {
+      sellerMap[p.vendedor] = (sellerMap[p.vendedor] || 0) + (p.ventas || 0);
+    });
+    const sellerList = Object.entries(sellerMap)
+      .map(([seller, sales]) => ({ seller, sales }))
+      .sort((a, b) => b.sales - a.sales);
+
+    const universe = selectedCity === 'ALL' ? goalTotals.universeClients : (
+      selectedCity === 'ARMENIA' ? 1777 : (selectedCity === 'MANIZALES' ? 2111 : (selectedCity === 'PEREIRA' ? 3965 : 100))
+    );
+    const coverage = universe > 0 ? totalClients / universe : 0;
+
+    return {
+      totalSales,
+      totalUnits,
+      totalInvoices,
+      totalClients,
+      avgPrice,
+      coverage,
+      activeSedes,
+      donutOptions,
+      donutSeries,
+      zoneList,
+      barOptions,
+      barSeries,
+      sellerList
+    };
+  }, [rawProductDetails, selectedCity, goalTotals]);
+
   const filteredProducts = useMemo(() => {
     let list = productImpactData;
     if (productSearch.trim()) {
@@ -478,19 +585,19 @@ const FocosNumerica = () => {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="inline-flex items-center gap-3 rounded-full bg-slate-950/70 border border-slate-800 px-4 py-2 shadow-lg shadow-slate-950/20">
+        <div className="flex flex-col gap-4">
+          <div className="inline-flex items-center gap-3 rounded-full bg-slate-950/70 border border-slate-800 px-4 py-2 shadow-lg shadow-slate-950/20 w-fit">
             <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
             <span className="text-slate-300 text-sm uppercase tracking-[0.25em]">Focos Numérica</span>
           </div>
-          <div className="max-w-2xl">
-            <h1 className="text-3xl font-bold tracking-tight text-white">Inteligencia numérica Alpina</h1>
-            <p className="text-slate-300 text-sm mt-1">
+          <div className="max-w-full">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Inteligencia numérica Alpina</h1>
+            <p className="text-slate-300 text-xs md:text-sm mt-1">
               Panel exclusivo de análisis de focos, cobertura y eficiencia por zona. Todo el insight financiero y operativo en un solo lugar.
             </p>
-            <div className="mt-3">
-              <label className="text-xs text-slate-400 mr-2">Filtrar ciudad:</label>
-              <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="bg-slate-900 text-slate-200 text-sm rounded px-2 py-1 border border-slate-800">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <label className="text-xs text-slate-400">Filtrar ciudad:</label>
+              <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="bg-slate-900 text-slate-200 text-xs md:text-sm rounded px-2 py-1.5 border border-slate-800">
                 <option value="ALL">Todas</option>
                 <option value="ARMENIA">ARMENIA</option>
                 <option value="MANIZALES">MANIZALES</option>
@@ -501,26 +608,27 @@ const FocosNumerica = () => {
           </div>
         </div>
 
-        <GlassCard hoverable={false} className="bg-slate-950/70 border border-sky-500/20 p-5 shadow-[0_25px_80px_-45px_rgba(56,189,248,0.6)]">
+        <GlassCard hoverable={false} className="bg-slate-950/70 border border-sky-500/20 p-4 md:p-5 shadow-[0_25px_80px_-45px_rgba(56,189,248,0.6)]">
           {/* Banner de avance del mes */}
           <div className="mb-4 pb-4 border-b border-slate-800/60">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Avance Junio 2026 · Día hábil {DIA_ACTUAL} de {DIAS_HABILES}</p>
-                <p className="text-xl font-extrabold text-white mt-1">
-                  Meta acumulada al día {DIA_ACTUAL}: <span className="text-sky-300">{formatCurrency(META_ACUMULADA)}</span>
+                <p className="text-lg md:text-xl font-extrabold text-white mt-1">
+                  Meta acumulada: <span className="text-sky-300 block sm:inline mt-1 sm:mt-0">{formatCurrency(META_ACUMULADA)}</span>
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Presupuesto total mes: <span className="text-slate-200 font-semibold">{formatCurrency(PRESUPUESTO_MES)}</span>
-                  &nbsp;·&nbsp; Meta diaria: <span className="text-slate-200 font-semibold">{formatCurrency(META_DIARIA)}</span>
+                <p className="text-[10px] md:text-[11px] text-slate-400 mt-1 flex flex-wrap gap-1">
+                  <span>Presupuesto total: <span className="text-slate-200 font-semibold">{formatShortCurrency(PRESUPUESTO_MES)}</span></span>
+                  <span className="hidden sm:inline">·</span>
+                  <span>Meta diaria: <span className="text-slate-200 font-semibold">{formatShortCurrency(META_DIARIA)}</span></span>
                 </p>
               </div>
-              <div className="flex flex-col items-end gap-1">
+              <div className="flex flex-col items-start sm:items-end gap-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-slate-500">Progreso del mes</span>
                   <span className="text-sm font-bold text-sky-400">{DIA_ACTUAL}/{DIAS_HABILES} días</span>
                 </div>
-                <div className="w-40 h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full sm:w-40 h-2 bg-slate-800 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-500 transition-all"
                     style={{ width: `${(DIA_ACTUAL / DIAS_HABILES) * 100}%` }}
@@ -530,44 +638,40 @@ const FocosNumerica = () => {
               </div>
             </div>
           </div>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <p className="text-slate-400 text-sm mt-2 max-w-2xl">
-                  Esta sección destaca las zonas más críticas y las oportunidades de eficiencia con datos Alpina 100% filtrados. Faltan {formatNumber(estimatedClientsToGoal)} clientes de ticket promedio para cerrar la meta de presupuesto.
-                </p>
-              </div>
-            </div>
-            <div className="rounded-3xl bg-slate-950/60 border border-slate-800 p-4 flex items-center gap-3">
-              <Sparkles className="h-6 w-6 text-amber-300" />
+          <div className="flex flex-col gap-3">
+            <p className="text-slate-400 text-xs md:text-sm">
+              Esta sección destaca las zonas más críticas y las oportunidades de eficiencia con datos Alpina 100% filtrados. Faltan <strong className="text-white">{formatNumber(estimatedClientsToGoal)}</strong> clientes de ticket promedio para cerrar la meta de presupuesto.
+            </p>
+            <div className="rounded-2xl md:rounded-3xl bg-slate-950/60 border border-slate-800 p-3 md:p-4 flex items-center gap-3 w-fit">
+              <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-300" />
               <div>
                 <p className="text-slate-500 text-[10px] uppercase tracking-wider">Facturas de foco</p>
-                <p className="text-2xl font-bold text-white mt-1">{formatNumber(totalFocusFacturas)}</p>
+                <p className="text-xl md:text-2xl font-bold text-white mt-1">{formatNumber(totalFocusFacturas)}</p>
               </div>
             </div>
           </div>
         </GlassCard>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-4 shadow-lg shadow-slate-950/20">
+        <div className="grid grid-cols-1 gap-3 xs:grid-cols-2 lg:grid-cols-4">
+          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-3 md:p-4 shadow-lg shadow-slate-950/20">
             <p className="text-slate-400 text-[10px] uppercase tracking-wider">Cobertura promedio</p>
-            <p className="text-2xl font-bold text-white mt-2">{formatPercent(averageCoverage)}</p>
-            <p className="text-slate-500 text-[10px] mt-2">Porcentaje medio de ejecución de presupuesto</p>
+            <p className="text-xl md:text-2xl font-bold text-white mt-2">{formatPercent(averageCoverage)}</p>
+            <p className="text-slate-500 text-[9px] md:text-[10px] mt-2">Porcentaje medio de ejecución de presupuesto</p>
           </GlassCard>
-          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-4 shadow-lg shadow-slate-950/20">
+          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-3 md:p-4 shadow-lg shadow-slate-950/20">
             <p className="text-slate-400 text-[10px] uppercase tracking-wider">Clientes faltantes</p>
-            <p className="text-2xl font-bold text-white mt-2">{formatNumber(estimatedClientsToGoal)}</p>
-            <p className="text-slate-500 text-[10px] mt-2">Estimado con ticket promedio actual</p>
+            <p className="text-xl md:text-2xl font-bold text-white mt-2">{formatNumber(estimatedClientsToGoal)}</p>
+            <p className="text-slate-500 text-[9px] md:text-[10px] mt-2">Estimado con ticket promedio actual</p>
           </GlassCard>
-          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-4 shadow-lg shadow-slate-950/20">
+          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-3 md:p-4 shadow-lg shadow-slate-950/20">
             <p className="text-slate-400 text-[10px] uppercase tracking-wider">Brecha comercial</p>
-            <p className="text-2xl font-bold text-white mt-2">{formatCurrency(salesGap)}</p>
-            <p className="text-slate-500 text-[10px] mt-2">Ventas netas faltantes para cerrar el presupuesto</p>
+            <p className="text-xl md:text-2xl font-bold text-white mt-2">{formatShortCurrency(salesGap)}</p>
+            <p className="text-slate-500 text-[9px] md:text-[10px] mt-2">Ventas faltantes para presupuesto</p>
           </GlassCard>
-          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-4 shadow-lg shadow-slate-950/20">
+          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-3 md:p-4 shadow-lg shadow-slate-950/20">
             <p className="text-slate-400 text-[10px] uppercase tracking-wider">Zonas en alerta</p>
-            <p className="text-2xl font-bold text-white mt-2">{zonesBelowTarget}</p>
-            <p className="text-slate-500 text-[10px] mt-2">Zonas con cobertura menor al 75%</p>
+            <p className="text-xl md:text-2xl font-bold text-white mt-2">{zonesBelowTarget}</p>
+            <p className="text-slate-500 text-[9px] md:text-[10px] mt-2">Zonas con cobertura menor al 75%</p>
           </GlassCard>
         </div>
 
@@ -641,46 +745,46 @@ const FocosNumerica = () => {
           })}
         </div>
 
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
+        <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-4 md:p-5 shadow-lg shadow-slate-950/20">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-white">Cumplimiento por ciudad</h3>
-              <p className="text-xs text-slate-400 mt-1">Universo de clientes, meta numérica (70% del universo) y faltantes por ciudad.</p>
+              <h3 className="text-sm md:text-base font-bold text-white">Cumplimiento por ciudad</h3>
+              <p className="text-[10px] md:text-xs text-slate-400 mt-1">Universo de clientes, meta numérica (70% del universo) y faltantes por ciudad.</p>
             </div>
-            <div className="text-right">
+            <div className="text-right hidden sm:block">
               <p className="text-[10px] uppercase tracking-widest text-slate-400">Impacto Global</p>
               <p className="text-sm font-bold text-sky-400">{formatPercent(goalTotals.impactedClients / goalTotals.universeClients)}</p>
             </div>
           </div>
-          <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full min-w-[400px] text-left text-xs border-collapse">
+          <div className="overflow-x-auto -mx-4 md:-mx-5 px-4 md:px-5">
+            <table className="w-full min-w-[600px] text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-[0.12em] text-[10px]">
-                  <th className="pb-3 pr-4">Ciudad</th>
-                  <th className="pb-3 pr-4 hidden sm:table-cell">Universo</th>
-                  <th className="pb-3 pr-4">Meta (70%)</th>
-                  <th className="pb-3 pr-4">Impactados (Unicos)</th>
-                  <th className="pb-3 pr-4">Cobertura Real</th>
-                  <th className="pb-3 pr-2">Faltan a Meta</th>
+                <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-[0.12em] text-[9px] md:text-[10px]">
+                  <th className="pb-3 pr-3 md:pr-4">Ciudad</th>
+                  <th className="pb-3 pr-3 md:pr-4">Universo</th>
+                  <th className="pb-3 pr-3 md:pr-4">Meta (70%)</th>
+                  <th className="pb-3 pr-3 md:pr-4">Impactados</th>
+                  <th className="pb-3 pr-3 md:pr-4">Cobertura</th>
+                  <th className="pb-3 pr-2">Faltan</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/60">
                 {cityGoalData.map((city) => (
                   <tr key={city.city} className="hover:bg-slate-900/10 transition-colors">
-                    <td className="py-2.5 pr-4 text-slate-300 font-semibold">{city.city}</td>
-                    <td className="py-2.5 pr-4 text-slate-400 hidden sm:table-cell">{formatNumber(city.universeClients)}</td>
-                    <td className="py-2.5 pr-4 text-slate-300">{formatNumber(city.metaClients)}</td>
-                    <td className="py-2.5 pr-4 text-slate-300">{formatNumber(city.impactedClients)}</td>
-                    <td className="py-2.5 pr-4 font-bold text-slate-100">{formatPercent(city.numericalCoverage)}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 text-slate-300 font-semibold text-xs md:text-sm">{city.city}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 text-slate-400">{formatNumber(city.universeClients)}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 text-slate-300">{formatNumber(city.metaClients)}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 text-slate-300">{formatNumber(city.impactedClients)}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 font-bold text-slate-100">{formatPercent(city.numericalCoverage)}</td>
                     <td className="py-2.5 pr-2 text-slate-100">{formatNumber(city.clientsMissing)}</td>
                   </tr>
                 ))}
                 <tr className="bg-slate-900/40">
-                  <td className="py-3 pr-4 text-slate-200 font-semibold">Total</td>
-                  <td className="py-3 pr-4 text-slate-200">{formatNumber(goalTotals.universeClients)}</td>
-                  <td className="py-3 pr-4 text-slate-200">{formatNumber(goalTotals.metaClients)}</td>
-                  <td className="py-3 pr-4 text-slate-200">{formatNumber(goalTotals.impactedClients)}</td>
-                  <td className="py-3 pr-4 text-slate-100 font-bold">{formatPercent(goalTotals.impactedClients / goalTotals.universeClients)}</td>
+                  <td className="py-3 pr-3 md:pr-4 text-slate-200 font-semibold text-xs md:text-sm">Total</td>
+                  <td className="py-3 pr-3 md:pr-4 text-slate-200">{formatNumber(goalTotals.universeClients)}</td>
+                  <td className="py-3 pr-3 md:pr-4 text-slate-200">{formatNumber(goalTotals.metaClients)}</td>
+                  <td className="py-3 pr-3 md:pr-4 text-slate-200">{formatNumber(goalTotals.impactedClients)}</td>
+                  <td className="py-3 pr-3 md:pr-4 text-slate-100 font-bold">{formatPercent(goalTotals.impactedClients / goalTotals.universeClients)}</td>
                   <td className="py-3 pr-2 text-slate-100">{formatNumber(Math.max(0, goalTotals.metaClients - goalTotals.impactedClients))}</td>
                 </tr>
               </tbody>
@@ -714,11 +818,11 @@ const FocosNumerica = () => {
       </div>
 
 
-      <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
+      <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-4 md:p-5 shadow-lg shadow-slate-950/20">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
           <div>
-            <h3 className="text-base font-bold text-white">Impacto Numérico · Marca / Familia / Producto</h3>
-            <p className="text-xs text-slate-400 mt-1">
+            <h3 className="text-sm md:text-base font-bold text-white">Impacto Numérico · Marca / Familia / Producto</h3>
+            <p className="text-[10px] md:text-xs text-slate-400 mt-1">
               Cobertura real de clientes únicos por nivel jerárquico sobre el universo de la sede seleccionada.
             </p>
           </div>
@@ -739,8 +843,8 @@ const FocosNumerica = () => {
           </div>
         </div>
 
-        {/* Header columns */}
-        <div className="hidden sm:flex items-center gap-4 px-4 pb-2 border-b border-slate-800 text-[9px] uppercase tracking-widest text-slate-500 font-semibold">
+        {/* Header columns - Hidden on mobile, visible on md+ */}
+        <div className="hidden md:flex items-center gap-4 px-4 pb-2 border-b border-slate-800 text-[9px] uppercase tracking-widest text-slate-500 font-semibold">
           <span className="flex-1 text-left">Nombre</span>
           <span className="w-32 text-right">Ventas</span>
           <span className="w-16 text-right">Facturas</span>
@@ -760,18 +864,18 @@ const FocosNumerica = () => {
                {/* ── MARCA ROW ── */}
               <button
                 onClick={() => toggleBrand(brand.label)}
-                className="w-full flex items-center gap-2 px-4 py-3 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 transition-all group"
+                className="w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 transition-all group"
               >
                 <span
-                  className="w-3.5 h-3.5 rounded-full shrink-0 transition-all duration-200 ring-2 ring-offset-1 ring-offset-slate-900"
+                  className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full shrink-0 transition-all duration-200 ring-2 ring-offset-1 ring-offset-slate-900"
                   style={{
                     backgroundColor: brandColor,
                     boxShadow: expandedBrands[brand.label] ? `0 0 8px ${brandColor}` : 'none',
                     ringColor: brandColor
                   }}
                 />
-                <span className="flex-1 text-left text-sm font-bold text-white tracking-wide">{brand.label}</span>
-                <div className="hidden sm:flex items-center gap-4 text-xs">
+                <span className="flex-1 text-left text-xs md:text-sm font-bold text-white tracking-wide truncate">{brand.label}</span>
+                <div className="hidden md:flex items-center gap-4 text-xs">
                   <span className="w-32 text-right text-slate-200 font-semibold">{formatCurrency(brand.ventas)}</span>
                   <span className="w-16 text-right text-slate-300">{formatNumber(brand.facturas)}</span>
                   <span className="w-20 text-right text-sky-300 font-bold">{formatNumber(brand.clientesCount)}</span>
@@ -782,6 +886,12 @@ const FocosNumerica = () => {
                     </div>
                   </div>
                   <span className="w-24 text-right text-slate-200 font-semibold">{formatKg(brand.pesoTotalKg)}</span>
+                </div>
+                {/* Mobile summary */}
+                <div className="flex md:hidden items-center gap-2 text-[10px]">
+                  <span className="text-sky-400 font-bold">{formatPercent(brand.coverage)}</span>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-slate-300">{formatShortCurrency(brand.ventas)}</span>
                 </div>
               </button>
 
@@ -796,17 +906,17 @@ const FocosNumerica = () => {
                         {/* Familia row */}
                         <button
                           onClick={() => toggleFamily(fKey)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900/70 hover:bg-slate-900 border border-slate-700/30 transition-all"
+                          className="w-full flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg bg-slate-900/70 hover:bg-slate-900 border border-slate-700/30 transition-all"
                         >
                           <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-200"
+                            className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shrink-0 transition-all duration-200"
                             style={{
                               backgroundColor: famColor,
                               boxShadow: expandedFamilies[fKey] ? `0 0 6px ${famColor}` : 'none'
                             }}
                           />
-                          <span className="flex-1 text-left text-xs font-semibold text-slate-100">{fam.label}</span>
-                          <div className="hidden sm:flex items-center gap-4 text-xs">
+                          <span className="flex-1 text-left text-[11px] md:text-xs font-semibold text-slate-100 truncate">{fam.label}</span>
+                          <div className="hidden md:flex items-center gap-4 text-xs">
                             <span className="w-32 text-right text-slate-200">{formatCurrency(fam.ventas)}</span>
                             <span className="w-16 text-right text-slate-300">{formatNumber(fam.facturas)}</span>
                             <span className="w-20 text-right text-violet-300 font-semibold">{formatNumber(fam.clientesCount)}</span>
@@ -818,16 +928,26 @@ const FocosNumerica = () => {
                             </div>
                             <span className="w-24 text-right text-slate-200 font-semibold">{formatKg(fam.pesoTotalKg)}</span>
                           </div>
+                          {/* Mobile summary */}
+                          <div className="flex md:hidden items-center gap-2 text-[10px]">
+                            <span className="text-violet-400 font-semibold">{formatPercent(fam.coverage)}</span>
+                            <span className="text-slate-400">·</span>
+                            <span className="text-slate-300">{formatShortCurrency(fam.ventas)}</span>
+                          </div>
                         </button>
 
                         {/* ── PRODUCTOS ── */}
                         {expandedFamilies[fKey] && (
                           <div className="ml-4 mt-1 space-y-0.5">
                             {fam.products.map((p, i) => (
-                              <div key={`${p.nbProducto}-${i}`} className="flex items-center gap-3 px-4 py-2 rounded-md hover:bg-slate-800/40 transition-colors border border-transparent hover:border-slate-700/30">
-                                <span className="text-[10px] font-mono text-slate-400 w-12 shrink-0">{p.nbProducto}</span>
-                                <span className="flex-1 text-xs text-slate-100 font-medium truncate max-w-[220px]">{p.nmProducto}</span>
-                                <div className="hidden sm:flex items-center gap-4 text-xs">
+                              <div 
+                                key={`${p.nbProducto}-${i}`} 
+                                onClick={() => setSelectedProduct(p)}
+                                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 rounded-md hover:bg-slate-800/40 transition-colors border border-transparent hover:border-slate-700/30 cursor-pointer group"
+                              >
+                                <span className="text-[9px] md:text-[10px] font-mono text-slate-400 w-10 md:w-12 shrink-0">{p.nbProducto}</span>
+                                <span className="flex-1 text-[11px] md:text-xs text-slate-100 font-medium truncate max-w-[150px] md:max-w-[220px] group-hover:text-sky-400 transition-colors">{p.nmProducto}</span>
+                                <div className="hidden md:flex items-center gap-4 text-xs">
                                   <span className="w-32 text-right text-slate-200">{formatCurrency(p.ventas)}</span>
                                   <span className="w-16 text-right text-slate-300">{formatNumber(p.facturas)}</span>
                                   <span className="w-20 text-right text-white font-semibold">{formatNumber(p.clientesCount)}</span>
@@ -838,6 +958,12 @@ const FocosNumerica = () => {
                                     </div>
                                   </div>
                                   <span className="w-24 text-right text-slate-200">{formatKg(p.pesoTotalKg)}</span>
+                                </div>
+                                {/* Mobile summary */}
+                                <div className="flex md:hidden items-center gap-1.5 text-[10px] shrink-0">
+                                  <span className="text-teal-300 font-bold">{formatPercent(p.coverage)}</span>
+                                  <span className="text-slate-500">·</span>
+                                  <span className="text-slate-300">{formatShortCurrency(p.ventas)}</span>
                                 </div>
                               </div>
                             ))}
@@ -854,6 +980,131 @@ const FocosNumerica = () => {
 
         </div>
       </GlassCard>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && productStats && (
+        <div 
+          onClick={() => setSelectedProduct(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity overflow-y-auto"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 rounded-xl md:rounded-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto shadow-2xl p-4 md:p-6 relative flex flex-col gap-4 md:gap-6 text-slate-300 my-auto"
+          >
+            {/* Close Button */}
+            <button 
+              onClick={() => setSelectedProduct(null)} 
+              className="absolute right-2 top-2 md:right-4 md:top-4 text-slate-500 hover:text-slate-200 transition-colors p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer z-10"
+            >
+              <X className="h-4 w-4 md:h-5 md:w-5" />
+            </button>
+
+            {/* Header */}
+            <div className="pr-8">
+              <span className="text-[9px] md:text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-bold uppercase tracking-wider">
+                Ficha de Producto · Focos Numérica
+              </span>
+              <h2 className="text-lg md:text-xl font-bold text-white mt-3">{selectedProduct.nmProducto}</h2>
+              <div className="flex flex-wrap gap-x-3 md:gap-x-4 gap-y-1 mt-1.5 text-[10px] md:text-xs text-slate-400">
+                <span>Código: <strong className="font-mono text-slate-300">{selectedProduct.nbProducto}</strong></span>
+                <span>·</span>
+                <span>Marca: <strong className="text-slate-300">{selectedProduct.nmTpMarca}</strong></span>
+                <span>·</span>
+                <span>Familia: <strong className="text-slate-300">{selectedProduct.nmTpFamilia}</strong></span>
+              </div>
+            </div>
+
+            {/* KPIs Row */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
+              {[
+                { label: 'Ventas del Producto', value: formatShortCurrency(productStats.totalSales), color: 'text-sky-400' },
+                { label: 'Unidades Vendidas', value: formatNumber(productStats.totalUnits), color: 'text-amber-400' },
+                { label: 'Facturas', value: formatNumber(productStats.totalInvoices), color: 'text-emerald-400' },
+                { label: 'Clientes Únicos', value: formatNumber(productStats.totalClients), color: 'text-violet-400' },
+                { label: 'Cobertura Numérica', value: formatPercent(productStats.coverage), color: 'text-teal-400' }
+              ].map((kpi, idx) => (
+                <div key={idx} className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-2.5 md:p-3.5 flex flex-col gap-0.5 md:gap-1">
+                  <span className="text-[9px] md:text-[10px] text-slate-500 uppercase tracking-wider font-semibold line-clamp-2">{kpi.label}</span>
+                  <span className={`text-base md:text-lg font-bold ${kpi.color} mt-0.5`}>{kpi.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Additional Info */}
+            <div className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-3 md:p-4">
+              <h4 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mb-2 md:mb-3">Información Adicional</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 text-[11px] md:text-xs">
+                <div>
+                  <span className="text-slate-500">Precio Promedio Unitario</span>
+                  <p className="text-white font-bold mt-1">{formatCurrency(productStats.avgPrice)}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Peso Total</span>
+                  <p className="text-white font-bold mt-1">{formatKg(selectedProduct.pesoTotalKg || 0)}</p>
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <span className="text-slate-500">Ticket Promedio</span>
+                  <p className="text-white font-bold mt-1">{formatCurrency(productStats.totalInvoices > 0 ? productStats.totalSales / productStats.totalInvoices : 0)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {/* Sede Donut */}
+              <div className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-4 md:p-5 flex flex-col">
+                <h4 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mb-3 md:mb-4">Ventas por Sede (Eje)</h4>
+                <div className="flex-1 flex items-center justify-center min-h-[200px] md:min-h-[220px]">
+                  {productStats.activeSedes.length > 0 ? (
+                    <Chart options={productStats.donutOptions} series={productStats.donutSeries} type="donut" width="100%" height={200} />
+                  ) : (
+                    <p className="text-slate-600 text-xs">Sin ventas en el periodo filtrado</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Zones Bar */}
+              <div className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-4 md:p-5 flex flex-col">
+                <h4 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mb-3 md:mb-4">Top 5 Zonas por Ventas</h4>
+                <div className="flex-1 flex items-center justify-center min-h-[200px] md:min-h-[220px]">
+                  {productStats.zoneList.length > 0 ? (
+                    <Chart options={productStats.barOptions} series={productStats.barSeries} type="bar" width="100%" height={200} />
+                  ) : (
+                    <p className="text-slate-600 text-xs">Sin datos de zonas</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Top Sellers Table */}
+            {productStats.sellerList.length > 0 && (
+              <div className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-4 md:p-5">
+                <h4 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mb-3 md:mb-4">Top Vendedores</h4>
+                <div className="overflow-x-auto -mx-4 md:-mx-5 px-4 md:px-5">
+                  <table className="w-full min-w-[400px] text-[11px] md:text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-wider text-[9px] md:text-[10px]">
+                        <th className="pb-2 pr-3 md:pr-4 text-left font-semibold">Vendedor</th>
+                        <th className="pb-2 pr-3 md:pr-4 text-right font-semibold">Ventas</th>
+                        <th className="pb-2 text-right font-semibold">Participación</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900/60">
+                      {productStats.sellerList.slice(0, 10).map((seller, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/20 transition-colors">
+                          <td className="py-2 pr-3 md:pr-4 text-slate-200 truncate max-w-[150px]">{seller.seller}</td>
+                          <td className="py-2 pr-3 md:pr-4 text-right text-white font-semibold whitespace-nowrap">{formatShortCurrency(seller.sales)}</td>
+                          <td className="py-2 text-right text-sky-400 font-bold">{formatPercent(seller.sales / productStats.totalSales)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

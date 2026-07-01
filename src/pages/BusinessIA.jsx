@@ -518,8 +518,8 @@ ${cuboContext}`;
               <div className="flex flex-wrap items-center gap-3">
                 <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
                 <div className="h-6 w-[1px] bg-slate-800"></div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-white">IA Empresarial</h1>
-                <span className="text-[10px] bg-purple-500/20 text-purple-300 font-semibold px-2 py-0.5 rounded-full border border-purple-500/30">Motor Predictivo Activo</span>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">IA Empresarial</h1>
+                <span className="text-[9px] md:text-[10px] bg-purple-500/20 text-purple-300 font-semibold px-2 py-0.5 rounded-full border border-purple-500/30">Motor Predictivo Activo</span>
               </div>
               <p className="text-slate-300 text-sm mt-1">
                 Análisis profundo, predicción lineal de tendencias y diagnóstico continuo del canal comercial regional.
@@ -571,7 +571,7 @@ ${cuboContext}`;
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Executive KPI Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
             <GlassCard hoverable={true} className="bg-slate-950/70 border border-slate-900 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 bg-blue-500/5 text-blue-400 rounded-bl-3xl group-hover:bg-blue-500/10 transition-colors">
                 <DollarSign className="h-5 w-5" />
@@ -635,7 +635,7 @@ ${cuboContext}`;
           </div>
 
           {/* Main Visuals & AI Smart Box */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <GlassCard hoverable={false} className="lg:col-span-2 p-6 flex flex-col justify-between shadow-xl">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -707,7 +707,7 @@ ${cuboContext}`;
       )}
 
       {activeTab === 'ai' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           
           {/* Columna 1: Anomalías Detectadas */}
           <div className="space-y-6">
@@ -943,7 +943,7 @@ ${cuboContext}`;
       )}
 
       {activeTab === 'chat' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Columna Izquierda: Ventana de Chat */}
           <div className="lg:col-span-2 flex flex-col h-[600px] rounded-3xl bg-slate-950/70 border border-slate-900 overflow-hidden shadow-xl">
             {/* Cabecera del Chat */}
@@ -1086,7 +1086,7 @@ ${cuboContext}`;
 
       {activeTab === 'simulator' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             
             {/* Panel de Controles (Sliders) */}
             <GlassCard hoverable={false} className="p-5 shadow-xl space-y-6">
@@ -1168,7 +1168,7 @@ ${cuboContext}`;
             <div className="lg:col-span-2 space-y-6">
               
               {/* Tarjetas KPI de Comparación */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
                 
                 {/* Ventas Brutas */}
                 <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-slate-900 bg-slate-950/40 relative overflow-hidden">

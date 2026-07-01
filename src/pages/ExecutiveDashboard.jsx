@@ -278,10 +278,10 @@ const ExecutiveDashboard = () => {
     <div className="space-y-6">
 
       {/* ── Header ── */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Dashboard Ejecutivo</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Dashboard Ejecutivo</h1>
+          <p className="text-slate-400 text-xs md:text-sm mt-1">
             Análisis consolidado · Alpina Eje Cafetero · {activePeriodLabel}
           </p>
         </div>
@@ -290,50 +290,51 @@ const ExecutiveDashboard = () => {
           {/* Botón Modo TV */}
           <button
             onClick={() => navigate('/tv')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold text-sm transition-all shadow-lg hover:shadow-xl"
+            className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold text-xs md:text-sm transition-all shadow-lg hover:shadow-xl"
             title="Activar modo presentación TV"
           >
-            <Monitor className="h-4 w-4" />
-            Modo TV
+            <Monitor className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden xs:inline">Modo TV</span>
+            <span className="xs:hidden">TV</span>
           </button>
 
           {/* ── Filtro de fechas ── */}
-          <div className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2 shadow-inner">
-            <CalendarDays className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-            <span className="text-[11px] text-slate-500 font-medium">Desde</span>
+          <div className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-lg md:rounded-xl px-2 md:px-3 py-1.5 md:py-2 shadow-inner">
+            <CalendarDays className="h-3 w-3 md:h-3.5 md:w-3.5 text-blue-400 shrink-0" />
+            <span className="text-[10px] md:text-[11px] text-slate-500 font-medium hidden sm:inline">Desde</span>
             <input
               type="date"
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
-              className="bg-transparent text-xs text-slate-200 focus:outline-none w-32 cursor-pointer"
+              className="bg-transparent text-[11px] md:text-xs text-slate-200 focus:outline-none w-28 md:w-32 cursor-pointer"
             />
           </div>
-          <div className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2 shadow-inner">
-            <CalendarDays className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-            <span className="text-[11px] text-slate-500 font-medium">Hasta</span>
+          <div className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-lg md:rounded-xl px-2 md:px-3 py-1.5 md:py-2 shadow-inner">
+            <CalendarDays className="h-3 w-3 md:h-3.5 md:w-3.5 text-indigo-400 shrink-0" />
+            <span className="text-[10px] md:text-[11px] text-slate-500 font-medium hidden sm:inline">Hasta</span>
             <input
               type="date"
               value={dateTo}
               onChange={e => setDateTo(e.target.value)}
-              className="bg-transparent text-xs text-slate-200 focus:outline-none w-32 cursor-pointer"
+              className="bg-transparent text-[11px] md:text-xs text-slate-200 focus:outline-none w-28 md:w-32 cursor-pointer"
             />
           </div>
           {(dateFrom || dateTo) && (
             <button
               onClick={clearDates}
-              className="text-[11px] text-rose-400 hover:text-rose-300 border border-rose-500/20 rounded-lg px-3 py-2 bg-rose-500/5 hover:bg-rose-500/10 transition-all font-medium"
+              className="text-[10px] md:text-[11px] text-rose-400 hover:text-rose-300 border border-rose-500/20 rounded-lg px-2 md:px-3 py-1.5 md:py-2 bg-rose-500/5 hover:bg-rose-500/10 transition-all font-medium"
             >
               Limpiar
             </button>
           )}
           {/* Active filter badges */}
           {filters.selectedZone !== 'Todas' && (
-            <span className="px-2.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[11px] font-medium">
+            <span className="px-2 md:px-2.5 py-1 md:py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] md:text-[11px] font-medium">
               Zona: {filters.selectedZone}
             </span>
           )}
           {filters.selectedSeller !== 'Todas' && (
-            <span className="px-2.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+            <span className="px-2 md:px-2.5 py-1 md:py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] md:text-[11px] font-medium">
               Vendedor: {filters.selectedSeller}
             </span>
           )}
@@ -351,7 +352,7 @@ const ExecutiveDashboard = () => {
       )}
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
         {kpiCards.map((card, idx) => {
           const Icon = card.icon;
           return (
@@ -360,26 +361,26 @@ const ExecutiveDashboard = () => {
               <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-40 pointer-events-none rounded-2xl`} />
               <div className="relative flex justify-between items-start">
                 <div className="space-y-1">
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{card.title}</p>
-                  <h3 className="text-2xl font-extrabold text-white tracking-tight">{card.value}</h3>
-                  <p className="text-[10px] text-slate-400 font-medium">{card.subtitle}</p>
+                  <p className="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest">{card.title}</p>
+                  <h3 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">{card.value}</h3>
+                  <p className="text-[9px] md:text-[10px] text-slate-400 font-medium">{card.subtitle}</p>
                 </div>
-                <div className={`p-2.5 rounded-xl bg-gradient-to-tr ${card.color} ${card.iconColor} shadow-lg`}>
-                  <Icon className="h-5 w-5" />
+                <div className={`p-2 md:p-2.5 rounded-lg md:rounded-xl bg-gradient-to-tr ${card.color} ${card.iconColor} shadow-lg`}>
+                  <Icon className="h-4 w-4 md:h-5 md:w-5" />
                 </div>
               </div>
-              <div className="relative mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between text-xs">
-                <span className="text-slate-500 font-medium">{card.badgeLabel}</span>
+              <div className="relative mt-3 md:mt-4 pt-2 md:pt-3 border-t border-slate-800/40 flex items-center justify-between text-[10px] md:text-xs">
+                <span className="text-slate-500 font-medium truncate pr-2">{card.badgeLabel}</span>
                 {card.badge !== undefined && (
-                  <span className={`flex items-center gap-0.5 font-bold px-2 py-0.5 rounded-full text-[11px] ${
+                  <span className={`flex items-center gap-0.5 font-bold px-1.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-[11px] shrink-0 ${
                     card.trend === 'up'    ? 'bg-emerald-500/10 text-emerald-400' :
                     card.trend === 'alert' ? 'bg-rose-500/10 text-rose-400'      :
                     card.trend === 'down'  ? 'bg-rose-500/10 text-rose-400'      :
                                             'bg-slate-800 text-slate-300'
                   }`}>
-                    {card.trend === 'up'    && <ArrowUpRight className="h-3 w-3" />}
-                    {card.trend === 'down'  && <ArrowDownRight className="h-3 w-3" />}
-                    {card.trend === 'alert' && <ArrowUpRight className="h-3 w-3" />}
+                    {card.trend === 'up'    && <ArrowUpRight className="h-2.5 w-2.5 md:h-3 md:w-3" />}
+                    {card.trend === 'down'  && <ArrowDownRight className="h-2.5 w-2.5 md:h-3 md:w-3" />}
+                    {card.trend === 'alert' && <ArrowUpRight className="h-2.5 w-2.5 md:h-3 md:w-3" />}
                     {formatPercent(card.badge)}
                   </span>
                 )}

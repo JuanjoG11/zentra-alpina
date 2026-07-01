@@ -129,8 +129,8 @@ const ProvidersAnalysis = () => {
             </div>
           </div>
           <div className="max-w-2xl">
-            <h1 className="text-3xl font-bold tracking-tight text-white">Análisis Alpina</h1>
-            <p className="text-slate-300 text-sm mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Análisis Alpina</h1>
+            <p className="text-slate-300 text-xs md:text-sm mt-1">
               Reporte gerencial enfocado exclusivamente en marcas Alpina: ventas reales, participación de portafolio, crecimiento y margen ponderado.
             </p>
           </div>
@@ -155,7 +155,7 @@ const ProvidersAnalysis = () => {
       </div>
 
       {/* ── Desglose por eje comercial ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {Object.entries(ventasPorEje).map(([city, v]) => {
           const m = CITY_META[city] || CITY_META.OTRO;
           const share = v / totalEjes;
@@ -181,7 +181,7 @@ const ProvidersAnalysis = () => {
       </div>
 
       {/* Main Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
         <GlassCard hoverable={false} className="flex flex-col justify-between bg-sky-950/90 border border-sky-500/20 p-5 shadow-xl shadow-sky-500/5">
           <div>
             <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ventas 2026</p>

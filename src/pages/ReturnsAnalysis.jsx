@@ -73,14 +73,14 @@ const ReturnsAnalysis = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">Análisis de Devoluciones</h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Análisis de Devoluciones</h1>
+        <p className="text-slate-400 text-xs md:text-sm mt-1">
           Identifique causas de devoluciones, impacto financiero en margen y mapee vendedores o clientes críticos.
         </p>
       </div>
 
       {/* Returns KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {/* Rechazos Valor */}
         <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
           <div>
