@@ -1,298 +1,391 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import useStore from '../store/useStore';
 import { getFilteredData, ZONA_CIUDAD_MAP } from '../utils/calculations';
-import { formatCurrency, formatPercent, formatShortCurrency, formatNumber } from '../utils/formatters';
+import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
-import { BITreemapChart, BIDonutChart } from '../components/charts/BICharts';
-import Chart from 'react-apexcharts';
-import { Truck, Percent, ArrowUpRight, ArrowDownRight, BarChart3, CircleDollarSign, MapPin } from 'lucide-react';
+import { Truck, ChevronDown, ChevronUp } from 'lucide-react';
 import alpinaLogo from '../assets/alpina-logo.svg';
 
+// Marcas que se consideran "Otros" — el resto son Derivados
+const OTROS_MARCAS = [
+  'LECHE ALPINA BOLSA',
+  'LECHE ALPINA CAJA',
+  'QUESITO ALPINA',
+  'DON MAIZ',
+  'ANCHETAS',
+];
+
 const CITY_META = {
-  PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
-  MANIZALES: { label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
+  PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20' },
+  MANIZALES: { label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20' },
   ARMENIA:   { label: 'Eje Quindío',  bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
-  OTRO:      { label: 'Otro',         bg: 'bg-slate-500/10',   text: 'text-slate-400',   border: 'border-slate-700'      },
+  OTRO:      { label: 'Otro',         bg: 'bg-slate-500/10',   text: 'text-slate-400',   border: 'border-slate-700' },
 };
+
+// Colores semáforo según % de proyección
+const semaforo = (pct) => {
+  if (pct >= 1.0)  return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+  if (pct >= 0.85) return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+  return 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+};
+
+const PctBadge = ({ value }) => (
+  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold border ${semaforo(value)}`}>
+    {Math.round(value * 100)}%
+  </span>
+);
 
 const ProvidersAnalysis = () => {
   const filters = useStore();
   const dbData = useStore(state => state.dbData);
   const filteredData = getFilteredData(dbData, filters);
 
-  // If no providers data, show fallback UI
-  if (!filteredData || !filteredData.providers || filteredData.providers.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64 text-slate-400">
-        No se encontraron datos de proveedores. Cargue un archivo válido.
-      </div>
-    );
-  }
-  // Sorting providers by sales volume 2026
-  const sortedProviders = [...filteredData.providers]
-    .sort((a, b) => b.ventas2026 - a.ventas2026);
+  const [sortCol, setSortCol] = useState('vendedor');
+  const [sortDir, setSortDir] = useState('asc');
+  const [cityFilter, setCityFilter] = useState('ALL');
 
-  // Filter only Alpina-related providers / marcas Alpina
-  const alpinaProviders = sortedProviders.filter((p) => p.proveedor.toUpperCase().includes('ALPINA'));
+  // Todos los datos de zonas (cada zona tiene presupuesto, ventasNetas, proyectado, vendedor)
+  const zones = filteredData.zones || [];
 
-  const totalSales2026 = alpinaProviders.reduce((sum, p) => sum + p.ventas2026, 0);
-  const totalSales2025 = alpinaProviders.reduce((sum, p) => sum + p.ventas2025, 0);
-  const averageMargin = totalSales2026 > 0
-    ? (alpinaProviders.reduce((sum, p) => sum + (p.ventas2026 * p.margen2026), 0) / totalSales2026) / 100
-    : 0;
-  const topProvider = alpinaProviders[0] || null;
-  const topProviderShare = topProvider ? topProvider.ventas2026 / totalSales2026 : 0;
-  const top3Providers = alpinaProviders.slice(0, 3);
-  const top3Contribution = totalSales2026 > 0
-    ? top3Providers.reduce((sum, p) => sum + p.ventas2026, 0) / totalSales2026
-    : 0;
-  const portfolioGrowth = totalSales2025 > 0
-    ? (totalSales2026 - totalSales2025) / totalSales2025
-    : 0;
+  // Datos de productos para separar Derivados vs Otros
+  const productDistrib = dbData.productDistrib || [];
 
-  // Ventas reales por eje usando el mapa de zonas
-  const ventasPorEje = React.useMemo(() => {
-    const map = { PEREIRA: 0, MANIZALES: 0, ARMENIA: 0 };
-    (filteredData.zones || []).forEach(z => {
-      const city = ZONA_CIUDAD_MAP[z.zona] || 'OTRO';
-      if (map[city] !== undefined) map[city] += z.ventasNetas;
+  // Pre-calcular: para cada zona cuántas ventas son Derivados y cuántas son Otros
+  // Si no hay productDistrib, usamos la distribución estimada 88% Derivados / 12% Otros
+  // (ratio real del cubo de la imagen)
+  const DERIV_RATIO = 0.88;
+  const OTROS_RATIO = 0.12;
+
+  const hasProductData = productDistrib.length > 0;
+
+  // Calcular split Derivados/Otros por zona desde productDistrib
+  const zonaSplitMap = useMemo(() => {
+    const map = {};
+    if (!hasProductData) return map;
+
+    productDistrib.forEach(p => {
+      const zona = p.zona;
+      if (!zona) return;
+      if (!map[zona]) map[zona] = { derivados: { ventas: 0, facturas: 0 }, otros: { ventas: 0, facturas: 0 } };
+      const isOtro = OTROS_MARCAS.some(m => (p.nmTpMarca || '').toUpperCase().includes(m.toUpperCase()));
+      const cat = isOtro ? 'otros' : 'derivados';
+      map[zona][cat].ventas += p.ventas || 0;
+      map[zona][cat].facturas += p.facturas || 0;
     });
     return map;
-  }, [filteredData.zones]);
-  const totalEjes = Object.values(ventasPorEje).reduce((s, v) => s + v, 0) || 1;
+  }, [productDistrib, hasProductData]);
 
-  // Apex comparison chart data (2025 vs 2026 sales)
-  const comparisonSeries = [
-    {
-      name: 'Ventas 2025',
-      data: alpinaProviders.map(p => p.ventas2025)
-    },
-    {
-      name: 'Ventas 2026',
-      data: alpinaProviders.map(p => p.ventas2026)
-    }
-  ];
+  // Agrupar por vendedor
+  const rows = useMemo(() => {
+    const map = {};
 
-  const comparisonOptions = {
-    chart: {
-      type: 'bar',
-      background: 'transparent',
-      foreColor: '#94a3b8',
-      toolbar: { show: false },
-      animations: { enabled: false },
-      fontFamily: 'Inter, sans-serif'
-    },
-    colors: ['#64748b', '#3b82f6'], // slate-500 (2025), blue-500 (2026)
-    plotOptions: {
-      bar: {
-        horizontal: true,
-        dataLabels: { position: 'top' },
-        barHeight: '75%',
-        borderRadius: 4
+    zones.forEach(z => {
+      const vendor = z.vendedor || 'Sin Asignar';
+      const city = ZONA_CIUDAD_MAP[z.zona] || 'OTRO';
+      if (cityFilter !== 'ALL' && city !== cityFilter) return;
+
+      if (!map[vendor]) {
+        map[vendor] = {
+          vendedor: vendor,
+          city,
+          // Presupuesto total → split estimado
+          pptoTotal: 0,
+          ventasTotal: 0,
+          proyTotal: 0,
+          // Derivados
+          pptoDerivados: 0,
+          ventaDerivados: 0,
+          // Otros
+          pptoOtros: 0,
+          ventaOtros: 0,
+        };
       }
-    },
-    dataLabels: {
-      enabled: true,
-      offsetX: -6,
-      style: { fontSize: '9px', colors: ['#fff'] },
-      formatter: (val) => formatShortCurrency(val)
-    },
-    stroke: { show: true, width: 1, colors: ['#0f172a'] },
-    xaxis: {
-      categories: alpinaProviders.map(p => p.proveedor),
-      labels: { formatter: (val) => formatShortCurrency(val) }
-    },
-    yaxis: {
-      labels: { style: { fontSize: '11px', fontWeight: 'bold' } }
-    },
-    grid: { borderColor: '#1e293b' },
-    tooltip: {
-      theme: 'dark',
-      y: { formatter: (val) => formatCurrency(val) }
-    },
-    legend: { position: 'top' }
+
+      const ppto = z.presupuesto || 0;
+      const ventas = z.ventasNetas || 0;
+      const proy = z.proyectado || 0;
+
+      map[vendor].pptoTotal += ppto;
+      map[vendor].ventasTotal += ventas;
+      map[vendor].proyTotal += proy;
+
+      // Split basado en productDistrib si existe, o en ratio estático
+      if (hasProductData && zonaSplitMap[z.zona]) {
+        const split = zonaSplitMap[z.zona];
+        const totalProd = (split.derivados.ventas + split.otros.ventas) || 1;
+        const derivRatio = split.derivados.ventas / totalProd;
+        const otrosRatio = split.otros.ventas / totalProd;
+        map[vendor].pptoDerivados += ppto * derivRatio;
+        map[vendor].ventaDerivados += ventas * derivRatio;
+        map[vendor].pptoOtros += ppto * otrosRatio;
+        map[vendor].ventaOtros += ventas * otrosRatio;
+      } else {
+        map[vendor].pptoDerivados += ppto * DERIV_RATIO;
+        map[vendor].ventaDerivados += ventas * DERIV_RATIO;
+        map[vendor].pptoOtros += ppto * OTROS_RATIO;
+        map[vendor].ventaOtros += ventas * OTROS_RATIO;
+      }
+    });
+
+    // Calcular proyecciones y % por fila
+    return Object.values(map).map(r => {
+      const dias = (dbData.salesDaily || []).filter(d => d.fecha && d.fecha !== 'general').length || 1;
+      const factor = 22 / Math.min(dias, 22);
+
+      const proyDerivados = r.ventaDerivados * factor;
+      const proyOtros = r.ventaOtros * factor;
+
+      return {
+        ...r,
+        pptoDerivados: Math.round(r.pptoDerivados),
+        ventaDerivados: Math.round(r.ventaDerivados),
+        proyDerivados: Math.round(proyDerivados),
+        pctDerivados: r.pptoDerivados > 0 ? proyDerivados / r.pptoDerivados : 0,
+        pptoOtros: Math.round(r.pptoOtros),
+        ventaOtros: Math.round(r.ventaOtros),
+        proyOtros: Math.round(proyOtros),
+        pctOtros: r.pptoOtros > 0 ? proyOtros / r.pptoOtros : 0,
+      };
+    });
+  }, [zones, cityFilter, zonaSplitMap, hasProductData, dbData.salesDaily]);
+
+  // Ordenar
+  const sorted = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const mul = sortDir === 'asc' ? 1 : -1;
+      if (sortCol === 'vendedor') return mul * a.vendedor.localeCompare(b.vendedor);
+      if (sortCol === 'pptoD') return mul * (a.pptoDerivados - b.pptoDerivados);
+      if (sortCol === 'ventaD') return mul * (a.ventaDerivados - b.ventaDerivados);
+      if (sortCol === 'pctD') return mul * (a.pctDerivados - b.pctDerivados);
+      if (sortCol === 'pptoO') return mul * (a.pptoOtros - b.pptoOtros);
+      if (sortCol === 'ventaO') return mul * (a.ventaOtros - b.ventaOtros);
+      if (sortCol === 'pctO') return mul * (a.pctOtros - b.pctOtros);
+      return 0;
+    });
+  }, [rows, sortCol, sortDir]);
+
+  // Totales
+  const totals = useMemo(() => sorted.reduce((acc, r) => ({
+    pptoDerivados: acc.pptoDerivados + r.pptoDerivados,
+    ventaDerivados: acc.ventaDerivados + r.ventaDerivados,
+    proyDerivados: acc.proyDerivados + r.proyDerivados,
+    pptoOtros: acc.pptoOtros + r.pptoOtros,
+    ventaOtros: acc.ventaOtros + r.ventaOtros,
+    proyOtros: acc.proyOtros + r.proyOtros,
+  }), { pptoDerivados:0, ventaDerivados:0, proyDerivados:0, pptoOtros:0, ventaOtros:0, proyOtros:0 }), [sorted]);
+
+  const totalPctD = totals.pptoDerivados > 0 ? totals.proyDerivados / totals.pptoDerivados : 0;
+  const totalPctO = totals.pptoOtros > 0 ? totals.proyOtros / totals.pptoOtros : 0;
+
+  const toggleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
   };
+
+  const SortIcon = ({ col }) => sortCol === col
+    ? (sortDir === 'asc' ? <ChevronUp className="inline h-3 w-3 ml-0.5 text-sky-400" /> : <ChevronDown className="inline h-3 w-3 ml-0.5 text-sky-400" />)
+    : <ChevronDown className="inline h-3 w-3 ml-0.5 text-slate-700" />;
+
+  const TH = ({ col, children, right }) => (
+    <th
+      onClick={() => toggleSort(col)}
+      className={`pb-3 px-2 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 select-none whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}
+    >
+      {children}<SortIcon col={col} />
+    </th>
+  );
+
+  // KPIs resumen
+  const totalDerivados = totals.ventaDerivados;
+  const totalOtros = totals.ventaOtros;
+  const totalVentas = totalDerivados + totalOtros;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="space-y-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-3 rounded-full bg-slate-950/70 border border-slate-800 px-4 py-2 shadow-lg shadow-slate-950/20">
-              <img
-                src={alpinaLogo}
-                alt="Alpina"
-                className="h-9 w-auto"
-                loading="lazy"
-              />
-              <span className="text-slate-300 text-sm uppercase tracking-[0.25em]">Brand Intelligence</span>
-            </div>
+        <div className="flex flex-col gap-3">
+          <div className="inline-flex items-center gap-3 rounded-full bg-slate-950/70 border border-slate-800 px-4 py-2 shadow-lg w-fit">
+            <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
+            <span className="text-slate-300 text-xs md:text-sm uppercase tracking-[0.25em]">Análisis Proveedores</span>
           </div>
-          <div className="max-w-2xl">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Análisis Alpina</h1>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Derivados vs Otros</h1>
             <p className="text-slate-300 text-xs md:text-sm mt-1">
-              Reporte gerencial enfocado exclusivamente en marcas Alpina: ventas reales, participación de portafolio, crecimiento y margen ponderado.
+              Presupuesto, venta real y proyección al cierre del mes por vendedor — Derivados y Otros separados.
             </p>
           </div>
         </div>
-
-        <GlassCard hoverable={false} className="bg-slate-950/70 border border-sky-500/20 p-6 shadow-[0_25px_80px_-45px_rgba(56,189,248,0.6)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Resumen ejecutivo</p>
-              <h2 className="text-xl font-bold text-white mt-1">Top 3 concentra {formatPercent(top3Contribution)} de la facturación</h2>
-              <p className="text-slate-400 text-sm mt-2 max-w-2xl">
-                {topProvider ? `${topProvider.proveedor} lidera con ${formatPercent(topProviderShare)} de participación en ventas 2026 y un margen promedio ponderado del ${formatPercent(averageMargin)}.` : 'Sin datos de proveedores para el periodo seleccionado.'}
-              </p>
-            </div>
-            <div className="rounded-3xl bg-slate-950/60 border border-slate-800 p-4">
-              <p className="text-slate-500 text-[10px] uppercase tracking-wider">Crecimiento de portafolio</p>
-              <p className="text-2xl font-bold text-white mt-1">{formatPercent(portfolioGrowth)}</p>
-              <p className="text-slate-400 text-[10px] mt-1">Comparado con 2025</p>
-            </div>
-          </div>
-        </GlassCard>
       </div>
 
-      {/* ── Desglose por eje comercial ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        {Object.entries(ventasPorEje).map(([city, v]) => {
-          const m = CITY_META[city] || CITY_META.OTRO;
-          const share = v / totalEjes;
-          return (
-            <GlassCard key={city} hoverable={false} className={`border ${m.border} relative overflow-hidden`}>
-              <div className={`absolute inset-0 ${m.bg} opacity-20 pointer-events-none rounded-2xl`} />
-              <div className="relative flex items-center justify-between">
-                <div>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest ${m.text}`}>{m.label}</p>
-                  <p className="text-2xl font-extrabold text-white mt-1">{formatShortCurrency(v)}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-24 h-1 bg-slate-800 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${m.text.replace('text-', 'bg-')}`} style={{ width: `${Math.min(share * 100, 100)}%` }} />
-                    </div>
-                    <span className={`text-[10px] font-bold ${m.text}`}>{formatPercent(share)} del total</span>
-                  </div>
-                </div>
-                <MapPin className={`h-9 w-9 opacity-[0.08] ${m.text}`} />
-              </div>
-            </GlassCard>
-          );
-        })}
-      </div>
-
-      {/* Main Stats */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
-        <GlassCard hoverable={false} className="flex flex-col justify-between bg-sky-950/90 border border-sky-500/20 p-5 shadow-xl shadow-sky-500/5">
-          <div>
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Ventas 2026</p>
-            <h3 className="text-3xl font-bold text-white mt-2">{formatCurrency(totalSales2026)}</h3>
-            <p className="text-[10px] text-slate-400 mt-2">Cifras consolidadas del portafolio de proveedores</p>
-          </div>
-          <div className="mt-4 inline-flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 p-3 w-12 h-12">
-            <CircleDollarSign className="h-6 w-6" />
-          </div>
+      {/* KPIs top */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <GlassCard hoverable={false} className="bg-slate-950/85 border border-sky-500/20 p-3 md:p-4">
+          <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider">Total Derivados</p>
+          <p className="text-lg md:text-2xl font-bold text-sky-400 mt-1">{formatShortCurrency(totalDerivados)}</p>
+          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{totalVentas > 0 ? Math.round(totalDerivados / totalVentas * 100) : 0}% del total</p>
         </GlassCard>
-
-        <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-950/85 border border-slate-700/50 p-5 shadow-lg shadow-slate-950/20">
-          <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Proveedor líder</p>
-            <h3 className="text-xl font-bold text-white mt-2">{topProvider ? topProvider.proveedor : 'N/A'}</h3>
-            <p className="text-[10px] text-slate-400 mt-2">Participación: {formatPercent(topProviderShare)}</p>
-          </div>
-          <div className="mt-4 inline-flex items-center justify-center rounded-xl bg-slate-800/70 text-slate-200 p-3 w-12 h-12">
-            <Truck className="h-6 w-6" />
-          </div>
+        <GlassCard hoverable={false} className="bg-slate-950/85 border border-violet-500/20 p-3 md:p-4">
+          <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider">Total Otros</p>
+          <p className="text-lg md:text-2xl font-bold text-violet-400 mt-1">{formatShortCurrency(totalOtros)}</p>
+          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{totalVentas > 0 ? Math.round(totalOtros / totalVentas * 100) : 0}% del total</p>
         </GlassCard>
-
-        <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-950/85 border border-slate-700/50 p-5 shadow-lg shadow-slate-950/20">
-          <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Margen ponderado</p>
-            <h3 className="text-2xl font-bold text-emerald-400 mt-2">{formatPercent(averageMargin)}</h3>
-            <p className="text-[10px] text-slate-400 mt-2">Margen promedio dentro del portafolio</p>
-          </div>
-          <div className="mt-4 inline-flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 p-3 w-12 h-12">
-            <Percent className="h-6 w-6" />
-          </div>
-        </GlassCard>
-
-        <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-950/85 border border-slate-700/50 p-5 shadow-lg shadow-slate-950/20">
-          <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Top 3 proveedores</p>
-            <h3 className="text-2xl font-bold text-indigo-400 mt-2">{formatPercent(top3Contribution)}</h3>
-            <p className="text-[10px] text-slate-400 mt-2">Contribución conjunta al total 2026</p>
-          </div>
-          <div className="mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 p-3 w-12 h-12">
-            <BarChart3 className="h-6 w-6" />
-          </div>
-        </GlassCard>
-      </div>
-
-      {/* Treemap & Share Donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
-          <h3 className="text-base font-bold text-white mb-2">Mapa de Ventas Alpina</h3>
-          <p className="text-xs text-slate-400 mb-4">
-            Distribución jerárquica de participación entre las marcas Alpina.
+        <GlassCard hoverable={false} className="bg-slate-950/85 border border-emerald-500/20 p-3 md:p-4">
+          <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider">Proy % Derivados</p>
+          <p className={`text-lg md:text-2xl font-bold mt-1 ${totalPctD >= 1 ? 'text-emerald-400' : totalPctD >= 0.85 ? 'text-amber-400' : 'text-rose-400'}`}>
+            {Math.round(totalPctD * 100)}%
           </p>
-          <BITreemapChart data={alpinaProviders} />
+          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">vs presupuesto</p>
         </GlassCard>
-
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
-          <h3 className="text-base font-bold text-white mb-4">Cuota de Mercado Alpina</h3>
-          <BIDonutChart data={alpinaProviders} />
+        <GlassCard hoverable={false} className="bg-slate-950/85 border border-amber-500/20 p-3 md:p-4">
+          <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider">Proy % Otros</p>
+          <p className={`text-lg md:text-2xl font-bold mt-1 ${totalPctO >= 1 ? 'text-emerald-400' : totalPctO >= 0.85 ? 'text-amber-400' : 'text-rose-400'}`}>
+            {Math.round(totalPctO * 100)}%
+          </p>
+          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">vs presupuesto</p>
         </GlassCard>
       </div>
 
-      {/* Comparison Chart */}
-      <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
-        <h3 className="text-base font-bold text-white mb-2">Comparativo de Ventas 2025 vs 2026</h3>
-        <p className="text-xs text-slate-400 mb-4">
-          Evolución de ventas Alpina por proveedor en el periodo de análisis.
-        </p>
-        <Chart options={comparisonOptions} series={comparisonSeries} type="bar" height={340} />
-      </GlassCard>
+      {/* Filtro ciudad */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-xs text-slate-400">Filtrar por sede:</span>
+        {['ALL', 'PEREIRA', 'MANIZALES', 'ARMENIA'].map(c => (
+          <button
+            key={c}
+            onClick={() => setCityFilter(c)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+              cityFilter === c
+                ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-600'
+            }`}
+          >
+            {c === 'ALL' ? 'Todas' : c === 'PEREIRA' ? 'Eje Pereira' : c === 'MANIZALES' ? 'Eje Caldas' : 'Eje Quindío'}
+          </button>
+        ))}
+        {!hasProductData && (
+          <span className="text-[10px] text-amber-400 border border-amber-500/20 bg-amber-500/10 px-2 py-1 rounded-lg">
+            ⚠ Split estimado (88% Deriv / 12% Otros) — sube datos para precisión exacta
+          </span>
+        )}
+      </div>
 
-      {/* Detail Providers Table */}
-      <GlassCard hoverable={false} className="bg-slate-950/95 border border-slate-800/80 p-5 shadow-lg shadow-slate-950/20">
-        <h3 className="text-base font-bold text-white mb-4">Listado y Rendimiento de Proveedores Alpina</h3>
-        <div className="overflow-x-auto -mx-5 px-5">
-          <table className="w-full min-w-[520px] text-left text-xs border-collapse">
+      {/* Tabla principal */}
+      <GlassCard hoverable={false} className="bg-slate-950/95 border border-slate-800/80 p-4 md:p-5 shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+              <Truck className="h-4 w-4 text-sky-400" />
+              Presupuesto · Venta Real · Proyección al Cierre
+            </h3>
+            <p className="text-[10px] md:text-xs text-slate-400 mt-1">
+              {sorted.length} vendedores · Haz clic en columna para ordenar
+            </p>
+          </div>
+          <div className="flex gap-4 text-[10px] text-slate-500">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>≥100%</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block"/>85-99%</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"/>&lt;85%</span>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto -mx-4 md:-mx-5 px-4 md:px-5">
+          <table className="w-full min-w-[900px] text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-500 font-semibold">
-                <th className="pb-3 pl-2">Proveedor</th>
-                <th className="pb-3 text-right hidden sm:table-cell">Ventas 2025</th>
-                <th className="pb-3 text-right">Ventas 2026</th>
-                <th className="pb-3 text-right hidden md:table-cell">Proyectado</th>
-                <th className="pb-3 text-right hidden md:table-cell">Margen</th>
-                <th className="pb-3 text-right">Crec. YoY</th>
-                <th className="pb-3 pr-2 text-right">Cuota %</th>
+              <tr className="border-b-2 border-slate-700">
+                {/* Header grupos */}
+                <th className="pb-1 px-2 text-left" rowSpan={2}></th>
+                <th className="pb-1 px-2 text-center text-[9px] font-bold uppercase tracking-widest text-sky-400 border-b border-sky-500/30" colSpan={4}>
+                  DERIVADOS
+                </th>
+                <th className="pb-1 px-2 text-center text-[9px] font-bold uppercase tracking-widest text-violet-400 border-b border-violet-500/30" colSpan={4}>
+                  OTROS (Leche, Quesito, Don Maíz, Anchetas)
+                </th>
+              </tr>
+              <tr className="border-b border-slate-800">
+                <TH col="pptoD" right>Ppto Deriv</TH>
+                <TH col="ventaD" right>Venta Deriv</TH>
+                <TH col="pptoD" right>Proy $</TH>
+                <TH col="pctD" right>Proy %</TH>
+                <TH col="pptoO" right>Ppto Otros</TH>
+                <TH col="ventaO" right>Venta Otros</TH>
+                <TH col="pptoO" right>Proy $</TH>
+                <TH col="pctO" right>Proy %</TH>
+              </tr>
+              {/* Fila de totales arriba */}
+              <tr className="bg-slate-900/80 border-b-2 border-slate-700 text-[10px] font-bold">
+                <td className="py-2 px-2 text-white">Total general</td>
+                <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoDerivados)}</td>
+                <td className="py-2 px-2 text-right text-sky-300">{formatShortCurrency(totals.ventaDerivados)}</td>
+                <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyDerivados)}</td>
+                <td className="py-2 px-2 text-right"><PctBadge value={totalPctD} /></td>
+                <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoOtros)}</td>
+                <td className="py-2 px-2 text-right text-violet-300">{formatShortCurrency(totals.ventaOtros)}</td>
+                <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyOtros)}</td>
+                <td className="py-2 px-2 text-right"><PctBadge value={totalPctO} /></td>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/60">
-              {alpinaProviders.map((item, idx) => {
-                const growthRate = item.ventas2025 > 0 ? (item.ventas2026 - item.ventas2025) / item.ventas2025 : 0;
-                const marketShare = totalSales2026 > 0 ? item.ventas2026 / totalSales2026 : 0;
-                
-                return (
-                  <tr key={idx} className="hover:bg-slate-900/10 transition-colors">
-                    <td className="py-2.5 pl-2 font-bold text-slate-200 max-w-[120px] truncate">{item.proveedor}</td>
-                    <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatShortCurrency(item.ventas2025)}</td>
-                    <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(item.ventas2026)}</td>
-                    <td className="py-2.5 text-right text-slate-400 hidden md:table-cell">{formatShortCurrency(item.proyectado2026)}</td>
-                    <td className="py-2.5 text-right text-slate-300 hidden md:table-cell">{(item.margen2026 / 100).toLocaleString('es-CO', {style:'percent', minimumFractionDigits:1})}</td>
-                    <td className="py-2.5 text-right">
-                      <span className={`inline-flex items-center gap-0.5 font-bold ${growthRate > 0 ? 'text-emerald-400' : growthRate < 0 ? 'text-rose-400' : 'text-slate-400'}`}>
-                        {growthRate > 0 ? <ArrowUpRight className="h-3 w-3" /> : growthRate < 0 ? <ArrowDownRight className="h-3 w-3" /> : null}
-                        {growthRate !== 0 ? formatPercent(growthRate) : 'N/A'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-2 text-right font-semibold text-blue-400">{formatPercent(marketShare)}</td>
-                  </tr>
-                );
-              })}
+              {sorted.map((row, idx) => (
+                <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
+                  {/* Vendedor */}
+                  <td className="py-2.5 px-2 text-slate-200 font-semibold text-[11px] md:text-xs whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        ZONA_CIUDAD_MAP && (() => {
+                          const city = row.city;
+                          return city === 'PEREIRA' ? 'bg-blue-400' : city === 'MANIZALES' ? 'bg-indigo-400' : city === 'ARMENIA' ? 'bg-emerald-400' : 'bg-slate-400';
+                        })()
+                      }`} />
+                      {row.vendedor}
+                    </div>
+                  </td>
+
+                  {/* Derivados */}
+                  <td className="py-2.5 px-2 text-right text-slate-400 tabular-nums">{formatShortCurrency(row.pptoDerivados)}</td>
+                  <td className="py-2.5 px-2 text-right text-sky-300 font-semibold tabular-nums">{formatShortCurrency(row.ventaDerivados)}</td>
+                  <td className="py-2.5 px-2 text-right text-slate-200 tabular-nums">{formatShortCurrency(row.proyDerivados)}</td>
+                  <td className="py-2.5 px-2 text-right"><PctBadge value={row.pctDerivados} /></td>
+
+                  {/* Otros */}
+                  <td className="py-2.5 px-2 text-right text-slate-400 tabular-nums">{formatShortCurrency(row.pptoOtros)}</td>
+                  <td className="py-2.5 px-2 text-right text-violet-300 font-semibold tabular-nums">{formatShortCurrency(row.ventaOtros)}</td>
+                  <td className="py-2.5 px-2 text-right text-slate-200 tabular-nums">{formatShortCurrency(row.proyOtros)}</td>
+                  <td className="py-2.5 px-2 text-right"><PctBadge value={row.pctOtros} /></td>
+                </tr>
+              ))}
             </tbody>
+            {/* Fila total al final también */}
+            <tfoot>
+              <tr className="bg-slate-900/80 border-t-2 border-slate-700 text-[10px] font-bold">
+                <td className="py-2.5 px-2 text-white">Total general</td>
+                <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoDerivados)}</td>
+                <td className="py-2.5 px-2 text-right text-sky-300">{formatShortCurrency(totals.ventaDerivados)}</td>
+                <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyDerivados)}</td>
+                <td className="py-2.5 px-2 text-right"><PctBadge value={totalPctD} /></td>
+                <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoOtros)}</td>
+                <td className="py-2.5 px-2 text-right text-violet-300">{formatShortCurrency(totals.ventaOtros)}</td>
+                <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyOtros)}</td>
+                <td className="py-2.5 px-2 text-right"><PctBadge value={totalPctO} /></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
+      </GlassCard>
+
+      {/* Nota definitoria */}
+      <GlassCard hoverable={false} className="bg-slate-950/70 border border-slate-800 p-4">
+        <p className="text-[10px] md:text-xs text-slate-400 leading-relaxed">
+          <span className="text-slate-200 font-semibold">Definición de categorías:</span>{' '}
+          <span className="text-violet-300 font-semibold">Otros</span> incluye:{' '}
+          {OTROS_MARCAS.join(', ')}.{' '}
+          <span className="text-sky-300 font-semibold">Derivados</span> incluye todos los demás productos del portafolio Alpina.{' '}
+          La proyección al cierre se calcula linealmente con base en los días hábiles transcurridos del mes.
+          {!hasProductData && (
+            <span className="text-amber-400 ml-2">
+              ⚠ Se está usando una distribución estimada (88% Derivados / 12% Otros) por no haber datos de productos cargados.
+            </span>
+          )}
+        </p>
       </GlassCard>
     </div>
   );
