@@ -465,10 +465,12 @@ const FocosNumerica = () => {
     // Top Zones
     const zoneMap = {};
     rawProductDetails.forEach(p => {
-      zoneMap[p.zona] = (zoneMap[p.zona] || 0) + (p.ventas || 0);
+      if (p.zona) { // Asegurarse de que zona existe
+        zoneMap[p.zona] = (zoneMap[p.zona] || 0) + (p.ventas || 0);
+      }
     });
     const zoneList = Object.entries(zoneMap)
-      .map(([zona, sales]) => ({ zona, sales }))
+      .map(([zona, sales]) => ({ zona: zona || 'Sin zona', sales }))
       .sort((a, b) => b.sales - a.sales)
       .slice(0, 5);
 
@@ -477,7 +479,7 @@ const FocosNumerica = () => {
       plotOptions: { bar: { horizontal: true, borderRadius: 4, dataLabels: { position: 'top' } } },
       colors: ['#38bdf8'],
       dataLabels: { enabled: true, formatter: (val) => formatShortCurrency(val), style: { fontSize: '9px', colors: ['#94a3b8'] }, offsetX: 8 },
-      xaxis: { categories: zoneList.map(z => z.zona), labels: { show: false } },
+      xaxis: { categories: zoneList.map(z => z.zona || 'Sin zona'), labels: { show: false } },
       yaxis: { labels: { style: { fontSize: '10px', colors: '#94a3b8' } } },
       tooltip: { theme: 'dark', y: { formatter: (val) => formatCurrency(val) } },
       grid: { show: false }
