@@ -4,7 +4,7 @@ import useStore from '../../store/useStore';
 import { ZONAS_POR_CIUDAD, getFilteredData, calculateKPIs } from '../../utils/calculations';
 import { formatCurrency, formatPercent, formatNumber } from '../../utils/formatters';
 import {
-  Bell, Sun, Moon, Search, Filter, MapPin,
+  Sun, Search, Filter, MapPin,
   Menu, ChevronDown, X, FileText
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -21,19 +21,15 @@ const Topbar = () => {
     selectedZone,   setZone,
     selectedSeller, setSeller,
     toggleSidebar,
-    darkMode,       toggleDarkMode,
-    notifications,  markAsRead, unreadCount,
+    darkMode,
     dbData
   } = useStore();
 
-  const [notifOpen,   setNotifOpen]   = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const navigate = useNavigate();
 
   const handleNotifClick = (n) => {
-    markAsRead(n.id);
-    setNotifOpen(false);
     if (n.route) navigate(n.route);
   };
 
@@ -360,7 +356,7 @@ const Topbar = () => {
     <>
       {/* ── TOPBAR FIJO ───────────────────────────────────────────────── */}
       <header className={`
-        fixed top-0 right-0 z-20 h-16
+        fixed top-0 right-0 z-20 h-20
         border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-xl
         flex items-center justify-between px-4 md:px-5
         transition-all duration-300 ease-in-out
@@ -452,67 +448,12 @@ const Topbar = () => {
               className="bg-slate-900/60 border border-slate-800/80 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-300 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 w-44 transition-all" />
           </div>
 
-          {/* Modo oscuro */}
-          <button onClick={toggleDarkMode}
-            className="p-2 rounded-xl border border-slate-800/60 bg-slate-900/30 text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
-            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-
-          {/* Notificaciones */}
-          <div className="relative">
-            <button onClick={() => { setNotifOpen(v => !v); setFiltersOpen(false); }}
-              className="relative p-2 rounded-xl border border-slate-800/60 bg-slate-900/30 text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
-              <Bell className="h-4 w-4" />
-              {unreadCount() > 0 && (
-                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-slate-950" />
-              )}
-            </button>
-
-            {notifOpen && (
-              <div className="absolute right-0 mt-3 w-72 sm:w-80 rounded-2xl border border-slate-800 bg-slate-950/95 backdrop-blur-xl shadow-2xl p-2 z-50">
-                <div className="px-3 py-2 border-b border-slate-800 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-200">Alertas Operativas</span>
-                  {unreadCount() > 0 && (
-                    <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full font-medium">{unreadCount()} nuevas</span>
-                  )}
-                </div>
-                <div className="max-h-64 overflow-y-auto py-1 divide-y divide-slate-900">
-                  {notifications.length === 0 && (
-                    <div className="py-6 text-center text-xs text-slate-500">
-                      Sin alertas activas en este momento.
-                    </div>
-                  )}
-                  {notifications.map(n => (
-                    <div key={n.id} onClick={() => handleNotifClick(n)}
-                      className={`p-2.5 hover:bg-slate-900/60 transition-colors rounded-lg flex items-start gap-2.5 cursor-pointer ${!n.read ? 'bg-slate-900/20' : ''}`}>
-                      <div className="mt-1 shrink-0">
-                        {n.type === 'warning' && <span className="h-2 w-2 rounded-full bg-amber-500 block" />}
-                        {n.type === 'success' && <span className="h-2 w-2 rounded-full bg-emerald-500 block" />}
-                        {n.type === 'info'    && <span className="h-2 w-2 rounded-full bg-blue-500 block" />}
-                        {n.type === 'danger'  && <span className="h-2 w-2 rounded-full bg-rose-500 block" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={`text-xs font-medium truncate ${!n.read ? 'text-slate-100' : 'text-slate-400'}`}>{n.title}</p>
-                          <span className="text-[10px] text-slate-500 shrink-0">{n.time}</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">{n.message}</p>
-                        {n.route && (
-                          <p className="text-[9px] text-blue-500/70 mt-1 font-medium">Toca para ver →</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </header>
 
       {/* ── PANEL DE FILTROS MÓVIL (desplegable bajo el topbar) ──────── */}
       {filtersOpen && (
-        <div className="fixed top-16 left-0 right-0 z-20 md:hidden border-b border-slate-800 bg-slate-950/95 backdrop-blur-xl shadow-xl p-4 space-y-3">
+        <div className="fixed top-20 left-0 right-0 z-20 md:hidden border-b border-slate-800 bg-slate-950/95 backdrop-blur-xl shadow-xl p-4 space-y-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Filtros</span>
             <button onClick={() => setFiltersOpen(false)} className="text-slate-500 hover:text-white transition-colors">

@@ -1,20 +1,50 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import useStore from '../../store/useStore';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
 const Layout = () => {
   const { sidebarOpen, toggleSidebar, fetchDataFromSupabase, generateNotifications } = useStore();
 
+  // PWA: detectar nueva versión y ofrecer recarga
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(r) {
+      // Chequear updates cada 60 segundos
+      if (r) setInterval(() => r.update(), 60 * 1000);
+    },
+  });
+
   useEffect(() => {
     fetchDataFromSupabase();
-    // Generar notificaciones desde los datos persistidos al arrancar
     generateNotifications();
   }, [fetchDataFromSupabase, generateNotifications]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans overflow-x-hidden">
+
+      {/* Banner de nueva versión disponible */}
+      {needRefresh && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-600 shadow-xl shadow-blue-500/30 border border-blue-400/30 text-white text-sm font-medium animate-in slide-in-from-bottom-4 duration-300">
+          <span>🚀 Nueva versión disponible</span>
+          <button
+            onClick={() => updateServiceWorker(true)}
+            className="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
+          >
+            Actualizar ahora
+          </button>
+          <button
+            onClick={() => setNeedRefresh(false)}
+            className="text-blue-200 hover:text-white text-xs"
+          >
+            Después
+          </button>
+        </div>
+      )}
       {/* Fondo decorativo */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] animate-pulse" />
@@ -45,7 +75,7 @@ const Layout = () => {
           - lg con sidebar abierto: pl-64 (16rem = w-64)
         */}
         <main className={`
-          flex-1 pt-20 px-4 pb-6
+          flex-1 pt-24 px-4 pb-6
           transition-all duration-300 ease-in-out
           lg:px-6
           ${sidebarOpen ? 'lg:pl-[17rem]' : 'lg:pl-[6rem]'}

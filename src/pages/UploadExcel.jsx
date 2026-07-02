@@ -939,7 +939,7 @@ const UploadExcel = () => {
           const uploadPeriod = latestPeriod;
           console.log(`📅 Cargando período: ${uploadPeriod} (los períodos anteriores quedan intactos)`);
 
-          // 1. Providers — borrar solo el período actual e insertar
+          // 1. Providers — delete período actual + insert
           const providersDb = processedData.providers.map(p => ({
             proveedor: p.proveedor,
             ventas2026: p.ventas2026,
@@ -952,7 +952,7 @@ const UploadExcel = () => {
           const { error: errProv } = await supabase.from('providers').insert(providersDb);
           if (errProv) throw new Error('Error al cargar proveedores: ' + errProv.message);
 
-          // 2. Zones — borrar solo el período actual e insertar
+          // 2. Zones — delete período actual + insert
           const zonesDb = processedData.zones.map(z => ({
             zona: z.zona,
             presupuesto: z.presupuesto,
@@ -964,7 +964,7 @@ const UploadExcel = () => {
           const { error: errZones } = await supabase.from('zones').insert(zonesDb);
           if (errZones) throw new Error('Error al cargar zonas: ' + errZones.message);
 
-          // 3. Returns Sellers — borrar solo el período actual e insertar
+          // 3. Returns Sellers — delete período actual + insert
           const returnsSellersDb = processedData.returnsSellers.map(s => ({
             nombre: s.nombre,
             ejecutivo: s.ejecutivo,

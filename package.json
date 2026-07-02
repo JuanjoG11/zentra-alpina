@@ -16,7 +16,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "concurrently": "^8.2.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vite-plugin-pwa": "^0.21.1"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",

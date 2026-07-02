@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import alpinaLogo from '../../assets/alpina-logo.svg';
 import {
   BarChart3, TrendingUp, RefreshCw, Truck, Users,
   Brain, Upload, ChevronLeft, ChevronRight, Sparkles, X
@@ -55,12 +54,12 @@ const Sidebar = () => {
       ${sidebarOpen ? 'w-64' : 'w-0 lg:w-20'}
     `}>
       {/* Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80 shrink-0 min-w-[5rem]">
-        <div className="flex items-center gap-2 overflow-hidden">
-          <img src={alpinaLogo} alt="Alpina" className="h-8 w-auto shrink-0" loading="lazy" />
+      <div className="h-20 flex items-center justify-between px-3 border-b border-slate-800/80 shrink-0 min-w-[5rem]">
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <img src="/icon-192.png" alt="Zentra Alpina" className="h-14 w-14 rounded-2xl shrink-0 object-cover" loading="lazy" />
           {sidebarOpen && (
             <span className="font-bold text-lg bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
-              Alpina BI
+              Zentra Alpina
             </span>
           )}
         </div>
