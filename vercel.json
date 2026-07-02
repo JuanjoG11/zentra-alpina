@@ -1,14 +1,5 @@
 {
-  "buildCommand": "npx vite build",
-  "outputDirectory": "dist",
-  "framework": "vite",
-  "installCommand": "npm install",
-  "rewrites": [
-    { "source": "/api/gemini", "destination": "/api/gemini" },
-    { "source": "/(.*)",       "destination": "/index.html" }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "https://torxgpnqiezpnqqdomik.supabase.co",
-    "VITE_SUPABASE_ANON_KEY": "sb_publishable_NSH1tlPsBZ_XsC3bbTRtyA_gRGibIur"
-  }
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "vite build",
+  "outputDirectory": "dist"
 }

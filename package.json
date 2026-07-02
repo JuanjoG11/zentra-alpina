@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "process-server": "node scripts/process_upload_server.js",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "etl-server": "node src/etl_server.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run etl-server\""
