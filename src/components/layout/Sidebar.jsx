@@ -1,14 +1,16 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useStore from '../../store/useStore';
+import { useAuth } from '../../context/AuthContext';
 import {
   BarChart3, TrendingUp, RefreshCw, Truck, Users,
-  Brain, Upload, ChevronLeft, ChevronRight, Sparkles, X
+  Brain, Upload, ChevronLeft, ChevronRight, Sparkles, X, LogOut
 } from 'lucide-react';
 
 const menuSections = [
   {
     label: 'Analítica',
+    role: 'gerente',
     items: [
       { name: 'Dashboard Ejecutivo',    path: '/',              icon: BarChart3   },
       { name: 'Análisis de Ventas',     path: '/ventas',        icon: TrendingUp  },
@@ -18,6 +20,7 @@ const menuSections = [
   },
   {
     label: 'Comercial',
+    role: 'gerente',
     items: [
       { name: 'Proveedores', path: '/proveedores', icon: Truck  },
       { name: 'Vendedores',  path: '/vendedores',  icon: Users  },
@@ -25,8 +28,15 @@ const menuSections = [
   },
   {
     label: 'Inteligencia',
+    role: 'gerente',
     items: [
-      { name: 'IA Empresarial',  path: '/ia',     icon: Brain  },
+      { name: 'IA Empresarial', path: '/ia', icon: Brain },
+    ]
+  },
+  {
+    label: 'Operaciones',
+    role: 'operador',
+    items: [
       { name: 'Cargar Archivos', path: '/upload', icon: Upload },
     ]
   }
@@ -36,14 +46,17 @@ const Sidebar = () => {
   const navigate   = useNavigate();
   const location   = useLocation();
   const { sidebarOpen, toggleSidebar } = useStore();
+  const { user, logout } = useAuth();
 
   const handleNav = (path) => {
     navigate(path);
-    // Cierra el sidebar en móvil al navegar
     if (window.innerWidth < 1024) toggleSidebar();
   };
 
-  const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 1024;
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <aside className={`
@@ -77,7 +90,7 @@ const Sidebar = () => {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5 min-w-[5rem]">
-        {menuSections.map(section => (
+        {menuSections.filter(section => section.role === user?.role).map(section => (
           <div key={section.label}>
             {sidebarOpen && (
               <p className="text-[9px] font-bold uppercase tracking-widest text-slate-600 px-3 mb-1.5 whitespace-nowrap">
@@ -115,17 +128,26 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-slate-800/80 flex items-center gap-3 shrink-0 min-w-[5rem]">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-lg">
-          JJ
-        </div>
-        {sidebarOpen && (
-          <div className="overflow-hidden">
-            <h4 className="text-xs font-semibold text-slate-200 truncate">Juan José</h4>
-            <p className="text-[10px] text-slate-500 truncate">Gerente Comercial</p>
+      {/* Footer — usuario + logout */}
+      <div className="p-4 border-t border-slate-800/80 shrink-0 min-w-[5rem]">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-lg uppercase">
+            {user?.username?.[0] || 'U'}
           </div>
-        )}
+          {sidebarOpen && (
+            <div className="flex-1 overflow-hidden">
+              <h4 className="text-xs font-semibold text-slate-200 truncate capitalize">{user?.username}</h4>
+              <p className="text-[10px] text-slate-500 truncate capitalize">{user?.role}</p>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            title="Cerrar sesión"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );

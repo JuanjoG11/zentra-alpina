@@ -1,7 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
+import Login from './pages/Login';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import SalesAnalysis from './pages/SalesAnalysis';
 import ReturnsAnalysis from './pages/ReturnsAnalysis';
@@ -17,21 +20,41 @@ import './index.css';
 ReactDOM.createRoot(document.getElementById('app')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<ExecutiveDashboard />} />
-          <Route path="ventas" element={<SalesAnalysis />} />
-          <Route path="devoluciones" element={<ReturnsAnalysis />} />
-          <Route path="focos" element={<FocosNumerica />} />
-          <Route path="proveedores" element={<ProvidersAnalysis />} />
-          <Route path="vendedores" element={<SellersAnalysis />} />
-          <Route path="ia" element={<BusinessIA />} />
-          <Route path="upload" element={<UploadExcel />} />
-          <Route path="ejecutivo" element={<ExecutiveProfile />} />
-        </Route>
-        {/* Ruta sin Layout para modo TV fullscreen */}
-        <Route path="tv" element={<TVDashboard />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          {/* Pública */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Rutas con layout — cualquier usuario logueado */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            {/* Solo gerente */}
+            <Route index element={<ProtectedRoute requiredRole="gerente"><ExecutiveDashboard /></ProtectedRoute>} />
+            <Route path="ventas"      element={<ProtectedRoute requiredRole="gerente"><SalesAnalysis /></ProtectedRoute>} />
+            <Route path="devoluciones" element={<ProtectedRoute requiredRole="gerente"><ReturnsAnalysis /></ProtectedRoute>} />
+            <Route path="focos"       element={<ProtectedRoute requiredRole="gerente"><FocosNumerica /></ProtectedRoute>} />
+            <Route path="proveedores" element={<ProtectedRoute requiredRole="gerente"><ProvidersAnalysis /></ProtectedRoute>} />
+            <Route path="vendedores"  element={<ProtectedRoute requiredRole="gerente"><SellersAnalysis /></ProtectedRoute>} />
+            <Route path="ia"          element={<ProtectedRoute requiredRole="gerente"><BusinessIA /></ProtectedRoute>} />
+            <Route path="ejecutivo"   element={<ProtectedRoute requiredRole="gerente"><ExecutiveProfile /></ProtectedRoute>} />
+
+            {/* Solo operador */}
+            <Route path="upload" element={<ProtectedRoute requiredRole="operador"><UploadExcel /></ProtectedRoute>} />
+          </Route>
+
+          {/* TV fullscreen — sin layout */}
+          <Route path="tv" element={<TVDashboard />} />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

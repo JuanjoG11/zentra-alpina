@@ -588,24 +588,30 @@ const FocosNumerica = () => {
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
-          <div className="inline-flex items-center gap-3 rounded-full bg-slate-950/70 border border-slate-800 px-4 py-2 shadow-lg shadow-slate-950/20 w-fit">
-            <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
-            <span className="text-slate-300 text-sm uppercase tracking-[0.25em]">Focos Numérica</span>
-          </div>
-          <div className="max-w-full">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Inteligencia numérica Alpina</h1>
-            <p className="text-slate-300 text-xs md:text-sm mt-1">
-              Panel exclusivo de análisis de focos, cobertura y eficiencia por zona. Todo el insight financiero y operativo en un solo lugar.
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <label className="text-xs text-slate-400">Filtrar ciudad:</label>
-              <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="bg-slate-900 text-slate-200 text-xs md:text-sm rounded px-2 py-1.5 border border-slate-800">
-                <option value="ALL">Todas</option>
-                <option value="ARMENIA">ARMENIA</option>
-                <option value="MANIZALES">MANIZALES</option>
-                <option value="PEREIRA">PEREIRA</option>
-                <option value="OTRO">OTRO</option>
-              </select>
+          <div className="flex items-center gap-4">
+            <div className="relative p-3.5 rounded-2xl bg-gradient-to-tr from-sky-600 to-blue-600 text-white shadow-xl shadow-sky-500/25">
+              <BarChart3 className="h-7 w-7" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
+                <div className="h-6 w-[1px] bg-slate-800"></div>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">Focos Numérica</h1>
+                <span className="text-[9px] md:text-[10px] bg-sky-500/20 text-sky-300 font-semibold px-2 py-0.5 rounded-full border border-sky-500/30">Cobertura & Eficiencia</span>
+              </div>
+              <p className="text-slate-300 text-xs md:text-sm mt-1">
+                Panel exclusivo de análisis de focos, cobertura y eficiencia por zona. Todo el insight financiero y operativo en un solo lugar.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <label className="text-xs text-slate-400">Filtrar ciudad:</label>
+                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="bg-slate-900 text-slate-200 text-xs md:text-sm rounded px-2 py-1.5 border border-slate-800">
+                  <option value="ALL">Todas</option>
+                  <option value="ARMENIA">ARMENIA</option>
+                  <option value="MANIZALES">MANIZALES</option>
+                  <option value="PEREIRA">PEREIRA</option>
+                  <option value="OTRO">OTRO</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
