@@ -42,13 +42,18 @@ const trafficLight = (pct) => {
 };
 
 // ─── Daily Sales Table ────────────────────────────────────────────────
-const PRESUPUESTO_JUNIO   = 4001885288;
-const TOTAL_BUSINESS_DAYS = 22;
+// Configuración por período: días hábiles y presupuesto total del canal
+const PERIODO_CONFIG = {
+  '2026-06': { diasHabiles: 22, presupuesto: 4001885288 },
+  '2026-07': { diasHabiles: 23, presupuesto: 0 }, // se actualiza al cargar el cubo de julio
+};
+const DEFAULT_PERIODO_CONFIG = { diasHabiles: 22, presupuesto: 0 };
 
-const DailySalesTable = ({ salesDaily, workDay }) => {
+const DailySalesTable = ({ salesDaily, workDay, periodoConfig }) => {
   const [showAll, setShowAll] = useState(false);
+  const { diasHabiles, presupuesto } = periodoConfig || DEFAULT_PERIODO_CONFIG;
 
-  const META_DIARIA    = PRESUPUESTO_JUNIO / TOTAL_BUSINESS_DAYS;
+  const META_DIARIA    = diasHabiles > 0 && presupuesto > 0 ? presupuesto / diasHabiles : 0;
   const META_ACUMULADA = META_DIARIA * workDay;
 
   const rows = [...salesDaily]
@@ -74,7 +79,7 @@ const DailySalesTable = ({ salesDaily, workDay }) => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              Acumulado real · Día hábil {workDay}/{TOTAL_BUSINESS_DAYS}
+              Acumulado real · Día hábil {workDay}/{diasHabiles}
             </p>
             <p className="text-lg font-extrabold text-white mt-0.5">{formatCurrency(totalAcumulado)}</p>
             <p className="text-[10px] text-slate-400 mt-0.5">
@@ -95,7 +100,7 @@ const DailySalesTable = ({ salesDaily, workDay }) => {
                 style={{ width: `${Math.min(vsMetaAcum * 100, 100)}%` }}
               />
             </div>
-            <p className="text-[10px] text-slate-500">{workDay} de {TOTAL_BUSINESS_DAYS} días hábiles</p>
+            <p className="text-[10px] text-slate-500">{workDay} de {diasHabiles} días hábiles</p>
           </div>
         </div>
       </div>
@@ -166,7 +171,8 @@ const ExecutiveDashboard = () => {
   const dbData = useStore(state => state.dbData);
   const filters = useStore();
   const navigate = useNavigate();
-  const currentWorkDay = useStore(state => state.currentWorkDay);
+  const currentWorkDay  = useStore(state => state.currentWorkDay);
+  const selectedPeriod  = useStore(state => state.selectedPeriod);
 
   // Date range filter (local state — no afecta otros módulos)
   const [dateFrom, setDateFrom] = useState('');
@@ -199,16 +205,21 @@ const ExecutiveDashboard = () => {
   const filteredData = getFilteredData(filteredDbData, filters);
   const kpis = calculateKPIs(filteredData);
 
-  // Period label from data
+  // Period label from data — usa selectedPeriod como fallback si no hay datos
   const activePeriodLabel = useMemo(() => {
     const valid = (filteredData.salesDaily || [])
       .filter(d => d.fecha && d.fecha !== 'general')
       .map(d => new Date(d.fecha)).filter(d => !isNaN(d.getTime()));
-    if (!valid.length) return 'Abril 2026';
-    valid.sort((a,b) => b-a);
     const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    if (!valid.length) {
+      // Derivar label desde selectedPeriod (formato YYYY-MM)
+      const parts = (filters.selectedPeriod || '').match(/^(\d{4})-(\d{2})$/);
+      if (parts) return `${months[parseInt(parts[2], 10) - 1]} ${parts[1]}`;
+      return filters.selectedPeriod || 'Sin datos';
+    }
+    valid.sort((a,b) => b-a);
     return `${months[valid[0].getMonth()]} ${valid[0].getFullYear()}`;
-  }, [filteredData.salesDaily]);
+  }, [filteredData.salesDaily, filters.selectedPeriod]);
 
   // Clear date filter
   const clearDates = () => { setDateFrom(''); setDateTo(''); };
@@ -223,6 +234,9 @@ const ExecutiveDashboard = () => {
     ).size;
     return days || 1;
   }, [currentWorkDay, filteredData.salesDaily]);
+
+  // Configuración del período (días hábiles, presupuesto total)
+  const periodoConfig = PERIODO_CONFIG[selectedPeriod] || DEFAULT_PERIODO_CONFIG;
 
   const kpiCards = [
     {
@@ -451,7 +465,7 @@ const ExecutiveDashboard = () => {
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500 inline-block"/>Crítico</span>
             </div>
           </div>
-          <DailySalesTable salesDaily={filteredData.salesDaily} workDay={workDay} />
+          <DailySalesTable salesDaily={filteredData.salesDaily} workDay={workDay} periodoConfig={periodoConfig} />
         </GlassCard>
 
         {/* Ranking zonas */}

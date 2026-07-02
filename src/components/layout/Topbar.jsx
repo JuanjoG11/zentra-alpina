@@ -284,16 +284,39 @@ const Topbar = () => {
 
   // ── Periodos ──────────────────────────────────────────────────────────
   const getPeriodsList = () => {
-    const list = new Set();
+    const list = new Map(); // key → label
     const m = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    // Agregar períodos que tienen datos en salesDaily
     (dbData.salesDaily || []).filter(d => d.fecha && d.fecha !== 'general').forEach(d => {
       const dt = new Date(d.fecha);
       if (!isNaN(dt.getTime())) {
-        list.add(JSON.stringify({ key: `${m[dt.getMonth()].toLowerCase()}-${dt.getFullYear()}`, label: `${m[dt.getMonth()]} ${dt.getFullYear()}` }));
+        const y = dt.getFullYear();
+        const mo = String(dt.getMonth() + 1).padStart(2, '0');
+        list.set(`${y}-${mo}`, `${m[dt.getMonth()]} ${y}`);
       }
     });
-    if (list.size === 0) list.add(JSON.stringify({ key: 'abril-2026', label: 'Abril 2026' }));
-    return Array.from(list).map(i => JSON.parse(i));
+
+    // Siempre incluir el mes actual del calendario (aunque esté vacío = julio)
+    const now = new Date();
+    const curY = now.getFullYear();
+    const curMo = String(now.getMonth() + 1).padStart(2, '0');
+    const curKey = `${curY}-${curMo}`;
+    if (!list.has(curKey)) {
+      list.set(curKey, `${m[now.getMonth()]} ${curY}`);
+    }
+
+    // Si solo hay el mes actual y ningún histórico, agregar el mes anterior como disponible
+    if (list.size === 1) {
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const pY = prevDate.getFullYear();
+      const pMo = String(prevDate.getMonth() + 1).padStart(2, '0');
+      list.set(`${pY}-${pMo}`, `${m[prevDate.getMonth()]} ${pY}`);
+    }
+
+    return Array.from(list.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => b.key.localeCompare(a.key));
   };
 
   // ── Zonas y vendedores filtrados por ciudad ───────────────────────────

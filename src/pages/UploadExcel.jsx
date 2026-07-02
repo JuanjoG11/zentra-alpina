@@ -661,9 +661,14 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   }
 
 
-  // Proyección: 22 días hábiles en el mes
+  // Proyección: días hábiles según el período detectado
   // Si el usuario configuró un día hábil manualmente, usarlo. Si no, contar días del cubo.
-  const TOTAL_BUSINESS_DAYS = 22;
+  const DIAS_HABILES_POR_PERIODO = { '2026-06': 22, '2026-07': 23 };
+  // Detectar el período del cubo desde las fechas de ventas
+  const _allSaleDates = Object.values(salesDailyAggr).map(d => new Date(d.fecha)).filter(d => !isNaN(d));
+  const _latestSaleDate = _allSaleDates.length ? _allSaleDates.reduce((a, b) => b > a ? b : a) : new Date();
+  const _cuboPeriodo = `${_latestSaleDate.getFullYear()}-${String(_latestSaleDate.getMonth() + 1).padStart(2, '0')}`;
+  const TOTAL_BUSINESS_DAYS = DIAS_HABILES_POR_PERIODO[_cuboPeriodo] || 22;
   const uniqueSalesDates = new Set(Object.values(salesDailyAggr).map(d => d.fecha));
   const detectedDays = uniqueSalesDates.size || 1;
   const elapsedDays = (configuredWorkDay > 0 && configuredWorkDay <= TOTAL_BUSINESS_DAYS)
@@ -867,7 +872,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
 };
 
 const UploadExcel = () => {
-  const { addNotification, fetchDataFromSupabase, currentWorkDay, setCurrentWorkDay } = useStore();
+  const { addNotification, fetchDataFromSupabase, currentWorkDay, setCurrentWorkDay, selectedPeriod } = useStore();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadStep, setUploadStep] = useState(0);
@@ -917,23 +922,11 @@ const UploadExcel = () => {
         throw new Error('No se detectaron datos válidos en las hojas seleccionadas.');
       }
 
-      // Find latest period in the processed data
-      let latestPeriod = 'abril-2026';
-      if (processedData.salesDaily && processedData.salesDaily.length > 0) {
-        const validDates = processedData.salesDaily
-          .filter(d => d.fecha && d.fecha !== 'general')
-          .map(d => new Date(d.fecha))
-          .filter(d => !isNaN(d.getTime()));
-        if (validDates.length > 0) {
-          validDates.sort((a, b) => b - a);
-          const latest = validDates[0];
-          const monthNames = [
-            'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-          ];
-          latestPeriod = `${monthNames[latest.getMonth()]}-${latest.getFullYear()}`;
-        }
-      }
+      // El período lo define el selector activo en la app cuando se sube el cubo.
+      // Si estás parado en Julio 2026 y subís → todo es julio, sin importar fechas de facturas.
+      // Si estás parado en Junio 2026 y subís → todo es junio.
+      const latestPeriod = useStore.getState().selectedPeriod;
+      console.log(`📅 Período del cubo: ${latestPeriod} (período seleccionado en la app)`);
 
       // Step 3: Insertando datos en Supabase PostgreSQL (fallbacks to local store update)
       setUploadStep(4);
@@ -942,41 +935,48 @@ const UploadExcel = () => {
       if (hasSupabase && supabase) {
         console.log('Sincronizando con Supabase PostgreSQL...');
         try {
-          // 1. Providers — upsert por nombre
+          // El período es el mes actual en que se sube el cubo
+          const uploadPeriod = latestPeriod;
+          console.log(`📅 Cargando período: ${uploadPeriod} (los períodos anteriores quedan intactos)`);
+
+          // 1. Providers — borrar solo el período actual e insertar
           const providersDb = processedData.providers.map(p => ({
             proveedor: p.proveedor,
             ventas2026: p.ventas2026,
             ventas2025: p.ventas2025,
             margen2026: p.margen2026,
-            meta: p.proyectado2026
+            meta: p.proyectado2026,
+            periodo: uploadPeriod
           }));
-          await supabase.from('providers').delete().neq('id', 0);
+          await supabase.from('providers').delete().eq('periodo', uploadPeriod);
           const { error: errProv } = await supabase.from('providers').insert(providersDb);
           if (errProv) throw new Error('Error al cargar proveedores: ' + errProv.message);
 
-          // 2. Zones — upsert por zona
+          // 2. Zones — borrar solo el período actual e insertar
           const zonesDb = processedData.zones.map(z => ({
             zona: z.zona,
             presupuesto: z.presupuesto,
             facturas: z.facturas,
-            ventasnetas: z.ventasNetas
+            ventasnetas: z.ventasNetas,
+            periodo: uploadPeriod
           }));
-          await supabase.from('zones').delete().neq('id', 0);
+          await supabase.from('zones').delete().eq('periodo', uploadPeriod);
           const { error: errZones } = await supabase.from('zones').insert(zonesDb);
           if (errZones) throw new Error('Error al cargar zonas: ' + errZones.message);
 
-          // 3. Returns Sellers — upsert por nombre+ejecutivo
+          // 3. Returns Sellers — borrar solo el período actual e insertar
           const returnsSellersDb = processedData.returnsSellers.map(s => ({
             nombre: s.nombre,
             ejecutivo: s.ejecutivo,
             ventas: s.ventas,
-            devoluciones: s.devoluciones
+            devoluciones: s.devoluciones,
+            periodo: uploadPeriod
           }));
-          await supabase.from('returns_sellers').delete().neq('id', 0);
+          await supabase.from('returns_sellers').delete().eq('periodo', uploadPeriod);
           const { error: errSellers } = await supabase.from('returns_sellers').insert(returnsSellersDb);
           if (errSellers) throw new Error('Error al cargar vendedores: ' + errSellers.message);
 
-          // 4. Sales Daily — DELETE total + INSERT deduplicado (sin upsert)
+          // 4. Sales Daily — borrar solo el período actual e insertar deduplicado
           if (processedData.salesDailyDb && processedData.salesDailyDb.length > 0) {
             // Deduplicar por (fecha, proveedor, vendedor) antes de insertar
             const salesMap = new Map();
@@ -991,11 +991,11 @@ const UploadExcel = () => {
                 salesMap.set(key, { ...row });
               }
             });
-            const dedupedSales = Array.from(salesMap.values());
+            const dedupedSales = Array.from(salesMap.values()).map(r => ({ ...r, periodo: uploadPeriod }));
             console.log(`Sales daily: ${processedData.salesDailyDb.length} filas → ${dedupedSales.length} deduplicadas`);
 
-            // Limpiar tabla y reinsertar
-            await supabase.from('sales_daily').delete().gte('id', 0);
+            // Borrar solo el período y reinsertar
+            await supabase.from('sales_daily').delete().eq('periodo', uploadPeriod);
             const chunkSize = 400;
             for (let i = 0; i < dedupedSales.length; i += chunkSize) {
               const chunk = dedupedSales.slice(i, i + chunkSize);
@@ -1004,7 +1004,7 @@ const UploadExcel = () => {
             }
           }
 
-          // 5. Returns Daily — DELETE total + INSERT deduplicado por fecha
+          // 5. Returns Daily — borrar solo el período actual e insertar deduplicado
           if (processedData.returnsDaily && processedData.returnsDaily.length > 0) {
             const returnsMap = new Map();
             processedData.returnsDaily.forEach(row => {
@@ -1017,14 +1017,14 @@ const UploadExcel = () => {
             });
             const dedupedReturns = Array.from(returnsMap.values());
 
-            await supabase.from('returns_daily').delete().gte('id', 0);
+            await supabase.from('returns_daily').delete().eq('periodo', uploadPeriod);
             const chunkSize = 400;
             for (let i = 0; i < dedupedReturns.length; i += chunkSize) {
               const chunk = dedupedReturns.slice(i, i + chunkSize);
-              // Remove zona field if it does not exist in the Supabase schema
+              // Remove zona field if it does not exist in the Supabase schema, add periodo
               const adjustedChunk = chunk.map(row => {
                 const { zona, ...rest } = row;
-                return rest;
+                return { ...rest, periodo: uploadPeriod };
               });
               const { error: errReturns } = await supabase.from('returns_daily').insert(adjustedChunk);
               if (errReturns) throw new Error('Error al cargar devoluciones diarias: ' + errReturns.message);
@@ -1303,6 +1303,19 @@ const UploadExcel = () => {
         <p className="text-slate-400 text-xs md:text-sm mt-1">
           Suba sus reportes Excel (Ventas, Devoluciones, Proveedores o Zonas). El pipeline ETL procesará, limpiará y normalizará los datos automáticamente en Supabase.
         </p>
+        {/* Indicador del período activo */}
+        {(() => {
+          const parts = (selectedPeriod || '').match(/^(\d{4})-(\d{2})$/);
+          const mNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+          const label = parts ? `${mNames[parseInt(parts[2],10)-1]} ${parts[1]}` : selectedPeriod;
+          return (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <span className="text-[10px] text-blue-300 font-medium uppercase tracking-wider">Cargando en período:</span>
+              <span className="text-xs font-bold text-blue-200">{label}</span>
+              <span className="text-[10px] text-slate-500">· Cambiá el selector arriba para cargar otro mes</span>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">

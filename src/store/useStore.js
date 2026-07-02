@@ -33,7 +33,52 @@ const saveToStorage = (dbData, period) => {
 };
 
 const persistedData   = loadPersistedData();
-const persistedPeriod = localStorage.getItem(PERIOD_KEY) || 'junio-2026';
+
+// Si el persistedData tiene providers y salesDaily vacíos, descartarlo —
+// es un artefacto de un período sin datos que se guardó anteriormente.
+const _persistedHasData = persistedData &&
+  ((persistedData.providers || []).length > 0 ||
+   (persistedData.salesDaily || []).length > 0 ||
+   (persistedData.zones || []).length > 0);
+const initialData = _persistedHasData ? persistedData : null;
+
+// Si el localStorage tenía datos vacíos, borrarlo para que no interfiera
+if (persistedData && !_persistedHasData) {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+}
+// El período activo: usar lo que esté guardado en localStorage.
+// Migrar formato viejo 'nombre-YYYY' → 'YYYY-MM' si es necesario.
+const _MONTH_NAME_TO_NUM = {
+  'enero':10, 'febrero':2, 'marzo':3, 'abril':4, 'mayo':5, 'junio':6,
+  'julio':7, 'agosto':8, 'septiembre':9, 'octubre':10, 'noviembre':11, 'diciembre':12,
+  // fix: enero debe ser 1
+};
+_MONTH_NAME_TO_NUM['enero'] = 1;
+const _migratePeriod = (p) => {
+  if (!p) return null;
+  // Ya está en formato YYYY-MM
+  if (/^\d{4}-\d{2}$/.test(p)) return p;
+  // Formato viejo: 'junio-2026' o 'Junio-2026'
+  const m = p.toLowerCase().match(/^([a-záéíóúñ]+)-(\d{4})$/);
+  if (m) {
+    const num = _MONTH_NAME_TO_NUM[m[1]];
+    if (num) return `${m[2]}-${String(num).padStart(2, '0')}`;
+  }
+  return p;
+};
+const _now = new Date();
+const _currentCalendarPeriod = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`;
+const _stored = localStorage.getItem(PERIOD_KEY);
+const _migratedStored = _migratePeriod(_stored);
+// Si el formato migró, actualizar localStorage
+if (_stored && _migratedStored !== _stored) {
+  try { localStorage.setItem(PERIOD_KEY, _migratedStored); } catch(e) {}
+}
+const persistedPeriod = _migratedStored || _currentCalendarPeriod;
+// El período activo siempre es el mes actual del calendario.
+// Lo guardado en localStorage solo sirve para la migración de formato,
+// no para fijar el período por defecto.
+const activePeriod = _currentCalendarPeriod;
 const persistedChat   = loadPersistedChat();
 const persistedWorkDay = parseInt(localStorage.getItem(WORKDAY_KEY) || '0', 10) || 0;
 
@@ -41,7 +86,7 @@ const hasSupabase = true; // supabase siempre configurado
 
 const useStore = create((set, get) => ({
   // Filtros globales
-  selectedPeriod: persistedPeriod,
+  selectedPeriod: activePeriod,
   selectedCity: 'Todas',
   selectedZone: 'Todas',
   selectedProvider: 'Todas',
@@ -50,8 +95,8 @@ const useStore = create((set, get) => ({
   sidebarOpen: typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
   darkMode: true,
 
-  // Datos de negocio — se usan datos persistidos si existen, si no el archivo estático
-  dbData: persistedData || alpinaData,
+  // Datos de negocio — se usan datos persistidos si existen y tienen contenido, si no el archivo estático
+  dbData: initialData || alpinaData,
   isLoadingData: false,
   dataError: null,
 
@@ -62,7 +107,11 @@ const useStore = create((set, get) => ({
   chatMessages: persistedChat || [],
 
   // Acciones
-  setPeriod: (period) => set({ selectedPeriod: period }),
+  setPeriod: (period) => {
+    set({ selectedPeriod: period });
+    // Al cambiar período, recargar datos del período seleccionado desde Supabase
+    setTimeout(() => get().fetchDataFromSupabase(), 0);
+  },
   setCity: (city) => set({ selectedCity: city }),
   setZone: (zone) => set({ selectedZone: zone }),
   setProvider: (provider) => set({ selectedProvider: provider }),
@@ -94,13 +143,16 @@ const useStore = create((set, get) => ({
 
     set({ isLoadingData: true, dataError: null });
     try {
-      // Fetch core tables in parallel
+      // Determinar el período a cargar (el seleccionado actualmente)
+      const currentPeriod = get().selectedPeriod;
+
+      // Fetch core tables in parallel, filtrando por período si la columna existe
       const [provRes, zonesRes, sellersRes, salesRes, returnsDailyRes] = await Promise.all([
-        supabase.from('providers').select('*'),
-        supabase.from('zones').select('*'),
-        supabase.from('returns_sellers').select('*'),
-        supabase.from('sales_daily').select('*'),
-        supabase.from('returns_daily').select('*').then(r => r.error?.code === '42P01' ? { data: [], error: null } : r)
+        supabase.from('providers').select('*').eq('periodo', currentPeriod),
+        supabase.from('zones').select('*').eq('periodo', currentPeriod),
+        supabase.from('returns_sellers').select('*').eq('periodo', currentPeriod),
+        supabase.from('sales_daily').select('*').eq('periodo', currentPeriod),
+        supabase.from('returns_daily').select('*').eq('periodo', currentPeriod).then(r => r.error?.code === '42P01' ? { data: [], error: null } : r)
       ]);
 
       if (provRes.error) throw provRes.error;
@@ -115,14 +167,32 @@ const useStore = create((set, get) => ({
       const dbReturnsDaily = returnsDailyRes.data || [];
 
       if (dbProviders.length === 0 && dbZones.length === 0) {
-        console.log('Las tablas de Supabase están vacías. Manteniendo datos de fallback locales.');
-        set({ isLoadingData: false });
+        // Período sin datos aún (ej: julio recién empezó) — mostrar estado vacío sin pisar localStorage
+        console.log(`Período ${currentPeriod} sin datos en Supabase. Mostrando estado vacío para este período.`);
+        const emptyData = {
+          providers: [],
+          salesDaily: [],
+          zones: [],
+          returnsSellers: [],
+          returnsConcepts: [],
+          clientReturns: [],
+          returnsDaily: [],
+          expiryConcepts: [],
+          expiryDaily: [],
+          expiryClientReturns: [],
+          productDistrib: []
+        };
+        // NO guardar en localStorage — no pisar datos de otros períodos que sí tienen datos
+        set({ dbData: emptyData, isLoadingData: false });
+        setTimeout(() => get().generateNotifications(), 0);
         return;
       }
 
       // Map back to alpinaData schema
       // Aplicar projectionFactor basado en el día hábil configurado manualmente (o auto-detectado)
-      const TOTAL_BD = 22;
+      // Días hábiles por período (julio 2026 = 23, junio 2026 = 22, resto default 22)
+      const DIAS_HABILES_POR_PERIODO = { '2026-06': 22, '2026-07': 23 };
+      const TOTAL_BD = DIAS_HABILES_POR_PERIODO[currentPeriod] || 22;
       const configuredWD = get().currentWorkDay;
       const detectedDays = new Set(
         dbSales.filter(s => Number(s.ventas) > 0 && s.fecha)
@@ -203,18 +273,16 @@ const useStore = create((set, get) => ({
         };
       }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-      // Determine the most recent period from salesDaily and update selectedPeriod
+      // Determine the most recent period from salesDaily — formato YYYY-MM (ej: '2026-07')
       const latestDate = dbSales.reduce((max, row) => {
         const date = new Date(row.fecha && !row.fecha.includes('T') ? row.fecha + 'T00:00:00' : row.fecha);
         return date > max ? date : max;
       }, new Date(0));
       
-      const monthNames = [
-        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-      ];
-      // Format latestPeriod as "monthname-YYYY" to be completely consistent with the rest of the application
-      const latestPeriod = `${monthNames[latestDate.getMonth()]}-${latestDate.getFullYear()}`;
+      // Format latestPeriod as "YYYY-MM" — mismo formato usado en la DB (default '2026-06')
+      const lyear = latestDate.getFullYear();
+      const lmonth = String(latestDate.getMonth() + 1).padStart(2, '0');
+      const latestPeriod = `${lyear}-${lmonth}`;
 
       // Try to preserve concepts, clientReturns, expiryConcepts, expiryDaily, expiryClientReturns
       // from local persisted data.
@@ -273,10 +341,12 @@ const useStore = create((set, get) => ({
         expiryClientReturns,
         productDistrib
       };
-      saveToStorage(newDbData, latestPeriod);
+      // Usar el período que se estaba consultando (no recalcular desde fechas para evitar desincronías)
+      const resolvedPeriod = (dbSales.length > 0 && latestDate.getFullYear() > 2000) ? latestPeriod : currentPeriod;
+      saveToStorage(newDbData, resolvedPeriod);
       set({
         dbData: newDbData,
-        selectedPeriod: latestPeriod,
+        selectedPeriod: resolvedPeriod,
         isLoadingData: false
       });
       // Regenerar notificaciones con los datos frescos de Supabase
