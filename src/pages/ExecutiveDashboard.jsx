@@ -44,7 +44,7 @@ const trafficLight = (pct) => {
 // ─── Daily Sales Table ────────────────────────────────────────────────
 // Configuración por período: días hábiles y presupuesto total del canal
 const PERIODO_CONFIG = {
-  '2026-06': { diasHabiles: 22, presupuesto: 4001885288 },
+  '2026-06': { diasHabiles: 23, presupuesto: 4210000000 },
   '2026-07': { diasHabiles: 23, presupuesto: 0 }, // se actualiza al cargar el cubo de julio
 };
 const DEFAULT_PERIODO_CONFIG = { diasHabiles: 22, presupuesto: 0 };

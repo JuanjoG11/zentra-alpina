@@ -196,46 +196,49 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   };
 
   const budgetMap = {
-    'E7000': 9739616,
-    'E7001': 15718970,
-    'M9450': 52875518,
-    'M9451': 60284852,
-    'M9453': 122322227,
-    'M9454': 127741607,
-    'M9455': 132916601,
-    'M9456': 98461006,
-    'M9457': 109101932,
-    'M9458': 97290771,
-    'M9459': 138264192,
-    'M9460': 144798907,
-    'M9461': 119740612,
-    'M9550': 78079017,
-    'M9552': 115979855,
-    'M9553': 118994777,
-    'M9554': 142991674,
-    'M9555': 131824208,
-    'M9556': 124797071,
-    'M9557': 230089941,
-    'M9558': 135727633,
-    'M9559': 165238515,
-    'M9560': 87159396,
-    'M9600': 62564014,
-    'M9601': 121038599,
-    'M9602': 138410924,
-    'M9603': 137651254,
-    'M9604': 115578543,
-    'M9605': 137739094,
-    'M9606': 101500232,
-    'P7000': 65937889,
-    'P7001': 71018396,
-    'P7002': 149868956,
-    'P7004': 147442404,
-    'P7005': 108916800,
-    'P7006': 142737629,
-    'P7007': 159379696,
-    'P7008': 93551428,
-    'P7009': 64522723,
-    'P7010': 78172901
+    // --- JUAN JOSE GUZMAN (Armenia/Pereira) ---
+    'M9601': 108000000,  // Marcela
+    'M9602': 115000000,  // Daniel
+    'M9603': 112000000,  // Andrea
+    'M9604': 107000000,  // Olga
+    'M9605': 115000000,  // Anderson
+    'M9606': 89000000,   // Alejandra
+    'M9600': 60000000,   // Angela
+    'P7008': 79000000,   // Sandra
+    'P7009': 72000000,   // Yerina
+    'P7010': 65470534,   // Angela G
+    // --- BIBIANA MONTOYA (Manizales/Pereira) ---
+    'M9552': 104000000,  // Viviana
+    'M9553': 105000000,  // Sindy
+    'M9554': 119000000,  // Santiago
+    'M9555': 113000000,  // Janneth
+    'M9556': 112000000,  // Diana
+    'M9557': 201000000,  // Sandra
+    'M9558': 126000000,  // Beatriz
+    'M9559': 144000000,  // Alejandro
+    'M9550': 69000000,   // Lina
+    'M9560': 84000000,   // Eliana/Angie
+    'P7000': 59000000,   // Karen
+    'P7001': 72000000,   // Yenni
+    'P7002': 106000000,  // Bladimir
+    'E7000': 10454052,   // Bibiana
+    // --- DIEGO GONZALEZ (Manizales/Pereira/Armenia) ---
+    'M9453': 114000000,  // Marcela
+    'M9454': 129000000,  // Julian
+    'M9455': 120000000,  // Genni
+    'M9456': 104000000,  // Eliana
+    'M9457': 119000000,  // German
+    'M9458': 108000000,  // Natalia
+    'M9459': 134000000,  // Yudi
+    'M9460': 152000000,  // Alex
+    'M9461': 128000000,  // Yesica
+    'P7004': 142000000,  // Valentina
+    'P7005': 122000000,  // Jhonier A
+    'P7006': 153000000,  // Cristian
+    'P7007': 175000000,  // Oscar D
+    'M9450': 84000000,   // Estefania
+    'M9451': 70000000,   // Nini
+    'E7001': 9075414,    // (sin vendedor)
   };
 
   const parseSpanishFloat = (str) => {
@@ -663,7 +666,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
 
   // Proyección: días hábiles según el período detectado
   // Si el usuario configuró un día hábil manualmente, usarlo. Si no, contar días del cubo.
-  const DIAS_HABILES_POR_PERIODO = { '2026-06': 22, '2026-07': 23 };
+  const DIAS_HABILES_POR_PERIODO = { '2026-06': 23, '2026-07': 23 };
   // Detectar el período del cubo desde las fechas de ventas
   const _allSaleDates = Object.values(salesDailyAggr).map(d => new Date(d.fecha)).filter(d => !isNaN(d));
   const _latestSaleDate = _allSaleDates.length ? _allSaleDates.reduce((a, b) => b > a ? b : a) : new Date();

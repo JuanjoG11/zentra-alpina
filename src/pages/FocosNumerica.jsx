@@ -13,6 +13,48 @@ const BRAND_COLORS = [
   '#facc15','#60a5fa','#f87171','#c084fc','#86efac'
 ];
 
+// Universo de clientes por zona — Focos Numérica junio 2026
+const ZONE_UNIVERSE = {
+  // ARMENIA — Juan José Guzmán (total: 1.777)
+  'M9601': 359,  // Johanna Marcela
+  'M9602': 338,  // Daniel
+  'M9603': 334,  // Andrea
+  'M9604': 270,  // Olga Patricia
+  'M9605': 233,  // John Anderson
+  'M9606': 243,  // Alejandra
+  // PEREIRA — Diego González (total: 3.965)
+  'M9453': 342,  // Lina Marcela
+  'M9454': 311,  // Julian
+  'M9455': 335,  // Genny
+  'M9456': 302,  // Eliana
+  'M9457': 293,  // German
+  'M9458': 302,  // Natalia
+  'M9459': 322,  // Yudi
+  'M9460': 279,  // Alexander
+  'M9461': 336,  // Yesica
+  'P7004': 318,  // Valentina
+  'P7005': 236,  // Jhonier Alejandro
+  'P7006': 267,  // Cristian
+  'P7007': 322,  // Duberney
+  // MANIZALES — Bibiana Montoya (total: 2.111)
+  'M9552': 251,  // Viviana
+  'M9553': 287,  // Sindy Amaris
+  'M9554': 267,  // Santiago
+  'M9555': 276,  // Janneth
+  'M9556': 289,  // Diana Milena
+  'M9557': 246,  // Sandra Milena
+  'M9558': 209,  // Beatriz Elena
+  'M9559': 286,  // Alejandro
+};
+
+// Zonas de supermercados/grandes superficies — excluidas de cobertura numérica
+const SUPERMARKET_ZONES = new Set([
+  'P7008', 'P7009', 'P7010', // Armenia supermercados
+  'M9550', 'M9560',           // Manizales supermercados
+  'P7000', 'P7001', 'P7002',  // Pereira supermercados
+  'E7000', 'E7001',           // Especiales
+]);
+
 const extractUnitWeightInGrams = (name) => {
   if (!name) return 0;
   const match = name.match(/(\d+(?:[.,]\d+)?)\s*(g|gr|ml|l|kg)\b/i);
@@ -88,8 +130,8 @@ const FocosNumerica = () => {
   const filteredData = getFilteredData(dbData, filters);
 
   // ── Constantes del mes — conectadas al store ────────────────────────
-  const PRESUPUESTO_MES = 4001885288;
-  const DIAS_HABILES    = 22; // Días hábiles reales de junio 2026
+  const PRESUPUESTO_MES = 4210000000;
+  const DIAS_HABILES    = 23; // Días hábiles reales de junio 2026
 
   // Día actual: usa el configurado manualmente; si es 0, detecta desde datos
   const detectedDay = useMemo(() => {
@@ -121,6 +163,7 @@ const FocosNumerica = () => {
   const numericFocus = filteredData.zones.map((z) => ({
     ...z,
     city: zoneCity(z.zona),
+    universeClients: ZONE_UNIVERSE[z.zona] || 0,
     coverage: z.presupuesto > 0 ? z.ventasNetas / z.presupuesto : 0,
     efficiency: z.facturas > 0 ? z.ventasNetas / z.facturas : 0,
     variance: z.porcentajeProyectado - 1
@@ -131,16 +174,20 @@ const FocosNumerica = () => {
     return numericFocus.filter((z) => z.city === selectedCity);
   }, [numericFocus, selectedCity]);
 
+  // Solo zonas tradicionales (excluye supermercados) para métricas de cobertura numérica
+  const traditionalZones = numericFocus.filter((z) => !SUPERMARKET_ZONES.has(z.zona));
+  const traditionalByCity = filteredByCity.filter((z) => !SUPERMARKET_ZONES.has(z.zona));
+
   const totalFocusFacturas = filteredByCity.reduce((sum, z) => sum + z.facturas, 0);
   const totalNetSales = filteredByCity.reduce((sum, z) => sum + z.ventasNetas, 0);
   const totalBudget = filteredByCity.reduce((sum, z) => sum + z.presupuesto, 0);
-  const averageCoverage = numericFocus.length > 0
-    ? numericFocus.reduce((sum, z) => sum + z.coverage, 0) / numericFocus.length
+  const averageCoverage = traditionalZones.length > 0
+    ? traditionalZones.reduce((sum, z) => sum + z.coverage, 0) / traditionalZones.length
     : 0;
   const salesGap = Math.max(0, totalBudget - totalNetSales);
   const averageInvoice = totalFocusFacturas > 0 ? totalNetSales / totalFocusFacturas : 0;
   const estimatedClientsToGoal = averageInvoice > 0 ? Math.ceil(salesGap / averageInvoice) : 0;
-  const zonesBelowTarget = numericFocus.filter((z) => z.coverage < 0.75).length;
+  const zonesBelowTarget = traditionalZones.filter((z) => z.coverage < 0.75).length;
 
   const citySummary = Object.values(filteredByCity.reduce((acc, z) => {
     const key = z.city;
@@ -540,7 +587,7 @@ const FocosNumerica = () => {
 
   const coverageSeries = [{
     name: 'Cobertura %',
-    data: filteredByCity.map((z) => Math.round(z.coverage * 100))
+    data: traditionalByCity.map((z) => Math.round(z.coverage * 100))
   }];
 
   const coverageOptions = {
@@ -554,7 +601,7 @@ const FocosNumerica = () => {
     colors: ['#38bdf8'],
     plotOptions: { bar: { borderRadius: 10, columnWidth: '55%' } },
     dataLabels: { enabled: false },
-    xaxis: { categories: filteredByCity.map((z) => z.zona), labels: { rotate: -30, style: { fontSize: '10px' }, hideOverlappingLabels: true } },
+    xaxis: { categories: traditionalByCity.map((z) => z.zona), labels: { rotate: -30, style: { fontSize: '10px' }, hideOverlappingLabels: true } },
     yaxis: { labels: { formatter: (val) => `${Math.round(val)}%` }, min: 0, max: 140 },
     tooltip: { theme: 'dark', y: { formatter: (val) => `${Math.round(val)}%` } },
     grid: { borderColor: '#1e293b' }
