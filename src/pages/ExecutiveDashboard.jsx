@@ -236,7 +236,12 @@ const ExecutiveDashboard = () => {
   }, [currentWorkDay, filteredData.salesDaily]);
 
   // Configuración del período (días hábiles, presupuesto total)
-  const periodoConfig = PERIODO_CONFIG[selectedPeriod] || DEFAULT_PERIODO_CONFIG;
+  // Si el presupuesto hardcodeado es 0, usa el que viene de las zonas (kpis.totalBudget)
+  const _basePeriodoConfig = PERIODO_CONFIG[selectedPeriod] || DEFAULT_PERIODO_CONFIG;
+  const periodoConfig = {
+    ..._basePeriodoConfig,
+    presupuesto: _basePeriodoConfig.presupuesto > 0 ? _basePeriodoConfig.presupuesto : (kpis.totalBudget || 0),
+  };
 
   const kpiCards = [
     {
