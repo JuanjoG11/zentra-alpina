@@ -327,8 +327,10 @@ rl.on('close', async () => {
 
   // 3. Zones
   const zones = Object.entries(zonesAggr).map(([zoneCode, data]) => {
-    const net = Math.round(data.ventasNetas);
-    const dev = Math.round(data.devoluciones);
+    const bruto = Math.round(data.ventasNetas);
+    const dev   = Math.round(data.devoluciones);
+    // Venta neta real = ventas brutas − rechazos − cambios
+    const net   = Math.max(0, bruto - dev);
     const budget = budgetMap[zoneCode] || Math.round(net / 0.95);
     return {
       zona: zoneCode,
@@ -345,14 +347,16 @@ rl.on('close', async () => {
 
   // 4. Returns Sellers
   const returnsSellers = Object.values(sellersAggr).map(s => {
-    const v = Math.round(s.ventas);
-    const d = Math.round(s.devoluciones);
+    const bruto = Math.round(s.ventas);
+    const d     = Math.round(s.devoluciones);
+    // Venta neta = bruto − rechazos − cambios
+    const v     = Math.max(0, bruto - d);
     return {
       ejecutivo: s.ejecutivo,
       nombre: s.nombre,
       ventas: v,
       devoluciones: d,
-      porcentajeDevolucion: v > 0 ? Number((d / v).toFixed(4)) : 0.0
+      porcentajeDevolucion: bruto > 0 ? Number((d / bruto).toFixed(4)) : 0.0
     };
   }).sort((a, b) => b.ventas - a.ventas);
 
@@ -404,8 +408,11 @@ rl.on('close', async () => {
   console.log(`Marcas detectadas: ${Object.keys(brandsAggr).length}`);
   console.log(`Zonas procesadas: ${zones.length}`);
   console.log(`Vendedores: ${returnsSellers.length}`);
-  console.log(`Total Ventas (vlrAntesIva): $${providers.reduce((sum, p) => sum + p.ventas2026, 0).toLocaleString()}`);
-  console.log(`Total Devoluciones (motivo + negativo): $${Math.round(totalDevValue).toLocaleString()}`);
+  const totalBruto = providers.reduce((sum, p) => sum + p.ventas2026, 0);
+  const totalDevTotal = Math.round(totalDevValue);
+  console.log(`Ventas brutas (vlrAntesIva): $${totalBruto.toLocaleString()}`);
+  console.log(`Total Devoluciones (rechazos + cambios): $${totalDevTotal.toLocaleString()}`);
+  console.log(`Ventas Netas (bruto − devoluciones): $${(totalBruto - totalDevTotal).toLocaleString()}`);
 
   // Sincronizar con Supabase
   if (supabase) {

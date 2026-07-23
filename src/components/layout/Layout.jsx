@@ -24,6 +24,22 @@ const Layout = () => {
     generateNotifications();
   }, [fetchDataFromSupabase, generateNotifications]);
 
+  // Re-sincronizar con Supabase cuando el usuario vuelve a la pestaña/app
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDataFromSupabase();
+      }
+    };
+    const handleFocus = () => fetchDataFromSupabase();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchDataFromSupabase]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans overflow-x-hidden">
 

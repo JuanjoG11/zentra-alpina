@@ -435,11 +435,14 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         const formattedDate = formatDateToMDY(dateVal);
         if (!formattedDate) continue;
 
+        // Venta real: motivo vacío Y valor positivo (excluye notas débito con motivo)
+        const esVentaReal = (motivoStr === '' && valTotal > 0);
+
         // 1. Providers — agrupado por nmProveedor
         if (!providersAggr[proveedor]) {
           providersAggr[proveedor] = { ventas2026: 0, count: 0, proveedorReal: proveedor };
         }
-        if (!esDevolucion && valTotal > 0) {
+        if (esVentaReal) {
           providersAggr[proveedor].ventas2026 += valTotal;
           providersAggr[proveedor].count++;
         }
@@ -448,13 +451,13 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         if (!brandsAggr[brand]) {
           brandsAggr[brand] = { ventas2026: 0, count: 0 };
         }
-        if (!esDevolucion && valTotal > 0) {
+        if (esVentaReal) {
           brandsAggr[brand].ventas2026 += valTotal;
           brandsAggr[brand].count++;
         }
 
         // 2. Sales Daily — solo ventas reales (motivo vacío y valor positivo)
-        if (!esDevolucion && valTotal > 0) {
+        if (esVentaReal) {
           const dayZoneKey = `${formattedDate}_${zone || 'OTRO'}`;
           if (!salesDailyAggr[dayZoneKey]) {
             salesDailyAggr[dayZoneKey] = { fecha: formattedDate, zona: zone || 'OTRO', contado: 0, credito: 0 };
@@ -479,7 +482,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
           }
           if (esDevolucion) {
             zonesAggr[zone].devoluciones += Math.abs(valTotal);
-          } else if (valTotal > 0) {
+          } else if (esVentaReal) {
             zonesAggr[zone].ventasNetas += valTotal;
           }
           // Facturas únicas: solo cuando motivo está vacío (venta real, sin devolución)
@@ -503,7 +506,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
           }
           if (esDevolucion) {
             sellersAggr[activeSeller].devoluciones += Math.abs(valTotal);
-          } else if (valTotal > 0) {
+          } else if (esVentaReal) {
             sellersAggr[activeSeller].ventas += valTotal;
           }
         }
@@ -570,7 +573,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         }
 
         // 6. Clientes por ciudad
-        if (valTotal > 0 && clientName) {
+        if (esVentaReal && clientName) {
           const uCity = String(getRowValue(row, cityKeys) || '').toUpperCase();
           let cityKey = 'OTRO';
           if (uCity.includes('ARMENIA') || uCity.includes('CALARCA') || uCity.includes('CIRCASIA') || uCity.includes('TEBAIDA') || uCity.includes('MONTENEGRO') || uCity.includes('QUIMBAYA') || uCity.includes('FILANDIA')) {
@@ -584,7 +587,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         }
 
         // 7b. Distribución numérica por producto — solo ventas reales (no devoluciones)
-        if (!esDevolucion && valTotal > 0) {
+        if (esVentaReal) {
           const nbProd   = String(getRowValue(row, nbProductoKeys)  || '').trim() || 'SIN_COD';
           const nmProd   = String(getRowValue(row, nmProductoKeys)  || '').trim() || 'Sin nombre';
           const tpProd   = String(getRowValue(row, tpProductoKeys)  || '').trim() || '';
@@ -614,7 +617,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         }
 
         // 7. Detalle ventas diarias para Supabase — solo ventas reales
-        if (zone && activeSeller && !esDevolucion && valTotal > 0) {
+        if (zone && activeSeller && esVentaReal) {
           const ymdDate = formatDateToYMD(dateVal);
           if (ymdDate) {
             const dbKey = `${ymdDate}_${proveedor}_${zone}_${activeSeller}`;
@@ -714,8 +717,10 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
   const zones = Object.entries(zonesAggr).map(([zoneCode, data]) => {
-    const net = Math.round(data.ventasNetas);
-    const dev = Math.round(data.devoluciones);
+    const bruto = Math.round(data.ventasNetas);
+    const dev   = Math.round(data.devoluciones);
+    // Venta neta real = ventas brutas − rechazos − cambios (ambos ya acumulados en devoluciones)
+    const net   = Math.max(0, bruto - dev);
     const budget = budgetMap[zoneCode] || Math.round(net / 0.95);
     const projectedNet = Math.round(net * projectionFactor);
     return {
@@ -732,14 +737,17 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   }).sort((a, b) => b.ventasNetas - a.ventasNetas);
 
   const returnsSellers = Object.values(sellersAggr).map(s => {
-    const v = Math.round(s.ventas);
-    const d = Math.round(s.devoluciones);
+    const bruto = Math.round(s.ventas);
+    const d     = Math.round(s.devoluciones);
+    // Venta neta = bruto − rechazos − cambios
+    const v     = Math.max(0, bruto - d);
     return {
       ejecutivo: s.ejecutivo,
       nombre: s.nombre,
       ventas: v,
       devoluciones: d,
-      porcentajeDevolucion: v > 0 ? Number((d / v).toFixed(4)) : 0.0
+      // % sobre ventas brutas para no perder la proporción real de devolución
+      porcentajeDevolucion: bruto > 0 ? Number((d / bruto).toFixed(4)) : 0.0
     };
   }).sort((a, b) => b.ventas - a.ventas);
 
