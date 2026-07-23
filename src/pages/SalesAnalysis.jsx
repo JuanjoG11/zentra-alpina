@@ -1,7 +1,7 @@
 import React from 'react';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONE_TYPE_MAP } from '../utils/calculations';
-import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
+import { formatCurrency, formatPercent, formatShortCurrency, formatCurrencyWithDecimals } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import { BIAreaChart, BIStackedBarChart, BILineChart } from '../components/charts/BICharts';
 import { TrendingUp, CreditCard, DollarSign, Layers, ArrowUpRight, MapPin } from 'lucide-react';
@@ -79,6 +79,31 @@ const channelTicket = React.useMemo(() => {
     return map;
   }, [filteredData.zones, totalZonesSales]);
 
+  // Map of Cambios (vencimientos) by zone / executive (excluding rechazos)
+  const zoneCambiosMap = React.useMemo(() => {
+    const map = {};
+    (filteredData.expiryClientReturns || []).forEach(c => {
+      const key = c.ejecutivo || '';
+      if (key) map[key] = (map[key] || 0) + (Number(c.valor) || 0);
+    });
+    return map;
+  }, [filteredData.expiryClientReturns]);
+
+  const getZoneCambioVal = React.useCallback((z) => {
+    const valorCambio = (zoneCambiosMap[z.zona] || 0) || (zoneCambiosMap[z.vendedor] || 0);
+    if (valorCambio > 0) return valorCambio;
+    const rate = Number(z.cambiosPorc) || 0.015;
+    return (z.ventasNetas || 0) * rate;
+  }, [zoneCambiosMap]);
+
+  const getZoneCambioRate = React.useCallback((z) => {
+    const valorCambio = (zoneCambiosMap[z.zona] || 0) || (zoneCambiosMap[z.vendedor] || 0);
+    if (valorCambio > 0 && z.ventasNetas > 0) {
+      return valorCambio / z.ventasNetas;
+    }
+    return Number(z.cambiosPorc) || 0.015;
+  }, [zoneCambiosMap]);
+
   const CANAL_ORDER = {
     'TAT': 1,
     'SUPERMERCADOS': 2,
@@ -107,9 +132,9 @@ const channelTicket = React.useMemo(() => {
       } else if (sortField === 'presupuesto') {
         comp = (a.presupuesto || 0) - (b.presupuesto || 0);
       } else if (sortField === 'cambio') {
-        const rA = a.presupuesto > 0 ? (a.ventasNetas - a.presupuesto) / a.presupuesto : 0;
-        const rB = b.presupuesto > 0 ? (b.ventasNetas - b.presupuesto) / b.presupuesto : 0;
-        comp = rA - rB;
+        const cA = getZoneCambioRate(a);
+        const cB = getZoneCambioRate(b);
+        comp = cA - cB;
       } else if (sortField === 'proyeccion') {
         const pA = (coreMap[a.zona]?.share || 0) * (a.presupuesto || 0);
         const pB = (coreMap[b.zona]?.share || 0) * (b.presupuesto || 0);
@@ -119,7 +144,7 @@ const channelTicket = React.useMemo(() => {
       }
       return sortOrder === 'asc' ? comp : -comp;
     });
-  }, [filteredData.zones, sortField, sortOrder, coreMap]);
+  }, [filteredData.zones, sortField, sortOrder, coreMap, getZoneCambioRate]);
 
   const paretoData = sortedZones.map((z) => {
     const meta = coreMap[z.zona] || { share: 0, accumShare: 0, isCore: false };
@@ -135,14 +160,15 @@ const channelTicket = React.useMemo(() => {
     const totalVentas = paretoData.reduce((sum, item) => sum + (item.ventasNetas || 0), 0);
     const totalPresupuesto = paretoData.reduce((sum, item) => sum + (item.presupuesto || 0), 0);
     const totalProyeccion = paretoData.reduce((sum, item) => sum + (item.share * item.presupuesto || 0), 0);
-    const changeRate = totalPresupuesto > 0 ? (totalVentas - totalPresupuesto) / totalPresupuesto : 0;
+    const totalCambiosVal = paretoData.reduce((sum, item) => sum + getZoneCambioVal(item), 0);
+    const changeRate = totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015;
     return {
       totalVentas,
       totalPresupuesto,
       totalProyeccion,
       changeRate,
     };
-  }, [paretoData]);
+  }, [paretoData, getZoneCambioVal]);
 
   const groupedByCanal = React.useMemo(() => {
     const map = {};
@@ -161,7 +187,8 @@ const channelTicket = React.useMemo(() => {
       const totalVentas = g.items.reduce((sum, i) => sum + (i.ventasNetas || 0), 0);
       const totalPresupuesto = g.items.reduce((sum, i) => sum + (i.presupuesto || 0), 0);
       const totalProyeccion = g.items.reduce((sum, i) => sum + ((i.share || 0) * (i.presupuesto || 0)), 0);
-      const changeRate = totalPresupuesto > 0 ? (totalVentas - totalPresupuesto) / totalPresupuesto : 0;
+      const totalCambiosVal = g.items.reduce((sum, i) => sum + getZoneCambioVal(i), 0);
+      const changeRate = totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015;
       const lastItem = g.items[g.items.length - 1];
       const maxAccumShare = lastItem ? lastItem.accumShare : 0;
 
@@ -176,7 +203,7 @@ const channelTicket = React.useMemo(() => {
         }
       };
     });
-  }, [paretoData]);
+  }, [paretoData, getZoneCambioVal]);
 
   // Simple Linear Forecast for next 7 days based on daily trend
   const dailyTotal = filteredData.salesDaily.filter(d => d.fecha !== 'general');
@@ -433,18 +460,18 @@ const channelTicket = React.useMemo(() => {
               {groupedByCanal.map((group, gIdx) => (
                 <React.Fragment key={gIdx}>
                   {group.items.map((item, idx) => {
-                    const changeRate = item.presupuesto > 0 ? (item.ventasNetas - item.presupuesto) / item.presupuesto : 0;
+                    const cambioRate = getZoneCambioRate(item);
                     return (
                       <tr key={idx} className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}>
                         <td className="py-2.5 pl-2 font-bold text-slate-200">{item.zona}</td>
                         <td className="py-2.5 hidden sm:table-cell">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
                         <td className="py-2.5"><CityBadge zona={item.zona} /></td>
                         <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
-                        <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(item.ventasNetas)}</td>
+                        <td className="py-2.5 text-right font-semibold text-slate-100">{formatCurrencyWithDecimals(item.ventasNetas)}</td>
                         <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatShortCurrency(item.presupuesto)}</td>
                         <td className="py-2.5 text-right">
-                          <span className={`font-bold ${changeRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {formatPercent(changeRate)}
+                          <span className="font-bold text-slate-200">
+                            {formatPercent(cambioRate)}
                           </span>
                         </td>
                         <td className="py-2.5 text-right text-slate-300 hidden sm:table-cell">{formatCurrency(item.share * item.presupuesto)}</td>
@@ -459,10 +486,10 @@ const channelTicket = React.useMemo(() => {
                     </td>
                     <td className="py-2.5 text-slate-500">—</td>
                     <td className="py-2.5 hidden md:table-cell text-slate-500">—</td>
-                    <td className="py-2.5 text-right font-extrabold text-amber-300 text-xs">{formatShortCurrency(group.subtotal.ventasNetas)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-amber-300 text-xs">{formatCurrencyWithDecimals(group.subtotal.ventasNetas)}</td>
                     <td className="py-2.5 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs">{formatShortCurrency(group.subtotal.presupuesto)}</td>
                     <td className="py-2.5 text-right">
-                      <span className={`font-extrabold text-xs ${group.subtotal.changeRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <span className="font-extrabold text-xs text-amber-300">
                         {formatPercent(group.subtotal.changeRate)}
                       </span>
                     </td>
@@ -478,10 +505,10 @@ const channelTicket = React.useMemo(() => {
                 <td className="py-3 hidden sm:table-cell text-slate-500">—</td>
                 <td className="py-3 text-slate-500">—</td>
                 <td className="py-3 hidden md:table-cell text-slate-500">—</td>
-                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatShortCurrency(paretoTotals.totalVentas)}</td>
+                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatCurrencyWithDecimals(paretoTotals.totalVentas)}</td>
                 <td className="py-3 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs md:text-sm">{formatShortCurrency(paretoTotals.totalPresupuesto)}</td>
                 <td className="py-3 text-right">
-                  <span className={`font-extrabold text-xs md:text-sm ${paretoTotals.changeRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  <span className="font-extrabold text-xs md:text-sm text-sky-300">
                     {formatPercent(paretoTotals.changeRate)}
                   </span>
                 </td>

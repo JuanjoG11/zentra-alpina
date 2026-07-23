@@ -13,6 +13,17 @@ export const formatCurrency = (val) => {
   return formatter.format(val).replace('COP', '$').trim();
 };
 
+export const formatCurrencyWithDecimals = (val) => {
+  if (val === undefined || val === null || isNaN(val)) return '$ 0,00';
+  const formatter = new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  return formatter.format(val).replace('COP', '$').trim();
+};
+
 export const formatShortCurrency = (val) => {
   if (val === undefined || val === null || isNaN(val)) return '$ 0';
   const isNegative = val < 0;
