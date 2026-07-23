@@ -9,9 +9,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // "prompt" muestra un banner cuando hay nueva versión disponible
-      // En cuanto el usuario acepta, recarga al instante
-      registerType: 'prompt',
+      // "autoUpdate": el SW se actualiza y activa automáticamente al detectar nueva versión
+      // Sin banners, sin esperar confirmación del usuario
+      registerType: 'autoUpdate',
       injectRegister: 'auto',
 
       // Cachear assets del build + llamadas a Supabase
@@ -34,8 +34,8 @@ export default defineConfig({
         ],
         // Limpiar caché viejo automáticamente
         cleanupOutdatedCaches: true,
-        skipWaiting: false,   // esperar a que el usuario acepte
-        clientsClaim: true,
+        skipWaiting: true,   // activar inmediatamente sin esperar
+        clientsClaim: true,  // tomar control de todos los tabs abiertos
       },
 
       // Manifest — identidad de la app instalable

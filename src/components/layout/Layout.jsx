@@ -24,7 +24,15 @@ const Layout = () => {
     generateNotifications();
   }, [fetchDataFromSupabase, generateNotifications]);
 
-  // Re-sincronizar con Supabase cuando el usuario vuelve a la pestaña/app
+  // Re-sincronizar datos automáticamente cada 5 minutos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchDataFromSupabase();
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchDataFromSupabase]);
+
+  // Re-sincronizar cuando el usuario vuelve a la pestaña/app
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -48,7 +56,11 @@ const Layout = () => {
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-600 shadow-xl shadow-blue-500/30 border border-blue-400/30 text-white text-sm font-medium animate-in slide-in-from-bottom-4 duration-300">
           <span>🚀 Nueva versión disponible</span>
           <button
-            onClick={() => updateServiceWorker(true)}
+            onClick={async () => {
+              await updateServiceWorker(true);
+              // Forzar recarga dura para limpiar caché del SW
+              window.location.reload();
+            }}
             className="px-3 py-1 bg-white text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
           >
             Actualizar ahora
