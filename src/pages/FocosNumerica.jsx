@@ -129,9 +129,22 @@ const FocosNumerica = () => {
   const setCity = useStore(state => state.setCity);
   const filteredData = getFilteredData(dbData, filters);
 
+  const selectedPeriod = useStore(state => state.selectedPeriod);
+
   // ── Constantes del mes — conectadas al store ────────────────────────
-  const PRESUPUESTO_MES = 4210000000;
-  const DIAS_HABILES    = 23; // Días hábiles reales de junio 2026
+  // Presupuesto y días hábiles según el período activo
+  const PRESUPUESTO_POR_PERIODO = { '2026-06': 4210000000, '2026-07': 4210000000 };
+  const DIAS_HABILES_POR_PERIODO = { '2026-06': 23, '2026-07': 23 };
+  const PRESUPUESTO_MES = PRESUPUESTO_POR_PERIODO[selectedPeriod] || 4210000000;
+  const DIAS_HABILES    = DIAS_HABILES_POR_PERIODO[selectedPeriod] || 23;
+
+  // Nombre del mes en español para el banner
+  const NOMBRE_MES = useMemo(() => {
+    if (!selectedPeriod) return 'Julio 2026';
+    const [year, month] = selectedPeriod.split('-');
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    return `${meses[parseInt(month, 10) - 1]} ${year}`;
+  }, [selectedPeriod]);
 
   // Día actual: usa el configurado manualmente; si es 0, detecta desde datos
   const detectedDay = useMemo(() => {
@@ -668,14 +681,14 @@ const FocosNumerica = () => {
           <div className="mb-4 pb-4 border-b border-slate-800/60">
             <div className="flex flex-col gap-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Avance Junio 2026 · Día hábil {DIA_ACTUAL} de {DIAS_HABILES}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Avance {NOMBRE_MES} · Día hábil {DIA_ACTUAL} de {DIAS_HABILES}</p>
                 <p className="text-lg md:text-xl font-extrabold text-white mt-1">
-                  Meta acumulada: <span className="text-sky-300 block sm:inline mt-1 sm:mt-0">{formatCurrency(META_ACUMULADA)}</span>
+                  Venta neta: <span className="text-sky-300 block sm:inline mt-1 sm:mt-0">{formatCurrency(totalNetSales)}</span>
                 </p>
                 <p className="text-[10px] md:text-[11px] text-slate-400 mt-1 flex flex-wrap gap-1">
-                  <span>Presupuesto total: <span className="text-slate-200 font-semibold">{formatShortCurrency(PRESUPUESTO_MES)}</span></span>
+                  <span>Meta acumulada día {DIA_ACTUAL}: <span className={`font-semibold ${totalNetSales >= META_ACUMULADA ? 'text-emerald-400' : 'text-rose-400'}`}>{formatShortCurrency(META_ACUMULADA)}</span></span>
                   <span className="hidden sm:inline">·</span>
-                  <span>Meta diaria: <span className="text-slate-200 font-semibold">{formatShortCurrency(META_DIARIA)}</span></span>
+                  <span>{totalNetSales >= META_ACUMULADA ? '✓ Por encima de la meta' : `Brecha: ${formatShortCurrency(META_ACUMULADA - totalNetSales)}`}</span>
                 </p>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
