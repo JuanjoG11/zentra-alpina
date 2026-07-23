@@ -194,6 +194,10 @@ const FocosNumerica = () => {
   const totalFocusFacturas = filteredByCity.reduce((sum, z) => sum + z.facturas, 0);
   const totalNetSales = filteredByCity.reduce((sum, z) => sum + z.ventasNetas, 0);
   const totalBudget = filteredByCity.reduce((sum, z) => sum + z.presupuesto, 0);
+  // Ventas brutas: suma de salesDaily (lo facturado antes de devoluciones)
+  const totalGrossSales = (filteredData.salesDaily || []).reduce((sum, d) => sum + (d.total || 0), 0)
+    || filteredData.providers.reduce((sum, p) => sum + p.ventas2026, 0);
+  const avanceReal = totalGrossSales > 0 ? totalGrossSales : totalNetSales;
   const averageCoverage = traditionalZones.length > 0
     ? traditionalZones.reduce((sum, z) => sum + z.coverage, 0) / traditionalZones.length
     : 0;
@@ -683,12 +687,16 @@ const FocosNumerica = () => {
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Avance {NOMBRE_MES} · Día hábil {DIA_ACTUAL} de {DIAS_HABILES}</p>
                 <p className="text-lg md:text-xl font-extrabold text-white mt-1">
-                  Venta neta: <span className="text-sky-300 block sm:inline mt-1 sm:mt-0">{formatCurrency(totalNetSales)}</span>
+                  Venta acumulada: <span className="text-sky-300 block sm:inline mt-1 sm:mt-0">{formatCurrency(avanceReal)}</span>
                 </p>
                 <p className="text-[10px] md:text-[11px] text-slate-400 mt-1 flex flex-wrap gap-1">
-                  <span>Meta acumulada día {DIA_ACTUAL}: <span className={`font-semibold ${totalNetSales >= META_ACUMULADA ? 'text-emerald-400' : 'text-rose-400'}`}>{formatShortCurrency(META_ACUMULADA)}</span></span>
+                  <span>Meta día {DIA_ACTUAL}: <span className={`font-semibold ${avanceReal >= META_ACUMULADA ? 'text-emerald-400' : 'text-rose-400'}`}>{formatShortCurrency(META_ACUMULADA)}</span></span>
                   <span className="hidden sm:inline">·</span>
-                  <span>{totalNetSales >= META_ACUMULADA ? '✓ Por encima de la meta' : `Brecha: ${formatShortCurrency(META_ACUMULADA - totalNetSales)}`}</span>
+                  <span className={avanceReal >= META_ACUMULADA ? 'text-emerald-400' : 'text-rose-400'}>
+                    {avanceReal >= META_ACUMULADA
+                      ? `✓ +${formatShortCurrency(avanceReal - META_ACUMULADA)} sobre meta`
+                      : `Brecha: ${formatShortCurrency(META_ACUMULADA - avanceReal)}`}
+                  </span>
                 </p>
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">

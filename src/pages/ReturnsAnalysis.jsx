@@ -67,7 +67,16 @@ const ReturnsAnalysis = () => {
     
   // Rechazos: suma directa de clientReturns (fuente completa, igual que calculateKPIs)
   const totalGeneralReturns = filteredData.clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
-  const totalExpiryReturns = filteredData.expiryDaily.reduce((sum, r) => sum + r.devoluciones, 0);
+
+  // Cambios (vencimientos): usar expiryDaily si disponible, sino derivar de returns_daily − rechazos
+  const expiryDailySum = filteredData.expiryDaily.reduce((sum, r) => sum + (r.devoluciones || 0), 0);
+  const returnsDailySum = filteredData.returnsDaily.reduce((sum, r) => sum + (r.devoluciones || 0), 0);
+  // returns_daily de Supabase tiene rechazos + cambios sumados
+  // Si expiryDaily tiene datos, úsalos. Si no, calcular como diferencia
+  const totalExpiryReturns = expiryDailySum > 0
+    ? expiryDailySum
+    : Math.max(0, returnsDailySum - totalGeneralReturns);
+
   const totalAllReturns = totalGeneralReturns + totalExpiryReturns;
 
   return (

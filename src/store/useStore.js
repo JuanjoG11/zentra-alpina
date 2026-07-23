@@ -149,7 +149,7 @@ const useStore = create((set, get) => ({
       // Fetch core tables in parallel, filtrando por período si la columna existe
       const [provRes, zonesRes, sellersRes, salesRes, returnsDailyRes,
              returnsConceptsRes, clientReturnsRes, expiryConceptsRes,
-             expiryClientReturnsRes, productDistribRes] = await Promise.all([
+             expiryClientReturnsRes, productDistribRes, cityClientsRes] = await Promise.all([
         supabase.from('providers').select('*').eq('periodo', currentPeriod),
         supabase.from('zones').select('*').eq('periodo', currentPeriod),
         supabase.from('returns_sellers').select('*').eq('periodo', currentPeriod),
@@ -160,6 +160,7 @@ const useStore = create((set, get) => ({
         supabase.from('expiry_concepts').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
         supabase.from('expiry_client_returns').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
         supabase.from('product_distrib').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
+        supabase.from('city_clients').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
       ]);
 
       if (provRes.error) throw provRes.error;
@@ -177,6 +178,7 @@ const useStore = create((set, get) => ({
       const dbExpiryConcepts = expiryConceptsRes.data || [];
       const dbExpiryClientReturns = expiryClientReturnsRes.data || [];
       const dbProductDistrib = productDistribRes.data || [];
+      const dbCityClients = cityClientsRes.data || [];
 
       if (dbProviders.length === 0 && dbZones.length === 0) {
         // Período sin datos aún (ej: julio recién empezó) — mostrar estado vacío sin pisar localStorage
@@ -351,6 +353,11 @@ const useStore = create((set, get) => ({
         returnsDaily = uniqueSalesDates.map(fecha => ({ fecha, devoluciones: perDay }));
       }
 
+      // City Clients: Supabase → localStorage → defaults
+      const cityClients = dbCityClients.length > 0
+        ? Object.fromEntries(dbCityClients.map(c => [c.ciudad, c.clientes]))
+        : (localData?.cityClients || { 'ARMENIA': 1120, 'MANIZALES': 1390, 'PEREIRA': 2540 });
+
       // Update store with fetched data and latest period
       const newDbData = {
         providers,
@@ -363,7 +370,8 @@ const useStore = create((set, get) => ({
         expiryConcepts,
         expiryDaily,
         expiryClientReturns,
-        productDistrib
+        productDistrib,
+        cityClients
       };
       // Usar el período que se estaba consultando (no recalcular desde fechas para evitar desincronías)
       const resolvedPeriod = (dbSales.length > 0 && latestDate.getFullYear() > 2000) ? latestPeriod : currentPeriod;

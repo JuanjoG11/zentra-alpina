@@ -1133,6 +1133,19 @@ const UploadExcel = () => {
             console.log('- Sincronizados productos/distribución numérica.');
           }
 
+          // 11. City Clients (clientes únicos por ciudad)
+          if (processedData.cityClients) {
+            const ccDb = Object.entries(processedData.cityClients)
+              .filter(([, count]) => count > 0)
+              .map(([ciudad, clientes]) => ({ ciudad, clientes, periodo: uploadPeriod }));
+            if (ccDb.length > 0) {
+              await supabase.from('city_clients').delete().eq('periodo', uploadPeriod);
+              const { error: errCc } = await supabase.from('city_clients').insert(ccDb);
+              if (errCc) console.warn('Advertencia city_clients:', errCc.message);
+              else console.log('- Sincronizados clientes por ciudad.');
+            }
+          }
+
           isDbUpload = true;
 
           // Persistir también en localStorage como caché local
@@ -1145,6 +1158,7 @@ const UploadExcel = () => {
             existing.returnsConcepts = processedData.returnsConcepts || [];
             existing.clientReturns = processedData.clientReturns || [];
             existing.productDistrib = processedData.productDistrib || [];
+            existing.cityClients = processedData.cityClients || {};
             localStorage.setItem('zentra_alpina_dbData', JSON.stringify(existing));
             localStorage.setItem('zentra_alpina_period', latestPeriod);
           } catch (e) { console.warn('Error al persistir caché local:', e); }

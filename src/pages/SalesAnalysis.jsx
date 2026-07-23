@@ -47,24 +47,136 @@ const channelTicket = React.useMemo(() => {
   };
 }, [filteredData.zones]);
 
-  // Pareto 80/20 Analysis - Sort zones by net sales
-  const sortedZones = [...filteredData.zones]
-    .sort((a, b) => b.ventasNetas - a.presupuesto); // Rank by actual Net Sales
+  // Sorting state for Pareto Table — Default sort: Zona Ascending (9450, 9451, 9452...)
+  const [sortField, setSortField] = React.useState('zona');
+  const [sortOrder, setSortOrder] = React.useState('asc');
 
-  const totalZonesSales = sortedZones.reduce((sum, z) => sum + z.ventasNetas, 0);
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'zona' ? 'asc' : 'desc');
+    }
+  };
+
+  // 1. Calculate overall sales share & Pareto 80/20 flags per zone
+  const totalZonesSales = filteredData.zones.reduce((sum, z) => sum + (z.ventasNetas || 0), 0);
   
-  let accumulatedSum = 0;
+  const coreMap = React.useMemo(() => {
+    const salesRanked = [...filteredData.zones].sort((a, b) => b.ventasNetas - a.ventasNetas);
+    let accumSum = 0;
+    const map = {};
+    salesRanked.forEach(z => {
+      accumSum += z.ventasNetas;
+      const accumShare = totalZonesSales > 0 ? accumSum / totalZonesSales : 0;
+      map[z.zona] = {
+        share: totalZonesSales > 0 ? z.ventasNetas / totalZonesSales : 0,
+        accumShare,
+        isCore: accumShare <= 0.82
+      };
+    });
+    return map;
+  }, [filteredData.zones, totalZonesSales]);
+
+  const CANAL_ORDER = {
+    'TAT': 1,
+    'SUPERMERCADOS': 2,
+    'ZONAS ESPECIALES': 3,
+    'OTRO': 4
+  };
+
+  // 2. Sort zones: Group by Canal first, then numeric order by zona (9450, 9451, 9452...)
+  const sortedZones = React.useMemo(() => {
+    return [...filteredData.zones].sort((a, b) => {
+      let comp = 0;
+      if (sortField === 'zona' || sortField === 'canal') {
+        const canalA = ZONE_TYPE_MAP[a.zona] || 'TAT';
+        const canalB = ZONE_TYPE_MAP[b.zona] || 'TAT';
+        const orderA = CANAL_ORDER[canalA] || 99;
+        const orderB = CANAL_ORDER[canalB] || 99;
+        if (orderA !== orderB) {
+          comp = orderA - orderB;
+        } else {
+          comp = String(a.zona || '').localeCompare(String(b.zona || ''), undefined, { numeric: true, sensitivity: 'base' });
+        }
+      } else if (sortField === 'vendedor') {
+        comp = String(a.vendedor || '').localeCompare(String(b.vendedor || ''));
+      } else if (sortField === 'ventas') {
+        comp = (a.ventasNetas || 0) - (b.ventasNetas || 0);
+      } else if (sortField === 'presupuesto') {
+        comp = (a.presupuesto || 0) - (b.presupuesto || 0);
+      } else if (sortField === 'cambio') {
+        const rA = a.presupuesto > 0 ? (a.ventasNetas - a.presupuesto) / a.presupuesto : 0;
+        const rB = b.presupuesto > 0 ? (b.ventasNetas - b.presupuesto) / b.presupuesto : 0;
+        comp = rA - rB;
+      } else if (sortField === 'proyeccion') {
+        const pA = (coreMap[a.zona]?.share || 0) * (a.presupuesto || 0);
+        const pB = (coreMap[b.zona]?.share || 0) * (b.presupuesto || 0);
+        comp = pA - pB;
+      } else if (sortField === 'accumShare') {
+        comp = (coreMap[a.zona]?.accumShare || 0) - (coreMap[b.zona]?.accumShare || 0);
+      }
+      return sortOrder === 'asc' ? comp : -comp;
+    });
+  }, [filteredData.zones, sortField, sortOrder, coreMap]);
+
   const paretoData = sortedZones.map((z) => {
-    accumulatedSum += z.ventasNetas;
-    const share = totalZonesSales > 0 ? z.ventasNetas / totalZonesSales : 0;
-    const accumShare = totalZonesSales > 0 ? accumulatedSum / totalZonesSales : 0;
+    const meta = coreMap[z.zona] || { share: 0, accumShare: 0, isCore: false };
     return {
       ...z,
-      share,
-      accumShare,
-      isCore: accumShare <= 0.82 // Mark core zones contributing to ~80%
+      share: meta.share,
+      accumShare: meta.accumShare,
+      isCore: meta.isCore
     };
   });
+
+  const paretoTotals = React.useMemo(() => {
+    const totalVentas = paretoData.reduce((sum, item) => sum + (item.ventasNetas || 0), 0);
+    const totalPresupuesto = paretoData.reduce((sum, item) => sum + (item.presupuesto || 0), 0);
+    const totalProyeccion = paretoData.reduce((sum, item) => sum + (item.share * item.presupuesto || 0), 0);
+    const changeRate = totalPresupuesto > 0 ? (totalVentas - totalPresupuesto) / totalPresupuesto : 0;
+    return {
+      totalVentas,
+      totalPresupuesto,
+      totalProyeccion,
+      changeRate,
+    };
+  }, [paretoData]);
+
+  const groupedByCanal = React.useMemo(() => {
+    const map = {};
+    const list = [];
+
+    paretoData.forEach((item) => {
+      const canal = ZONE_TYPE_MAP[item.zona] || 'TAT';
+      if (!map[canal]) {
+        map[canal] = { canal, items: [] };
+        list.push(map[canal]);
+      }
+      map[canal].items.push(item);
+    });
+
+    return list.map((g) => {
+      const totalVentas = g.items.reduce((sum, i) => sum + (i.ventasNetas || 0), 0);
+      const totalPresupuesto = g.items.reduce((sum, i) => sum + (i.presupuesto || 0), 0);
+      const totalProyeccion = g.items.reduce((sum, i) => sum + ((i.share || 0) * (i.presupuesto || 0)), 0);
+      const changeRate = totalPresupuesto > 0 ? (totalVentas - totalPresupuesto) / totalPresupuesto : 0;
+      const lastItem = g.items[g.items.length - 1];
+      const maxAccumShare = lastItem ? lastItem.accumShare : 0;
+
+      return {
+        ...g,
+        subtotal: {
+          ventasNetas: totalVentas,
+          presupuesto: totalPresupuesto,
+          proyeccion: totalProyeccion,
+          changeRate,
+          accumShare: maxAccumShare
+        }
+      };
+    });
+  }, [paretoData]);
 
   // Simple Linear Forecast for next 7 days based on daily trend
   const dailyTotal = filteredData.salesDaily.filter(d => d.fecha !== 'general');
@@ -289,41 +401,94 @@ const channelTicket = React.useMemo(() => {
         <div className="overflow-x-auto -mx-5 px-5">
           <table className="w-full min-w-[640px] text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-500 font-semibold">
-                <th className="pb-3 pl-2">Zona</th>
-                <th className="pb-3 hidden sm:table-cell">Canal</th>
+              <tr className="border-b border-slate-800 text-slate-500 font-semibold select-none">
+                <th className="pb-3 pl-2 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('zona')}>
+                  Zona {sortField === 'zona' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('canal')}>
+                  Canal {sortField === 'canal' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
                 <th className="pb-3">Eje</th>
-                <th className="pb-3 hidden md:table-cell">Vendedor</th>
-                <th className="pb-3 text-right">Ventas</th>
-                <th className="pb-3 text-right hidden sm:table-cell">Presupuesto</th>
-                <th className="pb-3 text-right">Cambio %</th>
-                <th className="pb-3 text-right hidden sm:table-cell">Proyección (Pesos)</th>
-                <th className="pb-3 text-right hidden md:table-cell">Acum. %</th>
-                
+                <th className="pb-3 hidden md:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('vendedor')}>
+                  Vendedor {sortField === 'vendedor' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('ventas')}>
+                  Ventas {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('presupuesto')}>
+                  Presupuesto {sortField === 'presupuesto' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('cambio')}>
+                  Cambio % {sortField === 'cambio' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('proyeccion')}>
+                  Proyección (Pesos) {sortField === 'proyeccion' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right hidden md:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('accumShare')}>
+                  Acum. % {sortField === 'accumShare' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/60">
-              {paretoData.map((item, idx) => {
-                const changeRate = item.presupuesto > 0 ? (item.ventasNetas - item.presupuesto) / item.presupuesto : 0;
-                return (
-                  <tr key={idx} className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}>
-                    <td className="py-2.5 pl-2 font-bold text-slate-200">{item.zona}</td>
-                    <td className="py-2.5 hidden sm:table-cell">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
-                    <td className="py-2.5"><CityBadge zona={item.zona} /></td>
-                    <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
-                    <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(item.ventasNetas)}</td>
-                    <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatShortCurrency(item.presupuesto)}</td>
+              {groupedByCanal.map((group, gIdx) => (
+                <React.Fragment key={gIdx}>
+                  {group.items.map((item, idx) => {
+                    const changeRate = item.presupuesto > 0 ? (item.ventasNetas - item.presupuesto) / item.presupuesto : 0;
+                    return (
+                      <tr key={idx} className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}>
+                        <td className="py-2.5 pl-2 font-bold text-slate-200">{item.zona}</td>
+                        <td className="py-2.5 hidden sm:table-cell">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
+                        <td className="py-2.5"><CityBadge zona={item.zona} /></td>
+                        <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
+                        <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(item.ventasNetas)}</td>
+                        <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatShortCurrency(item.presupuesto)}</td>
+                        <td className="py-2.5 text-right">
+                          <span className={`font-bold ${changeRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {formatPercent(changeRate)}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-right text-slate-300 hidden sm:table-cell">{formatCurrency(item.share * item.presupuesto)}</td>
+                        <td className="py-2.5 text-right text-slate-400 hidden md:table-cell">{formatPercent(item.accumShare)}</td>
+                      </tr>
+                    );
+                  })}
+                  {/* Fila Subtotal por Canal */}
+                  <tr className="bg-slate-900/75 border-t border-b border-amber-500/30 font-semibold">
+                    <td className="py-2.5 pl-2 text-amber-400 font-extrabold uppercase text-[11px] tracking-wider" colSpan={2}>
+                      SUBTOTAL {group.canal}
+                    </td>
+                    <td className="py-2.5 text-slate-500">—</td>
+                    <td className="py-2.5 hidden md:table-cell text-slate-500">—</td>
+                    <td className="py-2.5 text-right font-extrabold text-amber-300 text-xs">{formatShortCurrency(group.subtotal.ventasNetas)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs">{formatShortCurrency(group.subtotal.presupuesto)}</td>
                     <td className="py-2.5 text-right">
-                      <span className={`font-bold ${changeRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {formatPercent(changeRate)}
+                      <span className={`font-extrabold text-xs ${group.subtotal.changeRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {formatPercent(group.subtotal.changeRate)}
                       </span>
                     </td>
-                    <td className="py-2.5 text-right text-slate-300 hidden sm:table-cell">{formatCurrency(item.share * item.presupuesto)}</td>
-                    <td className="py-2.5 text-right text-slate-400 hidden md:table-cell">{formatPercent(item.accumShare)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-sky-300 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.proyeccion)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-slate-300 hidden md:table-cell text-xs">{formatPercent(group.subtotal.accumShare)}</td>
                   </tr>
-                );
-              })}
+                </React.Fragment>
+              ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-slate-700 bg-slate-900/90 font-bold">
+                <td className="py-3 pl-2 text-sky-400 font-extrabold uppercase tracking-wider">TOTALES</td>
+                <td className="py-3 hidden sm:table-cell text-slate-500">—</td>
+                <td className="py-3 text-slate-500">—</td>
+                <td className="py-3 hidden md:table-cell text-slate-500">—</td>
+                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatShortCurrency(paretoTotals.totalVentas)}</td>
+                <td className="py-3 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs md:text-sm">{formatShortCurrency(paretoTotals.totalPresupuesto)}</td>
+                <td className="py-3 text-right">
+                  <span className={`font-extrabold text-xs md:text-sm ${paretoTotals.changeRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {formatPercent(paretoTotals.changeRate)}
+                  </span>
+                </td>
+                <td className="py-3 text-right font-extrabold text-sky-300 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalProyeccion)}</td>
+                <td className="py-3 text-right font-extrabold text-slate-200 hidden md:table-cell text-xs md:text-sm">100,0%</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </GlassCard>
