@@ -147,12 +147,19 @@ const useStore = create((set, get) => ({
       const currentPeriod = get().selectedPeriod;
 
       // Fetch core tables in parallel, filtrando por período si la columna existe
-      const [provRes, zonesRes, sellersRes, salesRes, returnsDailyRes] = await Promise.all([
+      const [provRes, zonesRes, sellersRes, salesRes, returnsDailyRes,
+             returnsConceptsRes, clientReturnsRes, expiryConceptsRes,
+             expiryClientReturnsRes, productDistribRes] = await Promise.all([
         supabase.from('providers').select('*').eq('periodo', currentPeriod),
         supabase.from('zones').select('*').eq('periodo', currentPeriod),
         supabase.from('returns_sellers').select('*').eq('periodo', currentPeriod),
         supabase.from('sales_daily').select('*').eq('periodo', currentPeriod),
-        supabase.from('returns_daily').select('*').eq('periodo', currentPeriod).then(r => r.error?.code === '42P01' ? { data: [], error: null } : r)
+        supabase.from('returns_daily').select('*').eq('periodo', currentPeriod).then(r => r.error?.code === '42P01' ? { data: [], error: null } : r),
+        supabase.from('returns_concepts').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
+        supabase.from('client_returns').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
+        supabase.from('expiry_concepts').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
+        supabase.from('expiry_client_returns').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
+        supabase.from('product_distrib').select('*').eq('periodo', currentPeriod).then(r => r.error ? { data: [], error: null } : r),
       ]);
 
       if (provRes.error) throw provRes.error;
@@ -165,6 +172,11 @@ const useStore = create((set, get) => ({
       const dbSellers = sellersRes.data || [];
       const dbSales = salesRes.data || [];
       const dbReturnsDaily = returnsDailyRes.data || [];
+      const dbReturnsConcepts = returnsConceptsRes.data || [];
+      const dbClientReturns = clientReturnsRes.data || [];
+      const dbExpiryConcepts = expiryConceptsRes.data || [];
+      const dbExpiryClientReturns = expiryClientReturnsRes.data || [];
+      const dbProductDistrib = productDistribRes.data || [];
 
       if (dbProviders.length === 0 && dbZones.length === 0) {
         // Período sin datos aún (ej: julio recién empezó) — mostrar estado vacío sin pisar localStorage
@@ -284,43 +296,55 @@ const useStore = create((set, get) => ({
       const lmonth = String(latestDate.getMonth() + 1).padStart(2, '0');
       const latestPeriod = `${lyear}-${lmonth}`;
 
-      // Try to preserve concepts, clientReturns, expiryConcepts, expiryDaily, expiryClientReturns
-      // from local persisted data.
-      
+      // Datos complementarios: Supabase es la fuente primaria, localStorage como caché local
       const localData = loadPersistedData();
-      
-      const returnsConcepts = (localData && localData.returnsConcepts && localData.returnsConcepts.length > 0) 
-        ? localData.returnsConcepts 
-        : alpinaData.returnsConcepts;
-        
-      const clientReturns = (localData && localData.clientReturns && localData.clientReturns.length > 0) 
-        ? localData.clientReturns 
-        : alpinaData.clientReturns;
-        
-      const expiryConcepts = (localData && localData.expiryConcepts && localData.expiryConcepts.length > 0) 
-        ? localData.expiryConcepts 
-        : (alpinaData.expiryConcepts || []);
-        
-      const expiryDaily = (localData && localData.expiryDaily && localData.expiryDaily.length > 0) 
-        ? localData.expiryDaily 
-        : (alpinaData.expiryDaily || []);
-        
-      const expiryClientReturns = (localData && localData.expiryClientReturns && localData.expiryClientReturns.length > 0) 
-        ? localData.expiryClientReturns 
-        : (alpinaData.expiryClientReturns || []);
 
-      const productDistrib = (localData && localData.productDistrib && localData.productDistrib.length > 0)
-        ? localData.productDistrib
-        : (alpinaData.productDistrib || []);
+      // Returns Concepts: Supabase → localStorage → alpinaData
+      const returnsConcepts = dbReturnsConcepts.length > 0
+        ? dbReturnsConcepts.map(c => ({ concepto: c.concepto, porcentaje: Number(c.porcentaje) || 0 }))
+        : (localData?.returnsConcepts?.length > 0 ? localData.returnsConcepts : (alpinaData.returnsConcepts || []));
 
-      // returnsDaily: prefer localData with zone details if present, else prefer DB table, else build from sellers aggregates
+      // Client Returns: Supabase → localStorage → alpinaData
+      const clientReturns = dbClientReturns.length > 0
+        ? dbClientReturns.map(c => ({ ejecutivo: c.ejecutivo, cliente: c.cliente, concepto: c.concepto, valor: Number(c.valor) || 0 }))
+        : (localData?.clientReturns?.length > 0 ? localData.clientReturns : (alpinaData.clientReturns || []));
+
+      // Expiry Concepts: Supabase → localStorage → vacío
+      const expiryConcepts = dbExpiryConcepts.length > 0
+        ? dbExpiryConcepts.map(c => ({ concepto: c.concepto, porcentaje: Number(c.porcentaje) || 0 }))
+        : (localData?.expiryConcepts?.length > 0 ? localData.expiryConcepts : (alpinaData.expiryConcepts || []));
+
+      // Expiry Client Returns: Supabase → localStorage → vacío
+      const expiryClientReturns = dbExpiryClientReturns.length > 0
+        ? dbExpiryClientReturns.map(c => ({ ejecutivo: c.ejecutivo, cliente: c.cliente, concepto: c.concepto, valor: Number(c.valor) || 0 }))
+        : (localData?.expiryClientReturns?.length > 0 ? localData.expiryClientReturns : (alpinaData.expiryClientReturns || []));
+
+      // Expiry Daily: solo desde localStorage (no tiene tabla propia, returns_daily ya suma todo)
+      const expiryDaily = localData?.expiryDaily?.length > 0 ? localData.expiryDaily : [];
+
+      // Product Distrib: Supabase → localStorage → alpinaData
+      const productDistrib = dbProductDistrib.length > 0
+        ? dbProductDistrib.map(p => ({
+            nbProducto: p.nb_producto, nmProducto: p.nm_producto, tpProducto: p.tp_producto,
+            nmTpMarca: p.nm_tp_marca, nmTpFamilia: p.nm_tp_familia,
+            zona: p.zona, vendedor: p.vendedor,
+            ventas: Number(p.ventas) || 0, facturas: Number(p.facturas) || 0,
+            unidades: Number(p.unidades) || 0, clientesCount: Number(p.clientes_count) || 0,
+            participacion: Number(p.participacion) || 0, pesoTotal: Number(p.peso_total) || 0
+          }))
+        : (localData?.productDistrib?.length > 0 ? localData.productDistrib : (alpinaData.productDistrib || []));
+
+      // returnsDaily: Supabase es la fuente de verdad (ya incluye rechazos + cambios desde el upload).
+      // Solo usar localStorage como fallback si Supabase no tiene datos.
       let returnsDaily;
-      if (localData && localData.returnsDaily && localData.returnsDaily.length > 0) {
-        returnsDaily = localData.returnsDaily;
-      } else if (dbReturnsDaily && dbReturnsDaily.length > 0) {
+      if (dbReturnsDaily && dbReturnsDaily.length > 0) {
+        // Datos de Supabase: rechazos + cambios ya sumados en el upload
         returnsDaily = dbReturnsDaily.map(rd => ({ fecha: rd.fecha, devoluciones: Number(rd.devoluciones) || 0 }));
+      } else if (localData && localData.returnsDaily && localData.returnsDaily.length > 0) {
+        // Fallback: localStorage si Supabase no tiene nada
+        returnsDaily = localData.returnsDaily;
       } else {
-        // Fallback: spread seller total returns evenly across the observed sales days
+        // Fallback final: distribuir devoluciones de sellers entre los días de venta
         const totalDevSellers = dbSellers.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0);
         const uniqueSalesDates = Array.from(new Set(salesDaily.map(sd => sd.fecha)));
         const perDay = uniqueSalesDates.length > 0 ? Math.round(totalDevSellers / uniqueSalesDates.length) : 0;
@@ -352,9 +376,9 @@ const useStore = create((set, get) => ({
       // Regenerar notificaciones con los datos frescos de Supabase
       setTimeout(() => get().generateNotifications(), 0);
       console.log('Datos de Supabase sincronizados.');
-      console.log('  Ventas brutas (salesDaily):', salesDaily.reduce((s, d) => s + d.total, 0).toLocaleString('es-CO'));
-      console.log('  Ventas netas (sum zones):', zones.reduce((s, z) => s + z.ventasNetas, 0).toLocaleString('es-CO'));
-      console.log('  Devoluciones (sellers):', dbSellers.reduce((s, r) => s + (Number(r.devoluciones) || 0), 0).toLocaleString('es-CO'));
+      console.log('  Ventas brutas:', salesDaily.reduce((s, d) => s + d.total, 0).toLocaleString('es-CO'));
+      console.log('  Ventas netas (zones):', zones.reduce((s, z) => s + z.ventasNetas, 0).toLocaleString('es-CO'));
+      console.log('  Dev. Total (returns_daily):', returnsDaily.reduce((s, d) => s + d.devoluciones, 0).toLocaleString('es-CO'));
     } catch (err) {
       console.error('Error al sincronizar datos con Supabase:', err);
       set({ dataError: err.message, isLoadingData: false });

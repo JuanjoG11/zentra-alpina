@@ -1015,15 +1015,21 @@ const UploadExcel = () => {
             }
           }
 
-          // 5. Returns Daily — borrar solo el período actual e insertar deduplicado
-          if (processedData.returnsDaily && processedData.returnsDaily.length > 0) {
+          // 5. Returns Daily (rechazos) — borrar solo el período actual e insertar deduplicado
+          // Combinamos rechazos Y cambios (expiry) en la misma tabla con la suma total
+          const allReturnsDaily = [
+            ...(processedData.returnsDaily || []),
+            ...(processedData.expiryDaily || [])
+          ];
+          if (allReturnsDaily.length > 0) {
+            // Agrupar por fecha sumando rechazos + cambios
             const returnsMap = new Map();
-            processedData.returnsDaily.forEach(row => {
+            allReturnsDaily.forEach(row => {
               const key = String(row.fecha);
               if (returnsMap.has(key)) {
                 returnsMap.get(key).devoluciones += row.devoluciones;
               } else {
-                returnsMap.set(key, { ...row });
+                returnsMap.set(key, { fecha: row.fecha, devoluciones: row.devoluciones });
               }
             });
             const dedupedReturns = Array.from(returnsMap.values());
@@ -1032,21 +1038,104 @@ const UploadExcel = () => {
             const chunkSize = 400;
             for (let i = 0; i < dedupedReturns.length; i += chunkSize) {
               const chunk = dedupedReturns.slice(i, i + chunkSize);
-              // Remove zona field if it does not exist in the Supabase schema, add periodo
-              const adjustedChunk = chunk.map(row => {
-                const { zona, ...rest } = row;
-                return { ...rest, periodo: uploadPeriod };
-              });
+              const adjustedChunk = chunk.map(row => ({ ...row, periodo: uploadPeriod }));
               const { error: errReturns } = await supabase.from('returns_daily').insert(adjustedChunk);
               if (errReturns) throw new Error('Error al cargar devoluciones diarias: ' + errReturns.message);
             }
+            console.log(`- Sincronizadas ${dedupedReturns.length} filas de devoluciones diarias (rechazos + cambios).`);
           }
           
           console.log('Sincronización con base de datos completada con éxito.');
+
+          // 6. Returns Concepts (rechazos por concepto)
+          if (processedData.returnsConcepts && processedData.returnsConcepts.length > 0) {
+            const rcDb = processedData.returnsConcepts.map(c => ({
+              concepto: c.concepto,
+              porcentaje: c.porcentaje,
+              periodo: uploadPeriod
+            }));
+            await supabase.from('returns_concepts').delete().eq('periodo', uploadPeriod);
+            const { error: errRc } = await supabase.from('returns_concepts').insert(rcDb);
+            if (errRc) console.warn('Advertencia returns_concepts:', errRc.message);
+            else console.log('- Sincronizados conceptos de rechazo.');
+          }
+
+          // 7. Client Returns (rechazos por cliente)
+          if (processedData.clientReturns && processedData.clientReturns.length > 0) {
+            const crDb = processedData.clientReturns.map(c => ({
+              ejecutivo: c.ejecutivo,
+              cliente: c.cliente,
+              concepto: c.concepto,
+              valor: c.valor,
+              periodo: uploadPeriod
+            }));
+            await supabase.from('client_returns').delete().eq('periodo', uploadPeriod);
+            for (let i = 0; i < crDb.length; i += 400) {
+              const { error: errCr } = await supabase.from('client_returns').insert(crDb.slice(i, i + 400));
+              if (errCr) { console.warn('Advertencia client_returns:', errCr.message); break; }
+            }
+            console.log('- Sincronizados rechazos por cliente.');
+          }
+
+          // 8. Expiry Concepts (cambios por vencimiento)
+          if (processedData.expiryConcepts && processedData.expiryConcepts.length > 0) {
+            const ecDb = processedData.expiryConcepts.map(c => ({
+              concepto: c.concepto,
+              porcentaje: c.porcentaje,
+              periodo: uploadPeriod
+            }));
+            await supabase.from('expiry_concepts').delete().eq('periodo', uploadPeriod);
+            const { error: errEc } = await supabase.from('expiry_concepts').insert(ecDb);
+            if (errEc) console.warn('Advertencia expiry_concepts:', errEc.message);
+            else console.log('- Sincronizados conceptos de cambios.');
+          }
+
+          // 9. Expiry Client Returns (cambios por cliente)
+          if (processedData.expiryClientReturns && processedData.expiryClientReturns.length > 0) {
+            const ecrDb = processedData.expiryClientReturns.map(c => ({
+              ejecutivo: c.ejecutivo,
+              cliente: c.cliente,
+              concepto: c.concepto,
+              valor: c.valor,
+              periodo: uploadPeriod
+            }));
+            await supabase.from('expiry_client_returns').delete().eq('periodo', uploadPeriod);
+            for (let i = 0; i < ecrDb.length; i += 400) {
+              const { error: errEcr } = await supabase.from('expiry_client_returns').insert(ecrDb.slice(i, i + 400));
+              if (errEcr) { console.warn('Advertencia expiry_client_returns:', errEcr.message); break; }
+            }
+            console.log('- Sincronizados cambios por cliente.');
+          }
+
+          // 10. Product Distrib (distribución numérica por producto)
+          if (processedData.productDistrib && processedData.productDistrib.length > 0) {
+            const pdDb = processedData.productDistrib.map(p => ({
+              nb_producto:    p.nbProducto,
+              nm_producto:    p.nmProducto,
+              tp_producto:    p.tpProducto,
+              nm_tp_marca:    p.nmTpMarca,
+              nm_tp_familia:  p.nmTpFamilia,
+              zona:           p.zona,
+              vendedor:       p.vendedor,
+              ventas:         p.ventas,
+              facturas:       p.facturas,
+              unidades:       p.unidades,
+              clientes_count: p.clientesCount,
+              participacion:  p.participacion,
+              peso_total:     p.pesoTotal,
+              periodo:        uploadPeriod
+            }));
+            await supabase.from('product_distrib').delete().eq('periodo', uploadPeriod);
+            for (let i = 0; i < pdDb.length; i += 400) {
+              const { error: errPd } = await supabase.from('product_distrib').insert(pdDb.slice(i, i + 400));
+              if (errPd) { console.warn('Advertencia product_distrib:', errPd.message); break; }
+            }
+            console.log('- Sincronizados productos/distribución numérica.');
+          }
+
           isDbUpload = true;
 
-          // Persistir datos de cambios (expiry) en localStorage ANTES de re-sincronizar,
-          // porque estos datos solo vienen del Excel y no tienen tablas propias en Supabase.
+          // Persistir también en localStorage como caché local
           try {
             const existingRaw = localStorage.getItem('zentra_alpina_dbData');
             const existing = existingRaw ? JSON.parse(existingRaw) : {};
@@ -1058,8 +1147,7 @@ const UploadExcel = () => {
             existing.productDistrib = processedData.productDistrib || [];
             localStorage.setItem('zentra_alpina_dbData', JSON.stringify(existing));
             localStorage.setItem('zentra_alpina_period', latestPeriod);
-            console.log('✅ Datos de cambios/rechazos/distribución persistidos en localStorage antes de sync');
-          } catch (e) { console.warn('Error al persistir datos locales:', e); }
+          } catch (e) { console.warn('Error al persistir caché local:', e); }
 
           // Sincronizar store local con los datos reales leídos de la DB
           await fetchDataFromSupabase();

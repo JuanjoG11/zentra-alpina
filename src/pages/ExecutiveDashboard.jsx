@@ -267,14 +267,14 @@ const ExecutiveDashboard = () => {
       trend: kpis.compliance >= 1 ? 'up' : 'down'
     },
     {
-      title: 'Rechazos',
+      title: 'Dev. Total',
       value: formatCurrency(kpis.totalReturns),
       subtitle: `${formatPercent(kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0)} del total bruto`,
       icon: TrendingDown,
       color: 'from-rose-500/20 to-pink-500/20',
       iconColor: 'text-rose-400',
       badge: kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0,
-      badgeLabel: 'tasa de rechazo',
+      badgeLabel: 'tasa devolución total',
       trend: 'alert'
     },
     {
