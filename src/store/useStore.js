@@ -351,8 +351,10 @@ const useStore = create((set, get) => ({
       });
       // Regenerar notificaciones con los datos frescos de Supabase
       setTimeout(() => get().generateNotifications(), 0);
-      console.log('Datos de Supabase sincronizados. Ventas brutas:', salesDaily.reduce((s, d) => s + d.total, 0));
-      console.log('Devoluciones totales:', returnsDaily.reduce((s, d) => s + d.devoluciones, 0));
+      console.log('Datos de Supabase sincronizados.');
+      console.log('  Ventas brutas (salesDaily):', salesDaily.reduce((s, d) => s + d.total, 0).toLocaleString('es-CO'));
+      console.log('  Ventas netas (sum zones):', zones.reduce((s, z) => s + z.ventasNetas, 0).toLocaleString('es-CO'));
+      console.log('  Devoluciones (sellers):', dbSellers.reduce((s, r) => s + (Number(r.devoluciones) || 0), 0).toLocaleString('es-CO'));
     } catch (err) {
       console.error('Error al sincronizar datos con Supabase:', err);
       set({ dataError: err.message, isLoadingData: false });

@@ -288,22 +288,30 @@ export const calculateKPIs = (filteredData) => {
     : PRESUPUESTO_REAL_MES;
 
   // 3. Devoluciones totales = Rechazos + Cambios (vencimientos)
-  // Rechazos: clientReturns → returnsDaily → returnsSellers → estimación
   const clientReturnsSum  = Array.isArray(clientReturns)       ? clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0) : 0;
   const expiryReturnsSum  = Array.isArray(expiryClientReturns) ? expiryClientReturns.reduce((sum, c) => sum + (c.valor || 0), 0) : 0;
   const dailyReturnsSum   = Array.isArray(returnsDaily)        ? returnsDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
   const expiryDailySum    = Array.isArray(expiryDaily)         ? expiryDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
   const sellersReturnsSum = Array.isArray(returnsSellers)      ? returnsSellers.reduce((sum, s) => sum + (s.devoluciones || 0), 0) : 0;
 
-  // Rechazos: mejor fuente disponible
-  const rechazos = clientReturnsSum > 0 ? clientReturnsSum : (dailyReturnsSum > 0 ? dailyReturnsSum : (sellersReturnsSum > 0 ? sellersReturnsSum : totalSales * 0.024));
-  // Cambios (vencimientos): mejor fuente disponible
-  const cambios  = expiryReturnsSum > 0 ? expiryReturnsSum : expiryDailySum;
-  // Total devoluciones = rechazos + cambios
-  const totalReturns = rechazos + cambios;
+  // Fuente más fiable: ventas brutas − ventas netas por zona (incluye rechazos + cambios)
+  // zones.ventasNetas ya viene de Supabase con el valor correcto (bruto - dev - cambios)
+  const zonesNetSum = zones.length > 0 ? zones.reduce((sum, z) => sum + (z.ventasNetas || 0), 0) : 0;
+  const zonesImpliedReturns = zonesNetSum > 0 ? totalSales - zonesNetSum : 0;
 
-  // 4. Ventas Netas = Ventas Brutas − Rechazos − Cambios
-  const netSales = totalSales - totalReturns;
+  // Rechazos: mejor fuente disponible
+  const rechazos = clientReturnsSum > 0 ? clientReturnsSum : (dailyReturnsSum > 0 ? dailyReturnsSum : (sellersReturnsSum > 0 ? sellersReturnsSum : 0));
+  // Cambios: mejor fuente disponible
+  const cambios  = expiryReturnsSum > 0 ? expiryReturnsSum : expiryDailySum;
+
+  // Si tenemos rechazos+cambios locales, usarlos. Si no, derivar de la diferencia bruto-neto de zonas.
+  const totalReturns = (rechazos + cambios) > 0
+    ? (rechazos + cambios)
+    : (zonesImpliedReturns > 0 ? zonesImpliedReturns : totalSales * 0.044);
+
+  // 4. Ventas Netas = suma directa de zonas (ya calculada correctamente en el upload)
+  //    Fallback: totalSales − totalReturns
+  const netSales = zonesNetSum > 0 ? zonesNetSum : totalSales - totalReturns;
 
   // 5. Cumplimiento %: sales / budget
   const compliance = totalBudget > 0 ? totalSales / totalBudget : 0.973;
