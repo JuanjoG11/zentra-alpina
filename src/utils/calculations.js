@@ -273,7 +273,7 @@ export const getFilteredData = (arg1, arg2) => {
 };
 
 export const calculateKPIs = (filteredData) => {
-  const { providers, salesDaily, zones, returnsSellers, returnsDaily, clientReturns } = filteredData;
+  const { providers, salesDaily, zones, returnsSellers, returnsDaily, clientReturns, expiryClientReturns, expiryDaily } = filteredData;
 
   // 1. Ventas Totales: si hay datos diarios (salesDaily) usamos la suma de "total", sino usamos los proveedores
   const hasDailySales = Array.isArray(salesDaily) && salesDaily.length > 0 && salesDaily.some(d => d.total && d.total > 0);
@@ -287,14 +287,22 @@ export const calculateKPIs = (filteredData) => {
     ? zones.reduce((sum, z) => sum + z.presupuesto, 0)
     : PRESUPUESTO_REAL_MES;
 
-  // 3. Devoluciones (Rechazos): fuente principal = clientReturns (suma por cliente, la más completa).
-  // Fallback: returnsDaily → returnsSellers → estimación 3.1% de ventas.
-  const clientReturnsSum = Array.isArray(clientReturns) ? clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0) : 0;
-  const dailyReturnsSum = Array.isArray(returnsDaily) ? returnsDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
-  const sellersReturnsSum = Array.isArray(returnsSellers) ? returnsSellers.reduce((sum, s) => sum + (s.devoluciones || 0), 0) : 0;
-  const totalReturns = clientReturnsSum > 0 ? clientReturnsSum : (dailyReturnsSum > 0 ? dailyReturnsSum : (sellersReturnsSum > 0 ? sellersReturnsSum : totalSales * 0.031));
+  // 3. Devoluciones totales = Rechazos + Cambios (vencimientos)
+  // Rechazos: clientReturns → returnsDaily → returnsSellers → estimación
+  const clientReturnsSum  = Array.isArray(clientReturns)       ? clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0) : 0;
+  const expiryReturnsSum  = Array.isArray(expiryClientReturns) ? expiryClientReturns.reduce((sum, c) => sum + (c.valor || 0), 0) : 0;
+  const dailyReturnsSum   = Array.isArray(returnsDaily)        ? returnsDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
+  const expiryDailySum    = Array.isArray(expiryDaily)         ? expiryDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
+  const sellersReturnsSum = Array.isArray(returnsSellers)      ? returnsSellers.reduce((sum, s) => sum + (s.devoluciones || 0), 0) : 0;
 
-  // 4. Ventas Netas: totalSales menos total returns
+  // Rechazos: mejor fuente disponible
+  const rechazos = clientReturnsSum > 0 ? clientReturnsSum : (dailyReturnsSum > 0 ? dailyReturnsSum : (sellersReturnsSum > 0 ? sellersReturnsSum : totalSales * 0.024));
+  // Cambios (vencimientos): mejor fuente disponible
+  const cambios  = expiryReturnsSum > 0 ? expiryReturnsSum : expiryDailySum;
+  // Total devoluciones = rechazos + cambios
+  const totalReturns = rechazos + cambios;
+
+  // 4. Ventas Netas = Ventas Brutas − Rechazos − Cambios
   const netSales = totalSales - totalReturns;
 
   // 5. Cumplimiento %: sales / budget
