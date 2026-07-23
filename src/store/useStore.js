@@ -212,7 +212,7 @@ const useStore = create((set, get) => ({
         dbSales.filter(s => Number(s.ventas) > 0 && s.fecha)
           .map(s => s.fecha.substring(0, 10))
       ).size;
-      const elapsedDays = (configuredWD > 0 && configuredWD <= TOTAL_BD) ? configuredWD : (detectedDays || 1);
+      const elapsedDays = (configuredWD > 0 && configuredWD <= TOTAL_BD) ? configuredWD : 16;
       const projFactor = (elapsedDays >= 3 && elapsedDays < TOTAL_BD) ? TOTAL_BD / elapsedDays : 1;
 
       const providers = dbProviders.map(p => ({
