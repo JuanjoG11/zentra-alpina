@@ -1,6 +1,6 @@
 import React from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONE_TYPE_MAP } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONE_TYPE_MAP, ZONE_DEFAULT_CAMBIO_RATES } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency, formatCurrencyWithDecimals } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import { BIAreaChart, BIStackedBarChart, BILineChart } from '../components/charts/BICharts';
@@ -94,7 +94,7 @@ const channelTicket = React.useMemo(() => {
   const getZoneCambioVal = React.useCallback((z) => {
     const valorCambio = (zoneCambiosMap[z.zona] || 0) || (zoneCambiosMap[z.vendedor] || 0);
     if (valorCambio > 0) return valorCambio;
-    const rate = Number(z.cambiosPorc) || 0.015;
+    const rate = Number(z.cambiosPorc) || ZONE_DEFAULT_CAMBIO_RATES[z.zona] || 0.015;
     return (z.ventasNetas || 0) * rate;
   }, [zoneCambiosMap]);
 
@@ -103,7 +103,7 @@ const channelTicket = React.useMemo(() => {
     if (valorCambio > 0 && z.ventasNetas > 0) {
       return valorCambio / z.ventasNetas;
     }
-    return Number(z.cambiosPorc) || 0.015;
+    return Number(z.cambiosPorc) || ZONE_DEFAULT_CAMBIO_RATES[z.zona] || 0.015;
   }, [zoneCambiosMap]);
 
   // Proyección % = Proyección (pesos) / Presupuesto

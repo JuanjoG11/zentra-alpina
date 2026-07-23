@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { alpinaData } from '../data/alpina-data';
 import { supabase } from '../services/supabaseClient';
-import { DEFAULT_ZONE_SELLERS } from '../utils/calculations';
+import { DEFAULT_ZONE_SELLERS, ZONE_DEFAULT_CAMBIO_RATES } from '../utils/calculations';
 
 const STORAGE_KEY = 'zentra_alpina_dbData';
 const PERIOD_KEY  = 'zentra_alpina_period';
@@ -237,7 +237,7 @@ const useStore = create((set, get) => ({
           ventasNetas: net,
           proyectado: projected,
           porcentajeProyectado: budget > 0 ? projected / budget : 1.0,
-          cambiosPorc: 0.015,
+          cambiosPorc: ZONE_DEFAULT_CAMBIO_RATES[z.zona] || 0.015,
           facturas: Number(z.facturas) || 0
         };
       });
