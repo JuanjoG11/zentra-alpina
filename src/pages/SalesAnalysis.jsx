@@ -454,20 +454,20 @@ const channelTicket = React.useMemo(() => {
                 <th className="pb-3 hidden md:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('vendedor')}>
                   Vendedor {sortField === 'vendedor' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('ventas')}>
-                  Ventas Acum {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
-                </th>
                 <th className="pb-3 text-right hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('presupuesto')}>
                   Presupuesto {sortField === 'presupuesto' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('cambio')}>
-                  Cambio % {sortField === 'cambio' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('ventas')}>
+                  Ventas Acum {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 text-right hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('proyeccion')}>
                   Proyección (Pesos) {sortField === 'proyeccion' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 text-right hidden md:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('accumShare')}>
                   Proy. % {sortField === 'accumShare' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('cambio')}>
+                  Cambio % {sortField === 'cambio' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
               </tr>
             </thead>
@@ -482,23 +482,23 @@ const channelTicket = React.useMemo(() => {
                         <td className="py-2.5 hidden sm:table-cell">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
                         <td className="py-2.5"><CityBadge zona={item.zona} /></td>
                         <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
-                        <td className="py-2.5 text-right text-slate-400">{formatCurrency(item.ventasNetas)}</td>
                         <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatCurrency(item.presupuesto)}</td>
+                        <td className="py-2.5 text-right text-slate-400">{formatCurrency(item.ventasNetas)}</td>
+                        <td className="py-2.5 text-right hidden sm:table-cell text-sky-300 font-semibold">
+                          {formatCurrency(item.proyeccion)}
+                        </td>
+                        <td className="py-2.5 text-right hidden md:table-cell">
+                          {(() => {
+                            const ratio = item.proyeccion / (item.presupuesto || 1);
+                            const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
+                            return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
+                          })()}
+                        </td>
                         <td className="py-2.5 text-right">
                           <span className={`font-bold ${cambioRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>
                             {formatPercent(cambioRate)}
                           </span>
                         </td>
-                          <td className="py-2.5 text-right hidden sm:table-cell text-sky-300 font-semibold">
-                            {formatCurrency(item.proyeccion)}
-                          </td>
-                          <td className="py-2.5 text-right hidden md:table-cell">
-                            {(() => {
-                              const ratio = item.proyeccion / (item.presupuesto || 1);
-                              const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
-                              return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
-                            })()}
-                          </td>
                       </tr>
                     );
                   })}
@@ -509,13 +509,8 @@ const channelTicket = React.useMemo(() => {
                     </td>
                     <td className="py-2.5 text-slate-500">—</td>
                     <td className="py-2.5 hidden md:table-cell text-slate-500">—</td>
-                    <td className="py-2.5 text-right font-extrabold text-amber-300 text-xs">{formatCurrency(group.subtotal.ventasNetas)}</td>
                     <td className="py-2.5 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.presupuesto)}</td>
-                    <td className="py-2.5 text-right">
-                      <span className={`font-extrabold text-xs ${group.subtotal.changeRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                        {formatPercent(group.subtotal.changeRate)}
-                      </span>
-                    </td>
+                    <td className="py-2.5 text-right font-extrabold text-amber-300 text-xs">{formatCurrency(group.subtotal.ventasNetas)}</td>
                     <td className="py-2.5 text-right font-extrabold text-sky-300 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.proyeccion)}</td>
                     <td className="py-2.5 text-right font-extrabold text-slate-300 hidden md:table-cell text-xs">
                       {(() => {
@@ -523,6 +518,11 @@ const channelTicket = React.useMemo(() => {
                         const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
                         return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
                       })()}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      <span className={`font-extrabold text-xs ${group.subtotal.changeRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {formatPercent(group.subtotal.changeRate)}
+                      </span>
                     </td>
                   </tr>
                 </React.Fragment>
@@ -534,11 +534,8 @@ const channelTicket = React.useMemo(() => {
                 <td className="py-3 hidden sm:table-cell text-slate-500">—</td>
                 <td className="py-3 text-slate-500">—</td>
                 <td className="py-3 hidden md:table-cell text-slate-500">—</td>
-                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatCurrency(paretoTotals.totalVentas)}</td>
                 <td className="py-3 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalPresupuesto)}</td>
-                <td className="py-3 text-right">
-                  <span className={`font-extrabold text-xs md:text-sm ${paretoTotals.changeRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>{formatPercent(paretoTotals.changeRate)}</span>
-                </td>
+                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatCurrency(paretoTotals.totalVentas)}</td>
                 <td className="py-3 text-right font-extrabold text-sky-300 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalProyeccion)}</td>
                 <td className="py-3 text-right font-extrabold text-slate-300 hidden md:table-cell text-xs md:text-sm">
                   {(() => {
@@ -546,6 +543,9 @@ const channelTicket = React.useMemo(() => {
                     const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
                     return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
                   })()}
+                </td>
+                <td className="py-3 text-right">
+                  <span className={`font-extrabold text-xs md:text-sm ${paretoTotals.changeRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>{formatPercent(paretoTotals.changeRate)}</span>
                 </td>
               </tr>
             </tfoot>
