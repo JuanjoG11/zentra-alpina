@@ -91,20 +91,53 @@ const channelTicket = React.useMemo(() => {
     return map;
   }, [filteredData.expiryClientReturns]);
 
+  // Fallback map of seller returns by zone / executive (from returnsSellers)
+  const returnsSellersMap = React.useMemo(() => {
+    const map = {};
+    (filteredData.returnsSellers || []).forEach(s => {
+      const key = s.ejecutivo || s.nombre || '';
+      if (key) {
+        map[key] = {
+          devoluciones: Number(s.devoluciones) || 0,
+          porcentaje: Number(s.porcentajeDevolucion) || 0,
+          ventas: Number(s.ventas) || 0
+        };
+      }
+    });
+    return map;
+  }, [filteredData.returnsSellers]);
+
   const getZoneCambioVal = React.useCallback((z) => {
     const valorCambio = (zoneCambiosMap[z.zona] || 0) || (zoneCambiosMap[z.vendedor] || 0);
     if (valorCambio > 0) return valorCambio;
-    const rate = Number(z.cambiosPorc) || 0.015;
+
+    const sellerInfo = returnsSellersMap[z.zona] || returnsSellersMap[z.vendedor];
+    if (sellerInfo && sellerInfo.devoluciones > 0) {
+      return sellerInfo.devoluciones;
+    }
+
+    const rate = (sellerInfo && sellerInfo.porcentaje > 0) ? sellerInfo.porcentaje : (Number(z.cambiosPorc) || 0.015);
     return (z.ventasNetas || 0) * rate;
-  }, [zoneCambiosMap]);
+  }, [zoneCambiosMap, returnsSellersMap]);
 
   const getZoneCambioRate = React.useCallback((z) => {
     const valorCambio = (zoneCambiosMap[z.zona] || 0) || (zoneCambiosMap[z.vendedor] || 0);
     if (valorCambio > 0 && z.ventasNetas > 0) {
       return valorCambio / z.ventasNetas;
     }
+
+    const sellerInfo = returnsSellersMap[z.zona] || returnsSellersMap[z.vendedor];
+    if (sellerInfo) {
+      if (sellerInfo.ventas > 0 && sellerInfo.devoluciones > 0) {
+        return sellerInfo.devoluciones / sellerInfo.ventas;
+      }
+      if (sellerInfo.porcentaje > 0) {
+        return sellerInfo.porcentaje;
+      }
+    }
+
     return Number(z.cambiosPorc) || 0.015;
-  }, [zoneCambiosMap]);
+  }, [zoneCambiosMap, returnsSellersMap]);
 
   // Proyección % = Proyección (pesos) / Presupuesto
   const getProyPercent = React.useCallback((proyeccion, presupuesto) => {
