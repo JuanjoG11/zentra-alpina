@@ -47,12 +47,13 @@ export const formatShortCurrency = (val) => {
   return isNegative ? `-${formatted}` : formatted;
 };
 
-export const formatPercent = (val) => {
-  if (val === undefined || val === null || isNaN(val)) return '0,0%';
-  // Percent formatting in Colombia uses commas for decimals (e.g. 97,3%)
-  const percentage = val * 100;
-  return `${percentage.toFixed(1).replace('.', ',')}%`;
-};
+  export const formatPercent = (val) => {
+    if (val === undefined || val === null || isNaN(val)) return '0,00%';
+    // Percent formatting in Colombia uses commas for decimals (e.g. 97,30%)
+    const percentage = val * 100;
+    return `${percentage.toFixed(2).replace('.', ',')}%`;
+  };
+
 
 export const formatNumber = (val) => {
   if (val === undefined || val === null || isNaN(val)) return '0';

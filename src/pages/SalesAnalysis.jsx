@@ -482,7 +482,7 @@ const channelTicket = React.useMemo(() => {
                         <td className="py-2.5 hidden sm:table-cell">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
                         <td className="py-2.5"><CityBadge zona={item.zona} /></td>
                         <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
-                        <td className="py-2.5 text-right font-semibold text-slate-100">{formatCurrency(item.ventasNetas)}</td>
+                        <td className="py-2.5 text-right text-slate-400">{formatCurrency(item.ventasNetas)}</td>
                         <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatCurrency(item.presupuesto)}</td>
                         <td className="py-2.5 text-right">
                           <span className={`font-bold ${cambioRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>
