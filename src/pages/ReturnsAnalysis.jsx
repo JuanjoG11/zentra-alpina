@@ -65,19 +65,19 @@ const ReturnsAnalysis = () => {
   const sortedExpiryConcepts = [...filteredData.expiryConcepts]
     .sort((a, b) => b.porcentaje - a.porcentaje);
     
-  // Rechazos: suma directa de clientReturns (fuente completa, igual que calculateKPIs)
+  // Rechazos: suma directa de clientReturns
   const totalGeneralReturns = filteredData.clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
 
-  // Cambios (vencimientos): usar expiryDaily si disponible, sino derivar de returns_daily − rechazos
+  // Cambios (vencimientos): expiryDaily si disponible, sino diferencia
   const expiryDailySum = filteredData.expiryDaily.reduce((sum, r) => sum + (r.devoluciones || 0), 0);
   const returnsDailySum = filteredData.returnsDaily.reduce((sum, r) => sum + (r.devoluciones || 0), 0);
-  // returns_daily de Supabase tiene rechazos + cambios sumados
-  // Si expiryDaily tiene datos, úsalos. Si no, calcular como diferencia
   const totalExpiryReturns = expiryDailySum > 0
     ? expiryDailySum
     : Math.max(0, returnsDailySum - totalGeneralReturns);
 
-  const totalAllReturns = totalGeneralReturns + totalExpiryReturns;
+  // Total devolución: usar la misma fuente fiable que el Dashboard (bruto - neto de zonas)
+  // kpis.totalReturns = totalSales - zonesNetSum, siempre consistente entre dispositivos
+  const totalAllReturns = kpis.totalReturns > 0 ? kpis.totalReturns : totalGeneralReturns + totalExpiryReturns;
 
   return (
     <div className="space-y-6">
