@@ -104,6 +104,18 @@ const channelTicket = React.useMemo(() => {
     return Number(z.cambiosPorc) || 0.015;
   }, [zoneCambiosMap]);
 
+  // Proyección % = Proyección (pesos) / Presupuesto
+  const getProyPercent = React.useCallback((proyeccion, presupuesto) => {
+    if (!presupuesto) return 0;
+    return proyeccion / presupuesto;
+  }, []);
+
+  // Projection: ventasNetas divided by 16 working days, multiplied by 23 total days
+  const getProjection = React.useCallback((ventasNetas) => {
+    if (!ventasNetas) return 0;
+    return (ventasNetas / 16) * 23;
+  }, []);
+
   const CANAL_ORDER = {
     'TAT': 1,
     'SUPERMERCADOS': 2,
@@ -136,8 +148,8 @@ const channelTicket = React.useMemo(() => {
         const cB = getZoneCambioRate(b);
         comp = cA - cB;
       } else if (sortField === 'proyeccion') {
-        const pA = (coreMap[a.zona]?.share || 0) * (a.presupuesto || 0);
-        const pB = (coreMap[b.zona]?.share || 0) * (b.presupuesto || 0);
+        const pA = getProjection(a.ventasNetas);
+        const pB = getProjection(b.ventasNetas);
         comp = pA - pB;
       } else if (sortField === 'accumShare') {
         comp = (coreMap[a.zona]?.accumShare || 0) - (coreMap[b.zona]?.accumShare || 0);
@@ -152,14 +164,15 @@ const channelTicket = React.useMemo(() => {
       ...z,
       share: meta.share,
       accumShare: meta.accumShare,
-      isCore: meta.isCore
+      isCore: meta.isCore,
+      proyeccion: getProjection(z.ventasNetas)
     };
   });
 
   const paretoTotals = React.useMemo(() => {
     const totalVentas = paretoData.reduce((sum, item) => sum + (item.ventasNetas || 0), 0);
     const totalPresupuesto = paretoData.reduce((sum, item) => sum + (item.presupuesto || 0), 0);
-    const totalProyeccion = paretoData.reduce((sum, item) => sum + (item.share * item.presupuesto || 0), 0);
+    const totalProyeccion = paretoData.reduce((sum, item) => sum + (item.proyeccion || 0), 0);
     const totalCambiosVal = paretoData.reduce((sum, item) => sum + getZoneCambioVal(item), 0);
     const changeRate = totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015;
     return {
@@ -184,13 +197,13 @@ const channelTicket = React.useMemo(() => {
     });
 
     return list.map((g) => {
-      const totalVentas = g.items.reduce((sum, i) => sum + (i.ventasNetas || 0), 0);
-      const totalPresupuesto = g.items.reduce((sum, i) => sum + (i.presupuesto || 0), 0);
-      const totalProyeccion = g.items.reduce((sum, i) => sum + ((i.share || 0) * (i.presupuesto || 0)), 0);
-      const totalCambiosVal = g.items.reduce((sum, i) => sum + getZoneCambioVal(i), 0);
-      const changeRate = totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015;
-      const lastItem = g.items[g.items.length - 1];
-      const maxAccumShare = lastItem ? lastItem.accumShare : 0;
+       const totalVentas = g.items.reduce((sum, i) => sum + (i.ventasNetas || 0), 0);
+       const totalPresupuesto = g.items.reduce((sum, i) => sum + (i.presupuesto || 0), 0);
+       const totalProyeccion = g.items.reduce((sum, i) => sum + (i.proyeccion || 0), 0);
+       const totalCambiosVal = g.items.reduce((sum, i) => sum + getZoneCambioVal(i), 0);
+       const changeRate = totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015;
+       const lastItem = g.items[g.items.length - 1];
+       const maxAccumShare = lastItem ? lastItem.accumShare : 0;
 
       return {
         ...g,
@@ -440,7 +453,7 @@ const channelTicket = React.useMemo(() => {
                   Vendedor {sortField === 'vendedor' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('ventas')}>
-                  Ventas {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  Ventas Acum {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 text-right hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('presupuesto')}>
                   Presupuesto {sortField === 'presupuesto' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
@@ -452,7 +465,7 @@ const channelTicket = React.useMemo(() => {
                   Proyección (Pesos) {sortField === 'proyeccion' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 text-right hidden md:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('accumShare')}>
-                  Acum. % {sortField === 'accumShare' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  Proy. % {sortField === 'accumShare' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
               </tr>
             </thead>
@@ -467,15 +480,23 @@ const channelTicket = React.useMemo(() => {
                         <td className="py-2.5 hidden sm:table-cell">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
                         <td className="py-2.5"><CityBadge zona={item.zona} /></td>
                         <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
-                        <td className="py-2.5 text-right font-semibold text-slate-100">{formatCurrencyWithDecimals(item.ventasNetas)}</td>
-                        <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatShortCurrency(item.presupuesto)}</td>
+                        <td className="py-2.5 text-right font-semibold text-slate-100">{formatCurrency(item.ventasNetas)}</td>
+                        <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatCurrency(item.presupuesto)}</td>
                         <td className="py-2.5 text-right">
-                          <span className="font-bold text-slate-200">
+                          <span className={`font-bold ${cambioRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>
                             {formatPercent(cambioRate)}
                           </span>
                         </td>
-                        <td className="py-2.5 text-right text-slate-300 hidden sm:table-cell">{formatCurrency(item.share * item.presupuesto)}</td>
-                        <td className="py-2.5 text-right text-slate-400 hidden md:table-cell">{formatPercent(item.accumShare)}</td>
+                          <td className="py-2.5 text-right hidden sm:table-cell text-sky-300 font-semibold">
+                            {formatCurrency(item.proyeccion)}
+                          </td>
+                          <td className="py-2.5 text-right hidden md:table-cell">
+                            {(() => {
+                              const ratio = item.proyeccion / (item.presupuesto || 1);
+                              const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
+                              return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
+                            })()}
+                          </td>
                       </tr>
                     );
                   })}
@@ -486,15 +507,21 @@ const channelTicket = React.useMemo(() => {
                     </td>
                     <td className="py-2.5 text-slate-500">—</td>
                     <td className="py-2.5 hidden md:table-cell text-slate-500">—</td>
-                    <td className="py-2.5 text-right font-extrabold text-amber-300 text-xs">{formatCurrencyWithDecimals(group.subtotal.ventasNetas)}</td>
-                    <td className="py-2.5 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs">{formatShortCurrency(group.subtotal.presupuesto)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-amber-300 text-xs">{formatCurrency(group.subtotal.ventasNetas)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.presupuesto)}</td>
                     <td className="py-2.5 text-right">
-                      <span className="font-extrabold text-xs text-amber-300">
+                      <span className={`font-extrabold text-xs ${group.subtotal.changeRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>
                         {formatPercent(group.subtotal.changeRate)}
                       </span>
                     </td>
                     <td className="py-2.5 text-right font-extrabold text-sky-300 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.proyeccion)}</td>
-                    <td className="py-2.5 text-right font-extrabold text-slate-300 hidden md:table-cell text-xs">{formatPercent(group.subtotal.accumShare)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-slate-300 hidden md:table-cell text-xs">
+                      {(() => {
+                        const ratio = group.subtotal.proyeccion / (group.subtotal.presupuesto || 1);
+                        const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
+                        return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
+                      })()}
+                    </td>
                   </tr>
                 </React.Fragment>
               ))}
@@ -505,15 +532,19 @@ const channelTicket = React.useMemo(() => {
                 <td className="py-3 hidden sm:table-cell text-slate-500">—</td>
                 <td className="py-3 text-slate-500">—</td>
                 <td className="py-3 hidden md:table-cell text-slate-500">—</td>
-                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatCurrencyWithDecimals(paretoTotals.totalVentas)}</td>
-                <td className="py-3 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs md:text-sm">{formatShortCurrency(paretoTotals.totalPresupuesto)}</td>
+                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatCurrency(paretoTotals.totalVentas)}</td>
+                <td className="py-3 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalPresupuesto)}</td>
                 <td className="py-3 text-right">
-                  <span className="font-extrabold text-xs md:text-sm text-sky-300">
-                    {formatPercent(paretoTotals.changeRate)}
-                  </span>
+                  <span className={`font-extrabold text-xs md:text-sm ${paretoTotals.changeRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>{formatPercent(paretoTotals.changeRate)}</span>
                 </td>
                 <td className="py-3 text-right font-extrabold text-sky-300 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalProyeccion)}</td>
-                <td className="py-3 text-right font-extrabold text-slate-200 hidden md:table-cell text-xs md:text-sm">100,0%</td>
+                <td className="py-3 text-right font-extrabold text-slate-300 hidden md:table-cell text-xs md:text-sm">
+                  {(() => {
+                    const ratio = paretoTotals.totalProyeccion / (paretoTotals.totalPresupuesto || 1);
+                    const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
+                    return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
+                  })()}
+                </td>
               </tr>
             </tfoot>
           </table>

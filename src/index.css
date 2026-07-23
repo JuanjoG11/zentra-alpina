@@ -3,6 +3,9 @@
 
 @import "tailwindcss";
 
+/* Safelist: clases dinámicas usadas con template literals en JSX (Tailwind no las detecta estáticamente) */
+@source inline("text-rose-400 text-emerald-400 text-rose-500 text-emerald-500 bg-rose-400/10 bg-emerald-400/10");
+
 @layer base {
   body {
     font-family: 'Inter', sans-serif;
