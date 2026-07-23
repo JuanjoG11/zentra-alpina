@@ -26,6 +26,8 @@ const CityBadge = ({ zona }) => {
 const SalesAnalysis = () => {
   const filters = useStore();
   const dbData = useStore(state => state.dbData);
+  const currentWorkDay = useStore(state => state.currentWorkDay);
+  const selectedPeriod = useStore(state => state.selectedPeriod);
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
 
@@ -110,11 +112,24 @@ const channelTicket = React.useMemo(() => {
     return proyeccion / presupuesto;
   }, []);
 
-  // Projection: ventasNetas divided by 16 working days, multiplied by 23 total days
+  // Proyección: usar mismos días hábiles que el store (dinámico, no hardcodeado)
+  const { elapsedDays: projElapsed, totalDays: projTotal } = React.useMemo(() => {
+    const DIAS_HABILES_POR_PERIODO = { '2026-06': 22, '2026-07': 23 };
+    const total = DIAS_HABILES_POR_PERIODO[selectedPeriod] || 23;
+    // Detectar días transcurridos desde salesDaily si currentWorkDay no está configurado
+    const detectedDays = new Set(
+      (filteredData.salesDaily || []).filter(s => s.total > 0 && s.fecha)
+        .map(s => s.fecha.substring ? s.fecha.substring(0, 10) : s.fecha)
+    ).size;
+    const elapsed = (currentWorkDay > 0 && currentWorkDay <= total) ? currentWorkDay : (detectedDays || 1);
+    return { elapsedDays: elapsed, totalDays: total };
+  }, [selectedPeriod, currentWorkDay, filteredData.salesDaily]);
+
+  // Projection: ventasNetas / días hábiles transcurridos × total días hábiles del período
   const getProjection = React.useCallback((ventasNetas) => {
     if (!ventasNetas) return 0;
-    return (ventasNetas / 16) * 23;
-  }, []);
+    return (ventasNetas / projElapsed) * projTotal;
+  }, [projElapsed, projTotal]);
 
   const CANAL_ORDER = {
     'TAT': 1,
