@@ -294,23 +294,32 @@ export const calculateKPIs = (filteredData) => {
   const expiryDailySum    = Array.isArray(expiryDaily)         ? expiryDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
   const sellersReturnsSum = Array.isArray(returnsSellers)      ? returnsSellers.reduce((sum, s) => sum + (s.devoluciones || 0), 0) : 0;
 
-  // Fuente más fiable: ventas brutas − ventas netas por zona (incluye rechazos + cambios)
-  // zones.ventasNetas ya viene de Supabase con el valor correcto (bruto - dev - cambios)
+  // FUENTE PRINCIPAL: bruto − neto de zonas (siempre correcto, viene directo de Supabase)
+  // zones.ventasNetas = bruto - rechazos - cambios, calculado en el upload
   const zonesNetSum = zones.length > 0 ? zones.reduce((sum, z) => sum + (z.ventasNetas || 0), 0) : 0;
-  const zonesImpliedReturns = zonesNetSum > 0 ? totalSales - zonesNetSum : 0;
+  const zonesImpliedReturns = (zonesNetSum > 0 && totalSales > zonesNetSum)
+    ? totalSales - zonesNetSum
+    : 0;
 
-  // Rechazos: mejor fuente disponible
-  const rechazos = clientReturnsSum > 0 ? clientReturnsSum : (dailyReturnsSum > 0 ? dailyReturnsSum : (sellersReturnsSum > 0 ? sellersReturnsSum : 0));
-  // Cambios: mejor fuente disponible
-  const cambios  = expiryReturnsSum > 0 ? expiryReturnsSum : expiryDailySum;
+  // totalReturns: usar la diferencia bruto-neto como fuente más fiable.
+  // Solo usar otras fuentes si no tenemos datos de zonas.
+  let totalReturns;
+  if (zonesImpliedReturns > 0) {
+    // Mejor fuente: calculado directamente desde zonas (idéntico en todos los dispositivos)
+    totalReturns = zonesImpliedReturns;
+  } else if ((clientReturnsSum + expiryReturnsSum) > 0) {
+    // Segunda opción: suma de rechazos + cambios por cliente
+    totalReturns = clientReturnsSum + expiryReturnsSum;
+  } else if (dailyReturnsSum > 0) {
+    // Tercera opción: returns_daily de Supabase
+    totalReturns = dailyReturnsSum + expiryDailySum;
+  } else if (sellersReturnsSum > 0) {
+    totalReturns = sellersReturnsSum;
+  } else {
+    totalReturns = totalSales * 0.044;
+  }
 
-  // Si tenemos rechazos+cambios locales, usarlos. Si no, derivar de la diferencia bruto-neto de zonas.
-  const totalReturns = (rechazos + cambios) > 0
-    ? (rechazos + cambios)
-    : (zonesImpliedReturns > 0 ? zonesImpliedReturns : totalSales * 0.044);
-
-  // 4. Ventas Netas = suma directa de zonas (ya calculada correctamente en el upload)
-  //    Fallback: totalSales − totalReturns
+  // 4. Ventas Netas = suma directa de zonas (siempre correcto desde Supabase)
   const netSales = zonesNetSum > 0 ? zonesNetSum : totalSales - totalReturns;
 
   // 5. Cumplimiento %: sales / budget
