@@ -25,27 +25,26 @@ const loadPersistedChat = () => {
   return null;
 };
 
-const saveToStorage = (dbData, period) => {
+const saveToStorage = (period) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dbData));
     if (period) localStorage.setItem(PERIOD_KEY, period);
   } catch (e) { /* ignore quota errors */ }
 };
 
 const persistedData   = loadPersistedData();
 
-// Si el persistedData tiene providers y salesDaily vacíos, descartarlo —
-// es un artefacto de un período sin datos que se guardó anteriormente.
+// Usar datos persistidos SOLO como render inicial rápido (pantalla de carga).
+// Supabase siempre sobreescribirá con datos frescos al iniciar.
+// Esto garantiza que todos los dispositivos vean los mismos datos.
 const _persistedHasData = persistedData &&
   ((persistedData.providers || []).length > 0 ||
    (persistedData.salesDaily || []).length > 0 ||
    (persistedData.zones || []).length > 0);
-const initialData = _persistedHasData ? persistedData : null;
+const initialData = null; // Siempre cargar desde Supabase — no usar caché de localStorage
 
-// Si el localStorage tenía datos vacíos, borrarlo para que no interfiera
-if (persistedData && !_persistedHasData) {
-  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-}
+// Limpiar cualquier dato viejo cacheado en localStorage para garantizar
+// que todos los dispositivos carguen siempre datos frescos de Supabase.
+try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
 // El período activo: usar lo que esté guardado en localStorage.
 // Migrar formato viejo 'nombre-YYYY' → 'YYYY-MM' si es necesario.
 const _MONTH_NAME_TO_NUM = {
@@ -119,7 +118,7 @@ const useStore = create((set, get) => ({
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
   setDbData: (newData, period) => {
-    saveToStorage(newData, period);
+    if (period) saveToStorage(period);
     set({ dbData: newData, ...(period ? { selectedPeriod: period } : {}) });
     // Regenerar notificaciones con los nuevos datos
     setTimeout(() => get().generateNotifications(), 0);
