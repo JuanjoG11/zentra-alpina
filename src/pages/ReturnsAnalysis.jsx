@@ -79,16 +79,15 @@ const ReturnsAnalysis = () => {
       ? filteredData.returnsSellers
       : (alpinaData.returnsSellers || []);
 
-    const totalListDev = list.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0) || 1;
-    const rechazosRatio = totalGeneralReturns / totalListDev;
+    // Proporción exacta de rechazos sobre el total de devoluciones ($78.8M / $145.3M = ~54.24%)
+    const rechazosRatio = totalAllReturns > 0 ? totalGeneralReturns / totalAllReturns : 0;
 
     return list.map(s => {
       const bruto = Number(s.ventasBrutas) || Number(s.ventas) || 0;
       const dev   = Number(s.devoluciones) || 0;
       const canal = s.canal || (SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT');
       
-      // Cálculo 100% blindado y determinista: el rechazo de cada vendedor es proporcional a su devolucion
-      // de modo que la suma de toda la tabla NUNCA puede diferir de la tarjeta superior ($81.9M).
+      // Rechazos exactos del vendedor ajustados al total de la card superior
       const rechazos = Math.round(dev * rechazosRatio);
 
       return {
@@ -100,7 +99,7 @@ const ReturnsAnalysis = () => {
         rechazos,
       };
     });
-  }, [filteredData.returnsSellers, totalGeneralReturns]);
+  }, [filteredData.returnsSellers, totalGeneralReturns, totalAllReturns]);
 
   const filteredExecs = React.useMemo(() => {
     let result = execsData;
