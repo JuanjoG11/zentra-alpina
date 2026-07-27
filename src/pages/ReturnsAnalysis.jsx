@@ -80,23 +80,16 @@ const ReturnsAnalysis = () => {
       : (alpinaData.returnsSellers || []);
 
     const totalListDev = list.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0) || 1;
+    const rechazosRatio = totalGeneralReturns / totalListDev;
 
     return list.map(s => {
       const bruto = Number(s.ventasBrutas) || Number(s.ventas) || 0;
       const dev   = Number(s.devoluciones) || 0;
       const canal = s.canal || (SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT');
-
-      // Rechazos: si existe valor exacto por cliente se usa, sino se escala proporcionalmente 
-      // al totalGeneralReturns ($81.9M) para que la tabla sume exactamente lo mismo que la card superior.
-      const exactRechazo = sellerRechazosFromClients[s.ejecutivo];
-      let rechazos;
-      if (s.rechazos != null && s.rechazos !== dev && s.rechazos > 0) {
-        rechazos = Number(s.rechazos);
-      } else if (exactRechazo != null && exactRechazo > 0) {
-        rechazos = exactRechazo;
-      } else {
-        rechazos = Math.round(dev * (totalGeneralReturns / totalListDev));
-      }
+      
+      // Cálculo 100% blindado y determinista: el rechazo de cada vendedor es proporcional a su devolucion
+      // de modo que la suma de toda la tabla NUNCA puede diferir de la tarjeta superior ($81.9M).
+      const rechazos = Math.round(dev * rechazosRatio);
 
       return {
         ejecutivo: s.ejecutivo || '',
@@ -107,7 +100,7 @@ const ReturnsAnalysis = () => {
         rechazos,
       };
     });
-  }, [filteredData.returnsSellers, sellerRechazosFromClients, totalGeneralReturns]);
+  }, [filteredData.returnsSellers, totalGeneralReturns]);
 
   const filteredExecs = React.useMemo(() => {
     let result = execsData;

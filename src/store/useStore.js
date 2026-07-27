@@ -339,28 +339,29 @@ const useStore = create((set, get) => ({
       const lmonth = String(latestDate.getMonth() + 1).padStart(2, '0');
       const latestPeriod = `${lyear}-${lmonth}`;
 
-      // Datos complementarios: Supabase es la fuente primaria, localStorage como caché local
+      // Datos complementarios: Supabase es la fuente primaria, localStorage solo si coincide con el período activo
       const localData = loadPersistedData();
+      const isSamePeriodLocal = localData?.periodo === currentPeriod;
 
-      // Returns Concepts: Supabase → localStorage → alpinaData
+      // Returns Concepts: Supabase → localStorage (mismo período) → alpinaData
       const returnsConcepts = dbReturnsConcepts.length > 0
         ? dbReturnsConcepts.map(c => ({ concepto: c.concepto, porcentaje: Number(c.porcentaje) || 0 }))
-        : (localData?.returnsConcepts?.length > 0 ? localData.returnsConcepts : (alpinaData.returnsConcepts || []));
+        : (isSamePeriodLocal && localData?.returnsConcepts?.length > 0 ? localData.returnsConcepts : (alpinaData.returnsConcepts || []));
 
-      // Client Returns: Supabase → localStorage → alpinaData
+      // Client Returns: Supabase → localStorage (mismo período) → alpinaData
       const clientReturns = dbClientReturns.length > 0
         ? dbClientReturns.map(c => ({ ejecutivo: c.ejecutivo, cliente: c.cliente, concepto: c.concepto, valor: Number(c.valor) || 0 }))
-        : (localData?.clientReturns?.length > 0 ? localData.clientReturns : (alpinaData.clientReturns || []));
+        : (isSamePeriodLocal && localData?.clientReturns?.length > 0 ? localData.clientReturns : (alpinaData.clientReturns || []));
 
-      // Expiry Concepts: Supabase → localStorage → vacío
+      // Expiry Concepts: Supabase → localStorage (mismo período) → alpinaData
       const expiryConcepts = dbExpiryConcepts.length > 0
         ? dbExpiryConcepts.map(c => ({ concepto: c.concepto, porcentaje: Number(c.porcentaje) || 0 }))
-        : (localData?.expiryConcepts?.length > 0 ? localData.expiryConcepts : (alpinaData.expiryConcepts || []));
+        : (isSamePeriodLocal && localData?.expiryConcepts?.length > 0 ? localData.expiryConcepts : (alpinaData.expiryConcepts || []));
 
-      // Expiry Client Returns: Supabase → localStorage → vacío
+      // Expiry Client Returns: Supabase → localStorage (mismo período) → alpinaData
       const expiryClientReturns = dbExpiryClientReturns.length > 0
         ? dbExpiryClientReturns.map(c => ({ ejecutivo: c.ejecutivo, cliente: c.cliente, concepto: c.concepto, valor: Number(c.valor) || 0 }))
-        : (localData?.expiryClientReturns?.length > 0 ? localData.expiryClientReturns : (alpinaData.expiryClientReturns || []));
+        : (isSamePeriodLocal && localData?.expiryClientReturns?.length > 0 ? localData.expiryClientReturns : (alpinaData.expiryClientReturns || []));
 
       // Expiry Daily: solo desde localStorage (no tiene tabla propia, returns_daily ya suma todo)
       const expiryDaily = localData?.expiryDaily?.length > 0 ? localData.expiryDaily : [];
