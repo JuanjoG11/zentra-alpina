@@ -270,21 +270,20 @@ const useStore = create((set, get) => ({
         };
       });
 
+      const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
       const returnsSellers = dbSellers.map(s => {
-        const bruto = Number(s.ventas) || 0;
+        const bruto = Number(s.ventas) || 0;       // DB 'ventas' stores ventaBruta since last upload fix
         const dev   = Number(s.devoluciones) || 0;
-        // rechazos: use explicit field if present, otherwise estimate as total devoluciones
-        // (fallback for rows uploaded before this field was added)
-        const rechazos = s.rechazos != null ? Number(s.rechazos) : dev;
-        const ventasBrutas = s.ventasBrutas != null ? Number(s.ventasBrutas) : bruto;
-        const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
-        const canal = s.canal || (SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT');
+        // rechazos: no dedicated DB column, so use devoluciones as best available
+        // (when a new cube is uploaded the local processing separates them correctly in UI)
+        const rechazos = dev;
+        const canal = SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT';
         return {
           ejecutivo: s.ejecutivo,
           nombre: s.nombre && s.nombre !== 'Sin Asignar' ? s.nombre : (DEFAULT_ZONE_SELLERS[s.ejecutivo] || 'Sin Asignar'),
           canal,
           ventas: bruto,
-          ventasBrutas,
+          ventasBrutas: bruto,
           devoluciones: dev,
           rechazos,
           porcentajeDevolucion: bruto > 0 ? dev / bruto : 0.0,

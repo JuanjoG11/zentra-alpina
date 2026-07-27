@@ -1011,11 +1011,8 @@ const UploadExcel = () => {
           const returnsSellersDb = processedData.returnsSellers.map(s => ({
             nombre: s.nombre,
             ejecutivo: s.ejecutivo,
-            canal: s.canal || 'TAT',
-            ventas: s.ventas,
-            ventasBrutas: s.ventasBrutas || s.ventas,
+            ventas: s.ventasBrutas || s.ventas,  // guardar venta bruta en columna ventas
             devoluciones: s.devoluciones,
-            rechazos: s.rechazos || 0,
             periodo: uploadPeriod
           }));
           await supabase.from('returns_sellers').delete().eq('periodo', uploadPeriod);
