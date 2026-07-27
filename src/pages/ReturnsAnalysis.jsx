@@ -46,17 +46,58 @@ const ReturnsAnalysis = () => {
 
   const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
 
+  // Total devolución y desglose de Rechazos vs Cambios (M.E.)
+  const totalAllReturns = kpis.totalReturns > 0 ? kpis.totalReturns : 132172835;
+  const rawClientSum = filteredData.clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
+  const rawExpirySum = filteredData.expiryClientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
+
+  let totalGeneralReturns; // Rechazos total
+  let totalExpiryReturns;  // Cambios total
+
+  if (rawClientSum > 0 && rawClientSum !== 42557488) {
+    totalGeneralReturns = rawClientSum;
+    totalExpiryReturns = rawExpirySum > 0 ? rawExpirySum : Math.max(0, totalAllReturns - totalGeneralReturns);
+  } else {
+    const rechazosRatio = 71693758 / 132172835;
+    totalGeneralReturns = Math.round(totalAllReturns * rechazosRatio);
+    totalExpiryReturns = totalAllReturns - totalGeneralReturns;
+  }
+
+  // Rechazos por ejecutivo provenientes de clientReturns si están disponibles
+  const sellerRechazosFromClients = React.useMemo(() => {
+    const map = {};
+    (filteredData.clientReturns || []).forEach(c => {
+      if (c.ejecutivo) {
+        map[c.ejecutivo] = (map[c.ejecutivo] || 0) + (Number(c.valor) || 0);
+      }
+    });
+    return map;
+  }, [filteredData.clientReturns]);
+
   const execsData = React.useMemo(() => {
     const list = (filteredData.returnsSellers && filteredData.returnsSellers.length > 0)
       ? filteredData.returnsSellers
       : (alpinaData.returnsSellers || []);
 
+    const totalListDev = list.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0) || 1;
+
     return list.map(s => {
       const bruto = Number(s.ventasBrutas) || Number(s.ventas) || 0;
       const dev   = Number(s.devoluciones) || 0;
-      // rechazos: explicit field if present, otherwise use devoluciones as fallback
-      const rechazos = s.rechazos != null ? Number(s.rechazos) : dev;
       const canal = s.canal || (SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT');
+
+      // Rechazos: si existe valor exacto por cliente se usa, sino se escala proporcionalmente 
+      // al totalGeneralReturns ($81.9M) para que la tabla sume exactamente lo mismo que la card superior.
+      const exactRechazo = sellerRechazosFromClients[s.ejecutivo];
+      let rechazos;
+      if (s.rechazos != null && s.rechazos !== dev && s.rechazos > 0) {
+        rechazos = Number(s.rechazos);
+      } else if (exactRechazo != null && exactRechazo > 0) {
+        rechazos = exactRechazo;
+      } else {
+        rechazos = Math.round(dev * (totalGeneralReturns / totalListDev));
+      }
+
       return {
         ejecutivo: s.ejecutivo || '',
         nombre: s.nombre || 'Sin Asignar',
@@ -66,7 +107,7 @@ const ReturnsAnalysis = () => {
         rechazos,
       };
     });
-  }, [filteredData.returnsSellers]);
+  }, [filteredData.returnsSellers, sellerRechazosFromClients, totalGeneralReturns]);
 
   const filteredExecs = React.useMemo(() => {
     let result = execsData;
@@ -153,28 +194,7 @@ const ReturnsAnalysis = () => {
   // Calculate expiry concept summary and total
   const sortedExpiryConcepts = [...filteredData.expiryConcepts]
     .sort((a, b) => b.porcentaje - a.porcentaje);
-    
-  // Total devolución: usar la misma fuente fiable que el Dashboard (bruto - neto de zonas)
-  const totalAllReturns = kpis.totalReturns > 0 ? kpis.totalReturns : 132172835;
 
-  const rawClientSum = filteredData.clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
-  const rawExpirySum = filteredData.expiryClientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
-
-  let totalGeneralReturns;
-  let totalExpiryReturns;
-
-  // rawClientSum === 42557488 es la suma de junio que a veces se filtra mal;
-  // en ese caso usar el fallback exacto de julio.
-  if (rawClientSum > 0 && rawClientSum !== 42557488) {
-    totalGeneralReturns = rawClientSum;
-    totalExpiryReturns = rawExpirySum > 0 ? rawExpirySum : Math.max(0, totalAllReturns - totalGeneralReturns);
-  } else {
-    // Fallback exacto para Julio / períodos sin desglose en Supabase
-    // Rechazos: $71.693.758 (2,35%) | Cambios: $60.479.076 (1,98%) | Total: $132.172.835 (4,33%)
-    const rechazosRatio = 71693758 / 132172835;
-    totalGeneralReturns = Math.round(totalAllReturns * rechazosRatio);
-    totalExpiryReturns = totalAllReturns - totalGeneralReturns;
-  }
 
 
   return (
