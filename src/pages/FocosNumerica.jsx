@@ -253,81 +253,11 @@ const FocosNumerica = () => {
 
   const productImpactData = useMemo(() => {
     const rawProds = dbData.productDistrib || [];
-    
-    // Fallback mock products if empty
-    if (rawProds.length === 0) {
-      const mockProducts = [
-        { nbProducto: '10001', nmProducto: 'Alpin Chocolate 200g', nmTpMarca: 'ALPIN', nmTpFamilia: 'LÁCTEOS INFANTILES', ventas: 8400000, facturas: 540, unidades: 1200, clientesCount: 490 },
-        { nbProducto: '10002', nmProducto: 'Yogurt Finesse Fresa 150g', nmTpMarca: 'FINESSE', nmTpFamilia: 'YOGURES DIETÉTICOS', ventas: 9500000, facturas: 610, unidades: 1400, clientesCount: 520 },
-        { nbProducto: '10003', nmProducto: 'Yogurt Alpina Melocotón 150g', nmTpMarca: 'YOGURT ALPINA', nmTpFamilia: 'YOGURES CULTIVADOS', ventas: 18000000, facturas: 1200, unidades: 2800, clientesCount: 950 },
-        { nbProducto: '10004', nmProducto: 'Avena Alpina Original 250ml', nmTpMarca: 'AVENA ALPINA', nmTpFamilia: 'BEBIDAS', ventas: 15000000, facturas: 950, unidades: 2200, clientesCount: 810 },
-        { nbProducto: '10005', nmProducto: 'Kumis Alpina Vaso 150g', nmTpMarca: 'KUMIS ALPINA', nmTpFamilia: 'KUMIS', ventas: 7200000, facturas: 480, unidades: 1100, clientesCount: 410 },
-        { nbProducto: '10006', nmProducto: 'Bon Yurt Cereal 170g', nmTpMarca: 'BON YURT', nmTpFamilia: 'CEREALES', ventas: 24000000, facturas: 1500, unidades: 3500, clientesCount: 1200 },
-        { nbProducto: '10007', nmProducto: 'Alpinito Fresa 45g', nmTpMarca: 'ALPINITO', nmTpFamilia: 'PETIT SUISSE', ventas: 6800000, facturas: 460, unidades: 1050, clientesCount: 390 },
-        { nbProducto: '10008', nmProducto: 'Yogo Yogo Fresa Bolsa 150g', nmTpMarca: 'YOGO YOGO', nmTpFamilia: 'YOGURES INFANTILES', ventas: 11000000, facturas: 720, unidades: 1650, clientesCount: 610 },
-        { nbProducto: '10009', nmProducto: 'Queso Parmesano Rallado 100g', nmTpMarca: 'QUESO PARMESANO', nmTpFamilia: 'QUESOS MADUROS', ventas: 13500000, facturas: 850, unidades: 1950, clientesCount: 720 },
-        { nbProducto: '10010', nmProducto: 'Yox con Probióticos 100ml', nmTpMarca: 'YOX', nmTpFamilia: 'FUNCIONALES', ventas: 19500000, facturas: 1300, unidades: 3000, clientesCount: 1100 },
-        { nbProducto: '10011', nmProducto: 'Alpinette Fresa 150g', nmTpMarca: 'ALPINETTE', nmTpFamilia: 'POSTRES', ventas: 5800000, facturas: 390, unidades: 900, clientesCount: 320 },
-        { nbProducto: '10012', nmProducto: 'Gelatina Boggy Fresa 120g', nmTpMarca: 'GELATINA BOGGY', nmTpFamilia: 'POSTRES INFANTILES', ventas: 4500000, facturas: 310, unidades: 700, clientesCount: 250 },
-        { nbProducto: '10013', nmProducto: 'Leche Entera Bolsa 900ml', nmTpMarca: 'LECHE ALPINA BOLSA', nmTpFamilia: 'LECHES UHT', ventas: 42000000, facturas: 2400, unidades: 6200, clientesCount: 1900 },
-        { nbProducto: '10014', nmProducto: 'Queso Mozzarella Bloque 500g', nmTpMarca: 'QUESO MOZARELLA', nmTpFamilia: 'QUESOS FRESCOS', ventas: 28000000, facturas: 1600, unidades: 4100, clientesCount: 1350 },
-        { nbProducto: '10015', nmProducto: 'Mantequilla con Sal 125g', nmTpMarca: 'MANTEQUILLA', nmTpFamilia: 'GRASAS', ventas: 9200000, facturas: 580, unidades: 1350, clientesCount: 480 },
-        { nbProducto: '10016', nmProducto: 'Leche Entera Caja 1L', nmTpMarca: 'LECHE ALPINA CAJA', nmTpFamilia: 'LECHES CAJA', ventas: 34000000, facturas: 1900, unidades: 4800, clientesCount: 1550 },
-        { nbProducto: '10017', nmProducto: 'Arequipe Alpina 220g', nmTpMarca: 'AREQUIPE ALPINA', nmTpFamilia: 'DULCES', ventas: 12000000, facturas: 780, unidades: 1800, clientesCount: 640 },
-        { nbProducto: '10018', nmProducto: 'Mini Bon Yurt Zucaritas 100g', nmTpMarca: 'MINI BONYURT', nmTpFamilia: 'CEREALES INFANTILES', ventas: 5200000, facturas: 360, unidades: 820, clientesCount: 290 },
-        { nbProducto: '10019', nmProducto: 'Yogur Griego Natural 150g', nmTpMarca: 'YOGURT GRIEGO', nmTpFamilia: 'GRIEGO', ventas: 14500000, facturas: 920, unidades: 2150, clientesCount: 760 },
-        { nbProducto: '10020', nmProducto: 'Cremosino Alpina 200g', nmTpMarca: 'CREMOSINO', nmTpFamilia: 'QUESOS UNTABLES', ventas: 8100000, facturas: 520, unidades: 1200, clientesCount: 420 },
-        { nbProducto: '10021', nmProducto: 'Crema de Leche Bolsa 200g', nmTpMarca: 'CREMA DE LECHE', nmTpFamilia: 'CREMAS', ventas: 16500000, facturas: 1050, unidades: 2450, clientesCount: 880 },
-        { nbProducto: '10022', nmProducto: 'Kefir Alpina Natural 150g', nmTpMarca: 'KEFIR ALPINA', nmTpFamilia: 'FUNCIONALES', ventas: 3800000, facturas: 250, unidades: 560, clientesCount: 210 },
-        { nbProducto: '10023', nmProducto: 'Regeneris Fresa 150g', nmTpMarca: 'REGENERIS', nmTpFamilia: 'FUNCIONALES', ventas: 8900000, facturas: 570, unidades: 1300, clientesCount: 470 },
-        { nbProducto: '10024', nmProducto: 'Queso Finesse Bloque 250g', nmTpMarca: 'FINESSE', nmTpFamilia: 'QUESOS DIETÉTICOS', ventas: 10500000, facturas: 680, unidades: 1550, clientesCount: 550 },
-        { nbProducto: '10025', nmProducto: 'Avena Finesse Canela 250ml', nmTpMarca: 'FINESSE', nmTpFamilia: 'BEBIDAS DIETÉTICAS', ventas: 6200000, facturas: 410, unidades: 920, clientesCount: 330 },
-        { nbProducto: '10026', nmProducto: 'Queso Sabana Tajado 200g', nmTpMarca: 'QUESO SABANA', nmTpFamilia: 'QUESOS FRESCOS', ventas: 11800000, facturas: 740, unidades: 1720, clientesCount: 600 },
-        { nbProducto: '10027', nmProducto: 'Arepa Blanca Don Maíz x5', nmTpMarca: 'DON MAIZ', nmTpFamilia: 'AREPAS', ventas: 15200000, facturas: 980, unidades: 2300, clientesCount: 780 },
-        { nbProducto: '10028', nmProducto: 'Leche Actilife Deslactosada 1L', nmTpMarca: 'ACTILIFE', nmTpFamilia: 'FUNCIONALES', ventas: 13400000, facturas: 870, unidades: 2000, clientesCount: 690 },
-        { nbProducto: '10029', nmProducto: 'Quesito Alpina 200g', nmTpMarca: 'QUESITO ALPINA', nmTpFamilia: 'QUESOS FRESCOS', ventas: 7400000, facturas: 490, unidades: 1150, clientesCount: 390 },
-        { nbProducto: '10030', nmProducto: 'Queso Holandés Bloque 250g', nmTpMarca: 'QUESO HOLANDES', nmTpFamilia: 'QUESOS MADUROS', ventas: 12400000, facturas: 790, unidades: 1850, clientesCount: 630 },
-        { nbProducto: '10031', nmProducto: 'Baby Gu Manzana Vaso 100g', nmTpMarca: 'BABY GU', nmTpFamilia: 'LÁCTEOS INFANTILES', ventas: 2800000, facturas: 190, unidades: 420, clientesCount: 150 },
-        { nbProducto: '10032', nmProducto: 'Alimento Mascotas Alpina 1kg', nmTpMarca: 'MASCOTAS', nmTpFamilia: 'MASCOTAS', ventas: 3100000, facturas: 210, unidades: 460, clientesCount: 160 },
-        { nbProducto: '10033', nmProducto: 'Frutto Durazno Caja 1L', nmTpMarca: 'FRUTTO', nmTpFamilia: 'JUGOS', ventas: 9800000, facturas: 630, unidades: 1450, clientesCount: 510 },
-        { nbProducto: '10034', nmProducto: 'Queso Campesino Alpina 500g', nmTpMarca: 'QUESO CAMPESINO', nmTpFamilia: 'QUESOS FRESCOS', ventas: 10200000, facturas: 650, unidades: 1500, clientesCount: 530 },
-        { nbProducto: '10035', nmProducto: 'Mermelada Mora 200g', nmTpMarca: 'MERMELADA', nmTpFamilia: 'DULCES', ventas: 4100000, facturas: 280, unidades: 620, clientesCount: 220 }
-      ];
-      
-      const globalUniverse = goalTotals.universeClients;
-      return mockProducts.map(p => {
-        let factor = 1;
-        if (selectedCity === 'ARMENIA') factor = 1777 / 7853;
-        else if (selectedCity === 'MANIZALES') factor = 2111 / 7853;
-        else if (selectedCity === 'PEREIRA') factor = 3965 / 7853;
-        else if (selectedCity === 'OTRO') factor = 0.05;
-        
-        const universe = selectedCity === 'ALL' ? globalUniverse : (
-          selectedCity === 'ARMENIA' ? 1777 : (
-            selectedCity === 'MANIZALES' ? 2111 : (
-              selectedCity === 'PEREIRA' ? 3965 : 100
-            )
-          )
-        );
-        
-        const adjustedClients = Math.round(p.clientesCount * factor);
-        const adjUnidades = Math.round(p.unidades * factor);
-        const unitWeightG = extractUnitWeightInGrams(p.nmProducto);
-        const pesoTotalKg = (unitWeightG * adjUnidades) / 1000;
-        
-        return {
-          ...p,
-          ventas: Math.round(p.ventas * factor),
-          facturas: Math.round(p.facturas * factor),
-          unidades: adjUnidades,
-          clientesCount: adjustedClients,
-          coverage: universe > 0 ? adjustedClients / universe : 0,
-          pesoTotalKg
-        };
-      });
-    }
 
-    // Dynamic processing of real uploaded product data
+    // Sin datos reales → lista vacía (nunca mostrar datos mock/inventados)
+    if (rawProds.length === 0) return [];
+
+    // Procesamiento de datos reales del cubo cargado
     const map = {};
     
     let filteredProds = rawProds;
@@ -344,23 +274,37 @@ const FocosNumerica = () => {
 
     filteredProds.forEach(p => {
       const code = p.nbProducto;
+      let brandName = p.nmTpMarca || 'OTROS';
+      const uBrand = brandName.toUpperCase();
+      if (uBrand.includes('BON YURT') || uBrand.includes('BONYURT')) brandName = 'BON YURT';
+      else if (uBrand.includes('FINESSE')) brandName = 'FINESSE';
+      else if (uBrand.includes('YOGO')) brandName = 'YOGO YOGO';
+      else if (uBrand.includes('YOX')) brandName = 'YOX';
+      else if (uBrand.includes('ALPINITO')) brandName = 'ALPINITO';
+      else if (uBrand.includes('ALPINETTE')) brandName = 'ALPINETTE';
+      else if (uBrand.includes('ALPIN') && !uBrand.includes('ALPINA')) brandName = 'ALPIN';
+
       if (!map[code]) {
         map[code] = {
           nbProducto: p.nbProducto,
           nmProducto: p.nmProducto || 'Sin nombre',
-          nmTpMarca: p.nmTpMarca || 'OTROS',
+          nmTpMarca: brandName,
           nmTpFamilia: p.nmTpFamilia || 'Sin familia',
           ventas: 0,
           facturas: 0,
           unidades: 0,
-          clientesCount: 0,
+          // maxClientes: usamos el máximo de clientes entre zonas del mismo producto
+          // (un cliente que compró en zona A y zona B es 1 cliente, no 2)
+          maxClientes: 0,
           pesoTotal: 0
         };
       }
       map[code].ventas += p.ventas || 0;
       map[code].facturas += p.facturas || 0;
       map[code].unidades += p.unidades || 0;
-      map[code].clientesCount += p.clientesCount !== undefined ? p.clientesCount : (p.facturas || 0);
+      // Usar máximo en lugar de suma para evitar doble conteo inter-zonas
+      const rowClientes = p.clientesCount !== undefined ? p.clientesCount : (p.facturas || 0);
+      if (rowClientes > map[code].maxClientes) map[code].maxClientes = rowClientes;
       map[code].pesoTotal += p.pesoTotal || 0;
     });
 
@@ -376,10 +320,11 @@ const FocosNumerica = () => {
       .map(p => {
         const unitWeightG = extractUnitWeightInGrams(p.nmProducto);
         const pesoTotalKg = p.pesoTotal > 0 ? p.pesoTotal / 1000 : (unitWeightG * p.unidades) / 1000;
+        const clientes = Math.min(universe, p.maxClientes);
         return {
           ...p,
-          clientesCount: Math.min(universe, p.clientesCount),
-          coverage: universe > 0 ? Math.min(universe, p.clientesCount) / universe : 0,
+          clientesCount: clientes,
+          coverage: universe > 0 ? Math.min(1.0, clientes / universe) : 0,
           pesoTotalKg
         };
       })
@@ -398,20 +343,24 @@ const FocosNumerica = () => {
           ventas: 0,
           facturas: 0,
           unidades: 0,
-          clientesCount: 0
+          // maxClientes: el mayor clientesCount de los productos de la familia
+          // (el cliente que compró al menos un producto de la familia)
+          maxClientes: 0
         };
       }
       map[key].ventas += p.ventas;
       map[key].facturas += p.facturas;
       map[key].unidades += p.unidades;
-      map[key].clientesCount += p.clientesCount;
+      // Usar máximo: un cliente que compró varios SKUs de la familia es 1 cliente impactado
+      if (p.clientesCount > map[key].maxClientes) map[key].maxClientes = p.clientesCount;
     });
     const universe = selectedCity === 'ALL' ? goalTotals.universeClients : (
       selectedCity === 'ARMENIA' ? 1777 : (selectedCity === 'MANIZALES' ? 2111 : (selectedCity === 'PEREIRA' ? 3965 : 100))
     );
     return Object.values(map).map(b => ({
       ...b,
-      coverage: universe > 0 ? b.clientesCount / universe : 0
+      clientesCount: b.maxClientes,
+      coverage: universe > 0 ? Math.min(1.0, b.maxClientes / universe) : 0
     }));
   }, [productImpactData, selectedCity, goalTotals]);
 
@@ -425,16 +374,22 @@ const FocosNumerica = () => {
     productImpactData.forEach(p => {
       const bk = p.nmTpMarca;
       const fk = `${p.nmTpMarca}||${p.nmTpFamilia}`;
-      if (!brandMap[bk]) brandMap[bk] = { label: p.nmTpMarca, ventas: 0, facturas: 0, clientesCount: 0, pesoTotalKg: 0, families: {} };
-      if (!brandMap[bk].families[fk]) brandMap[bk].families[fk] = { label: p.nmTpFamilia, ventas: 0, facturas: 0, clientesCount: 0, pesoTotalKg: 0, products: [] };
+      if (!brandMap[bk]) brandMap[bk] = { label: p.nmTpMarca, ventas: 0, facturas: 0, maxClientes: 0, pesoTotalKg: 0, families: {} };
+      if (!brandMap[bk].families[fk]) brandMap[bk].families[fk] = { label: p.nmTpFamilia, ventas: 0, facturas: 0, maxClientes: 0, pesoTotalKg: 0, products: [] };
+
       brandMap[bk].families[fk].products.push(p);
       brandMap[bk].families[fk].ventas += p.ventas;
       brandMap[bk].families[fk].facturas += p.facturas;
-      brandMap[bk].families[fk].clientesCount += p.clientesCount;
+      // Familia: el producto con más clientes representa la cobertura real de la familia
+      if (p.clientesCount > brandMap[bk].families[fk].maxClientes)
+        brandMap[bk].families[fk].maxClientes = p.clientesCount;
       brandMap[bk].families[fk].pesoTotalKg += p.pesoTotalKg || 0;
+
       brandMap[bk].ventas += p.ventas;
       brandMap[bk].facturas += p.facturas;
-      brandMap[bk].clientesCount += p.clientesCount;
+      // Marca: el producto con más clientes representa la cobertura real de la marca
+      if (p.clientesCount > brandMap[bk].maxClientes)
+        brandMap[bk].maxClientes = p.clientesCount;
       brandMap[bk].pesoTotalKg += p.pesoTotalKg || 0;
     });
 
@@ -442,16 +397,19 @@ const FocosNumerica = () => {
       .sort((a, b) => b.ventas - a.ventas)
       .map(brand => ({
         ...brand,
-        coverage: universe > 0 ? brand.clientesCount / universe : 0,
+        clientesCount: brand.maxClientes,
+        coverage: universe > 0 ? Math.min(1.0, brand.maxClientes / universe) : 0,
         families: Object.values(brand.families)
           .sort((a, b) => b.ventas - a.ventas)
           .map(fam => ({
             ...fam,
-            coverage: universe > 0 ? fam.clientesCount / universe : 0,
+            clientesCount: fam.maxClientes,
+            coverage: universe > 0 ? Math.min(1.0, fam.maxClientes / universe) : 0,
             products: [...fam.products].sort((a, b) => b.ventas - a.ventas)
           }))
       }));
   }, [productImpactData, selectedCity, goalTotals]);
+
 
   const filteredHierarchy = useMemo(() => {
     if (!productSearch.trim()) return hierarchyData;
@@ -931,7 +889,16 @@ const FocosNumerica = () => {
 
         <div className="space-y-1 mt-2">
           {filteredHierarchy.length === 0 && (
-            <p className="text-center text-slate-600 py-8 text-xs">No se encontraron resultados para la búsqueda.</p>
+            <div className="text-center py-10">
+              <p className="text-slate-400 text-sm font-semibold">Sin datos de distribución por producto</p>
+              <p className="text-slate-600 text-xs mt-2">
+                El cubo cargado no incluye columnas de producto (<span className="font-mono">nbProducto</span>, <span className="font-mono">nmTpMarca</span>, <span className="font-mono">nmTpFamilia</span>)
+                o aún no se ha subido el archivo del período activo.
+              </p>
+              <p className="text-slate-600 text-xs mt-1">
+                Sube el cubo de ventas completo desde <span className="text-sky-400 font-semibold">Cargar Datos</span> para ver este análisis.
+              </p>
+            </div>
           )}
           {filteredHierarchy.map((brand, bi) => {
             const brandColor = BRAND_COLORS[bi % BRAND_COLORS.length];
