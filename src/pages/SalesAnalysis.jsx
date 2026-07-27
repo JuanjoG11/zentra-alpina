@@ -34,20 +34,23 @@ const SalesAnalysis = () => {
 const channelTicket = React.useMemo(() => {
   const sums = {
     SUPERMERCADOS: { sales: 0, facturas: 0 },
+    TAT: { sales: 0, facturas: 0 },
     'ZONAS ESPECIALES': { sales: 0, facturas: 0 }
   };
   filteredData.zones.forEach(z => {
-    const type = ZONE_TYPE_MAP[z.zona] || 'OTRO';
+    const type = ZONE_TYPE_MAP[z.zona] || 'TAT';
     if (sums[type]) {
       sums[type].sales += z.ventasNetas || 0;
       sums[type].facturas += z.facturas || 0;
     }
   });
   return {
-    SUPERMERCADOS: sums.SUPERMERCADOS.facturas ? sums.SUPERMERCADOS.sales / sums.SUPERMERCADOS.facturas : 0,
-    'ZONAS ESPECIALES': sums['ZONAS ESPECIALES'].facturas ? sums['ZONAS ESPECIALES'].sales / sums['ZONAS ESPECIALES'].facturas : 0
+    SUPERMERCADOS: sums.SUPERMERCADOS.facturas ? Math.round(sums.SUPERMERCADOS.sales / sums.SUPERMERCADOS.facturas) : 0,
+    TAT: sums.TAT.facturas ? Math.round(sums.TAT.sales / sums.TAT.facturas) : 0,
+    'ZONAS ESPECIALES': sums['ZONAS ESPECIALES'].facturas ? Math.round(sums['ZONAS ESPECIALES'].sales / sums['ZONAS ESPECIALES'].facturas) : 0
   };
 }, [filteredData.zones]);
+
 
   // Sorting state for Pareto Table — Default sort: Zona Ascending (9450, 9451, 9452...)
   const [sortField, setSortField] = React.useState('zona');
@@ -283,9 +286,17 @@ const channelTicket = React.useMemo(() => {
   }, [filteredData.zones]);
 
   const totalEjes = Object.values(ejeTotals).reduce((s, v) => s + v, 0) || 1;
-  const creditTotal = dailyTotal.reduce((sum, d) => sum + (Number(d.credito) || 0), 0) || 587897284;
-  const cashTotal = dailyTotal.reduce((sum, d) => sum + (Number(d.contado) || 0), 0) || 4759532351;
-  const creditPercentage = creditTotal / (creditTotal + cashTotal || 1);
+  const totalNetSales = filteredData.zones.reduce((sum, z) => sum + (z.ventasNetas || 0), 0);
+  const grossCredit = dailyTotal.reduce((sum, d) => sum + (Number(d.credito) || 0), 0);
+  const grossCash = dailyTotal.reduce((sum, d) => sum + (Number(d.contado) || 0), 0);
+  const grossTotal = grossCash + grossCredit || 1;
+  const creditPercentage = grossCredit / grossTotal;
+
+  // Ventas de Contado y Crédito NETAS (Ajustadas a la Venta Neta real de las zonas)
+  // De este modo, Contado Neta + Crédito Neta es exactamente igual a Venta Neta ($1.486 Mill)
+  const cashTotal = totalNetSales > 0 ? Math.round(totalNetSales * (1 - creditPercentage)) : grossCash;
+  const creditTotal = totalNetSales > 0 ? Math.round(totalNetSales * creditPercentage) : grossCredit;
+
 
   // Dynamic forecast labels based on first/last dates
   const getForecastLabels = () => {
@@ -358,9 +369,9 @@ const channelTicket = React.useMemo(() => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
         <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
           <div className="flex-1 min-w-0">
-            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas de Contado</p>
+            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas de Contado (Neta)</p>
             <h3 className="text-xl md:text-2xl font-bold text-emerald-400 mt-1">{formatShortCurrency(cashTotal)}</h3>
-            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(1 - creditPercentage)} del total comercial</p>
+            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(1 - creditPercentage)} del total comercial neto</p>
           </div>
           <div className="p-2.5 md:p-3 bg-emerald-500/10 text-emerald-400 rounded-lg md:rounded-xl shrink-0">
             <DollarSign className="h-5 w-5 md:h-6 md:w-6" />
@@ -369,9 +380,10 @@ const channelTicket = React.useMemo(() => {
 
         <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
           <div className="flex-1 min-w-0">
-            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas a Crédito</p>
+            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas a Crédito (Neta)</p>
             <h3 className="text-xl md:text-2xl font-bold text-amber-400 mt-1">{formatShortCurrency(creditTotal)}</h3>
-            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(creditPercentage)} del total comercial</p>
+            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(creditPercentage)} del total comercial neto</p>
+
           </div>
           <div className="p-2.5 md:p-3 bg-amber-500/10 text-amber-400 rounded-lg md:rounded-xl shrink-0">
             <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
@@ -383,27 +395,28 @@ const channelTicket = React.useMemo(() => {
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1 min-w-0">
                 <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ticket Super</p>
-                <h3 className="text-lg md:text-xl font-bold text-blue-400 mt-1">{formatShortCurrency(channelTicket.SUPERMERCADOS)}</h3>
+                <h3 className="text-lg md:text-xl font-bold text-blue-400 mt-1">{formatCurrency(channelTicket.SUPERMERCADOS)}</h3>
               </div>
               <div className="p-2 md:p-2.5 bg-blue-500/10 text-blue-400 rounded-lg shrink-0">
                 <Layers className="h-4 w-4 md:h-5 md:w-5" />
               </div>
             </div>
-            <p className="text-[9px] md:text-[10px] text-slate-500">Venta por factura (Super)</p>
+            <p className="text-[9px] md:text-[10px] text-slate-500">Venta por factura (Supermercados)</p>
           </GlassCard>
           
           <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-900/20 border-slate-800">
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1 min-w-0">
-                <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ticket Especial</p>
-                <h3 className="text-lg md:text-xl font-bold text-blue-400 mt-1">{formatShortCurrency(channelTicket['ZONAS ESPECIALES'])}</h3>
+                <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ticket TAT</p>
+                <h3 className="text-lg md:text-xl font-bold text-emerald-400 mt-1">{formatCurrency(channelTicket.TAT)}</h3>
               </div>
-              <div className="p-2 md:p-2.5 bg-blue-500/10 text-blue-400 rounded-lg shrink-0">
+              <div className="p-2 md:p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0">
                 <Layers className="h-4 w-4 md:h-5 md:w-5" />
               </div>
             </div>
-            <p className="text-[9px] md:text-[10px] text-slate-500">Venta por factura (Especial)</p>
+            <p className="text-[9px] md:text-[10px] text-slate-500">Venta por factura (Tienda a Tienda)</p>
           </GlassCard>
+
         </div>
       </div>
 
