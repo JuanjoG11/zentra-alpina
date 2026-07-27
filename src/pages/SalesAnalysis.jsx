@@ -1,6 +1,6 @@
 import React from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONE_TYPE_MAP, ZONE_DEFAULT_CAMBIO_RATES } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONE_TYPE_MAP, ZONE_DEFAULT_CAMBIO_RATES, countCalendarBusinessDays } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency, formatCurrencyWithDecimals } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import { BIAreaChart, BIStackedBarChart, BILineChart } from '../components/charts/BICharts';
@@ -112,11 +112,17 @@ const channelTicket = React.useMemo(() => {
     return proyeccion / presupuesto;
   }, []);
 
-  // Proyección (Pesos) = (Ventas Netas / 16) * 23
+  // Días hábiles totales del período y día hábil actual (sincronizado desde Supabase)
+  const DIAS_HABILES_POR_PERIODO = { '2026-06': 22, '2026-07': 23 };
+  const TOTAL_BD = DIAS_HABILES_POR_PERIODO[selectedPeriod] || 22;
+  const detectedWorkDay = React.useMemo(() => countCalendarBusinessDays(filteredData.salesDaily), [filteredData.salesDaily]);
+  const workDay = currentWorkDay > 0 ? currentWorkDay : detectedWorkDay;
+
+  // Proyección (Pesos) = (Ventas Netas / díaHábilActual) * díasHábilesTotales
   const getProjection = React.useCallback((ventasNetas) => {
-    if (!ventasNetas) return 0;
-    return (ventasNetas / 16) * 23;
-  }, []);
+    if (!ventasNetas || workDay <= 0) return 0;
+    return (ventasNetas / workDay) * TOTAL_BD;
+  }, [workDay, TOTAL_BD]);
 
   const CANAL_ORDER = {
     'TAT': 1,
