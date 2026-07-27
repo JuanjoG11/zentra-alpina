@@ -33,6 +33,7 @@ const ReturnsAnalysis = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [sortField, setSortField] = React.useState('ejecutivo');
   const [sortOrder, setSortOrder] = React.useState('asc');
+  const [canalFilter, setCanalFilter] = React.useState('TODOS'); // 'TODOS' | 'TAT' | 'SUPER'
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -43,27 +44,40 @@ const ReturnsAnalysis = () => {
     }
   };
 
+  const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
+
   const execsData = React.useMemo(() => {
     const list = (filteredData.returnsSellers && filteredData.returnsSellers.length > 0)
       ? filteredData.returnsSellers
       : (alpinaData.returnsSellers || []);
 
-    return list.map(s => ({
-      ejecutivo: s.ejecutivo || '',
-      nombre: s.nombre || 'Sin Asignar',
-      ventas: Number(s.ventas) || 0,
-      devoluciones: Number(s.devoluciones) || 0,
-    }));
+    return list.map(s => {
+      const bruto = Number(s.ventasBrutas) || Number(s.ventas) || 0;
+      const dev   = Number(s.devoluciones) || 0;
+      // rechazos: explicit field if present, otherwise use devoluciones as fallback
+      const rechazos = s.rechazos != null ? Number(s.rechazos) : dev;
+      const canal = s.canal || (SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT');
+      return {
+        ejecutivo: s.ejecutivo || '',
+        nombre: s.nombre || 'Sin Asignar',
+        canal,
+        ventas: bruto,
+        devoluciones: dev,
+        rechazos,
+      };
+    });
   }, [filteredData.returnsSellers]);
 
   const filteredExecs = React.useMemo(() => {
-    if (!searchTerm.trim()) return execsData;
+    let result = execsData;
+    if (canalFilter !== 'TODOS') result = result.filter(e => e.canal === canalFilter);
+    if (!searchTerm.trim()) return result;
     const term = searchTerm.toLowerCase();
-    return execsData.filter(e =>
+    return result.filter(e =>
       e.ejecutivo.toLowerCase().includes(term) ||
       e.nombre.toLowerCase().includes(term)
     );
-  }, [execsData, searchTerm]);
+  }, [execsData, searchTerm, canalFilter]);
 
   const sortedExecs = React.useMemo(() => {
     return [...filteredExecs].sort((a, b) => {
@@ -74,11 +88,11 @@ const ReturnsAnalysis = () => {
         comp = a.nombre.localeCompare(b.nombre);
       } else if (sortField === 'ventas') {
         comp = a.ventas - b.ventas;
-      } else if (sortField === 'devoluciones') {
-        comp = a.devoluciones - b.devoluciones;
+      } else if (sortField === 'rechazos') {
+        comp = a.rechazos - b.rechazos;
       } else if (sortField === 'porcentaje') {
-        const rA = a.ventas > 0 ? a.devoluciones / a.ventas : 0;
-        const rB = b.ventas > 0 ? b.devoluciones / b.ventas : 0;
+        const rA = a.ventas > 0 ? a.rechazos / a.ventas : 0;
+        const rB = b.ventas > 0 ? b.rechazos / b.ventas : 0;
         comp = rA - rB;
       }
       return sortOrder === 'asc' ? comp : -comp;
@@ -86,9 +100,22 @@ const ReturnsAnalysis = () => {
   }, [filteredExecs, sortField, sortOrder]);
 
   const totalsExecs = React.useMemo(() => {
-    const ventas = execsData.reduce((sum, e) => sum + e.ventas, 0);
-    const devoluciones = execsData.reduce((sum, e) => sum + e.devoluciones, 0);
-    return { ventas, devoluciones };
+    const ventas    = filteredExecs.reduce((sum, e) => sum + e.ventas, 0);
+    const rechazos  = filteredExecs.reduce((sum, e) => sum + e.rechazos, 0);
+    const devoluciones = filteredExecs.reduce((sum, e) => sum + e.devoluciones, 0);
+    return { ventas, rechazos, devoluciones };
+  }, [filteredExecs]);
+
+  // Canal totals for quick KPI pills
+  const canalTotals = React.useMemo(() => {
+    const tat   = execsData.filter(e => e.canal === 'TAT');
+    const super_ = execsData.filter(e => e.canal === 'SUPER');
+    const sumRech = (arr) => arr.reduce((s, e) => s + e.rechazos, 0);
+    const sumVtas = (arr) => arr.reduce((s, e) => s + e.ventas, 0);
+    return {
+      TAT:   { rechazos: sumRech(tat),   ventas: sumVtas(tat) },
+      SUPER: { rechazos: sumRech(super_), ventas: sumVtas(super_) },
+    };
   }, [execsData]);
 
   // Group returns by client to find critical ones (general returns only)
@@ -230,20 +257,46 @@ const ReturnsAnalysis = () => {
       <GlassCard hoverable={false}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h3 className="text-base font-bold text-white">Devoluciones por Ejecutivo Comercial</h3>
+            <h3 className="text-base font-bold text-white">Rechazos por Ejecutivo Comercial</h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Consolidado de venta, devoluciones y porcentaje de devolución por cada ejecutivo comercial.
+              Solo rechazos (excluye cambios M.E. por vencimiento). Separado por canal TAT y Supermercados.
             </p>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar ejecutivo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-3 py-1.5 bg-slate-900/80 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 w-full sm:w-64"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Canal filter pills */}
+            {['TODOS','TAT','SUPER'].map(c => (
+              <button
+                key={c}
+                onClick={() => setCanalFilter(c)}
+                className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                  canalFilter === c
+                    ? c === 'TAT'
+                      ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                      : c === 'SUPER'
+                        ? 'bg-violet-500/20 text-violet-300 border-violet-500/40'
+                        : 'bg-slate-700 text-white border-slate-600'
+                    : 'bg-slate-900/60 text-slate-500 border-slate-800 hover:text-slate-300'
+                }`}
+              >
+                {c === 'SUPER' ? 'Super' : c === 'TAT' ? 'TAT' : 'Todos'}
+                {c !== 'TODOS' && (
+                  <span className="ml-1 opacity-70">
+                    ({formatPercent(canalTotals[c].ventas > 0 ? canalTotals[c].rechazos / canalTotals[c].ventas : 0)})
+                  </span>
+                )}
+              </button>
+            ))}
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar ejecutivo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-3 py-1.5 bg-slate-900/80 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 w-full sm:w-52"
+              />
+            </div>
           </div>
         </div>
 
@@ -255,35 +308,46 @@ const ReturnsAnalysis = () => {
                   EJECUTIVO {sortField === 'ejecutivo' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('nombre')}>
-                  NOMEJECU {sortField === 'nombre' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  NOMBRE {sortField === 'nombre' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
+                <th className="pb-3 text-center">CANAL</th>
                 <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('ventas')}>
-                  VENTA $ {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  VENTA BRUTA $ {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('devoluciones')}>
-                  DEVOLUCIONES $ {sortField === 'devoluciones' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('rechazos')}>
+                  RECHAZOS $ {sortField === 'rechazos' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 text-right pr-2 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('porcentaje')}>
-                  % DEVOLUCION {sortField === 'porcentaje' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  % RECHAZO {sortField === 'porcentaje' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/60">
               {sortedExecs.map((item, idx) => {
-                const rate = item.ventas > 0 ? item.devoluciones / item.ventas : 0;
-                const isHigh = rate > 0.05;
+                const rate = item.ventas > 0 ? item.rechazos / item.ventas : 0;
+                const isHigh   = rate > 0.05;
                 const isMedium = rate > 0.025;
+                const isTAT    = item.canal === 'TAT';
                 return (
                   <tr key={idx} className="hover:bg-slate-900/40 transition-colors">
                     <td className="py-2.5 pl-2 font-bold font-mono text-slate-200">{item.ejecutivo}</td>
                     <td className="py-2.5 font-semibold text-slate-200">{item.nombre}</td>
+                    <td className="py-2.5 text-center">
+                      <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                        isTAT
+                          ? 'text-sky-300 bg-sky-500/10 border-sky-500/20'
+                          : 'text-violet-300 bg-violet-500/10 border-violet-500/20'
+                      }`}>
+                        {isTAT ? 'TAT' : 'Super'}
+                      </span>
+                    </td>
                     <td className="py-2.5 text-right text-slate-300 font-medium">{formatCurrency(item.ventas)}</td>
-                    <td className="py-2.5 text-right font-semibold text-rose-400">{formatCurrency(item.devoluciones)}</td>
+                    <td className="py-2.5 text-right font-semibold text-rose-400">{formatCurrency(item.rechazos)}</td>
                     <td className="py-2.5 text-right pr-2">
                       <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                        isHigh ? 'text-rose-400 bg-rose-500/10 border border-rose-500/20' :
+                        isHigh   ? 'text-rose-400 bg-rose-500/10 border border-rose-500/20' :
                         isMedium ? 'text-amber-400 bg-amber-500/10 border border-amber-500/20' :
-                        'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                                   'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
                       }`}>
                         {formatPercent(rate)}
                       </span>
@@ -294,13 +358,14 @@ const ReturnsAnalysis = () => {
             </tbody>
             <tfoot className="sticky bottom-0 bg-slate-900/95 backdrop-blur-md border-t-2 border-slate-700 font-bold">
               <tr>
-                <td className="py-3 pl-2 text-sky-400 font-extrabold uppercase">Total general</td>
+                <td className="py-3 pl-2 text-sky-400 font-extrabold uppercase">Total {canalFilter !== 'TODOS' ? canalFilter : 'general'}</td>
                 <td className="py-3 text-slate-500">—</td>
+                <td className="py-3"></td>
                 <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatCurrency(totalsExecs.ventas)}</td>
-                <td className="py-3 text-right font-extrabold text-rose-400 text-xs md:text-sm">{formatCurrency(totalsExecs.devoluciones)}</td>
+                <td className="py-3 text-right font-extrabold text-rose-400 text-xs md:text-sm">{formatCurrency(totalsExecs.rechazos)}</td>
                 <td className="py-3 text-right pr-2">
                   <span className="inline-block text-xs font-extrabold px-2.5 py-1 rounded-full text-rose-400 bg-rose-500/10 border border-rose-500/30">
-                    {formatPercent(totalsExecs.ventas > 0 ? totalsExecs.devoluciones / totalsExecs.ventas : 0)}
+                    {formatPercent(totalsExecs.ventas > 0 ? totalsExecs.rechazos / totalsExecs.ventas : 0)}
                   </span>
                 </td>
               </tr>

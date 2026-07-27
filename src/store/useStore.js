@@ -270,13 +270,27 @@ const useStore = create((set, get) => ({
         };
       });
 
-      const returnsSellers = dbSellers.map(s => ({
-        ejecutivo: s.ejecutivo,
-        nombre: s.nombre && s.nombre !== 'Sin Asignar' ? s.nombre : (DEFAULT_ZONE_SELLERS[s.ejecutivo] || 'Sin Asignar'),
-        ventas: Number(s.ventas) || 0,
-        devoluciones: Number(s.devoluciones) || 0,
-        porcentajeDevolucion: s.ventas > 0 ? Number(s.devoluciones) / Number(s.ventas) : 0.0
-      }));
+      const returnsSellers = dbSellers.map(s => {
+        const bruto = Number(s.ventas) || 0;
+        const dev   = Number(s.devoluciones) || 0;
+        // rechazos: use explicit field if present, otherwise estimate as total devoluciones
+        // (fallback for rows uploaded before this field was added)
+        const rechazos = s.rechazos != null ? Number(s.rechazos) : dev;
+        const ventasBrutas = s.ventasBrutas != null ? Number(s.ventasBrutas) : bruto;
+        const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
+        const canal = s.canal || (SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT');
+        return {
+          ejecutivo: s.ejecutivo,
+          nombre: s.nombre && s.nombre !== 'Sin Asignar' ? s.nombre : (DEFAULT_ZONE_SELLERS[s.ejecutivo] || 'Sin Asignar'),
+          canal,
+          ventas: bruto,
+          ventasBrutas,
+          devoluciones: dev,
+          rechazos,
+          porcentajeDevolucion: bruto > 0 ? dev / bruto : 0.0,
+          porcentajeRechazo: bruto > 0 ? rechazos / bruto : 0.0
+        };
+      });
 
       // Aggregate salesDaily from dbSales — only sum POSITIVE ventas (gross sales).
       // Rows with negative ventas are returns that leaked from old ETL runs; we ignore them here

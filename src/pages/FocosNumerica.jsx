@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD, countCalendarBusinessDays } from '../utils/calculations';
-
+import { getFilteredData, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency, formatNumber, formatKg } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
@@ -147,11 +146,12 @@ const FocosNumerica = () => {
     return `${meses[parseInt(month, 10) - 1]} ${year}`;
   }, [selectedPeriod]);
 
-  // Día actual: usa el configurado manualmente/sincronizado; si es 0, detecta desde datos por calendario
+  // Día actual: usa el configurado manualmente; si es 0, detecta desde datos
   const detectedDay = useMemo(() => {
-    return countCalendarBusinessDays(dbData.salesDaily);
+    const days = (dbData.salesDaily || [])
+      .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime()));
+    return days.length > 0 ? days.length : 1;
   }, [dbData.salesDaily]);
-
 
   const DIA_ACTUAL  = currentWorkDay > 0 ? currentWorkDay : detectedDay;
   const META_DIARIA = PRESUPUESTO_MES / DIAS_HABILES;

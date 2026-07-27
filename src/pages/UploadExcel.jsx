@@ -497,15 +497,31 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         // 4. Returns Sellers
         if (activeSeller) {
           if (!sellersAggr[activeSeller]) {
+            const sellerZone = zone || 'OTRO';
+            const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
+            const sellerCanal = SUPER_ZONES_SET.has(sellerZone) ? 'SUPER' : 'TAT';
             sellersAggr[activeSeller] = {
-              ejecutivo: zone || 'OTRO',
+              ejecutivo: sellerZone,
               nombre: activeSeller,
+              canal: sellerCanal,
               ventas: 0,
-              devoluciones: 0
+              devoluciones: 0,
+              rechazos: 0
             };
           }
           if (esDevolucion) {
             sellersAggr[activeSeller].devoluciones += Math.abs(valTotal);
+            // esVencimiento is defined in scope block 5 below, so derive here too
+            const mNorm = motivoStr
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/\./g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+            if (!mNorm.includes('vencimiento')) {
+              sellersAggr[activeSeller].rechazos += Math.abs(valTotal);
+            }
           } else if (esVentaReal) {
             sellersAggr[activeSeller].ventas += valTotal;
           }
@@ -739,15 +755,20 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const returnsSellers = Object.values(sellersAggr).map(s => {
     const bruto = Math.round(s.ventas);
     const d     = Math.round(s.devoluciones);
+    const r     = Math.round(s.rechazos || 0);
     // Venta neta = bruto − rechazos − cambios
     const v     = Math.max(0, bruto - d);
     return {
       ejecutivo: s.ejecutivo,
       nombre: s.nombre,
+      canal: s.canal || 'TAT',
       ventas: v,
+      ventasBrutas: bruto,
       devoluciones: d,
+      rechazos: r,
       // % sobre ventas brutas para no perder la proporción real de devolución
-      porcentajeDevolucion: bruto > 0 ? Number((d / bruto).toFixed(4)) : 0.0
+      porcentajeDevolucion: bruto > 0 ? Number((d / bruto).toFixed(4)) : 0.0,
+      porcentajeRechazo: bruto > 0 ? Number((r / bruto).toFixed(4)) : 0.0
     };
   }).sort((a, b) => b.ventas - a.ventas);
 
@@ -990,8 +1011,11 @@ const UploadExcel = () => {
           const returnsSellersDb = processedData.returnsSellers.map(s => ({
             nombre: s.nombre,
             ejecutivo: s.ejecutivo,
+            canal: s.canal || 'TAT',
             ventas: s.ventas,
+            ventasBrutas: s.ventasBrutas || s.ventas,
             devoluciones: s.devoluciones,
+            rechazos: s.rechazos || 0,
             periodo: uploadPeriod
           }));
           await supabase.from('returns_sellers').delete().eq('periodo', uploadPeriod);
