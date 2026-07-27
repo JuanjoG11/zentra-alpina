@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, countCalendarBusinessDays } from '../utils/calculations';
+
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import {
@@ -224,16 +225,12 @@ const ExecutiveDashboard = () => {
   // Clear date filter
   const clearDates = () => { setDateFrom(''); setDateTo(''); };
 
-  // workDay: usa el configurado manualmente o lo detecta desde datos
+  // workDay: usa el configurado manualmente/sincronizado o lo detecta calendario laboral
   const workDay = useMemo(() => {
     if (currentWorkDay > 0) return currentWorkDay;
-    const days = new Set(
-      (filteredData.salesDaily || [])
-        .filter(d => d.fecha && d.fecha !== 'general' && d.total > 0)
-        .map(d => d.fecha)
-    ).size;
-    return days || 1;
+    return countCalendarBusinessDays(filteredData.salesDaily);
   }, [currentWorkDay, filteredData.salesDaily]);
+
 
   // Configuración del período (días hábiles, presupuesto total)
   // Si el presupuesto hardcodeado es 0, usa el que viene de las zonas (kpis.totalBudget)

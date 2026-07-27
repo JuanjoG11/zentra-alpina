@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, countCalendarBusinessDays } from '../utils/calculations';
+
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import alpinaLogo from '../assets/alpina-logo.svg';
 import {
@@ -169,7 +170,8 @@ const TVDashboard = () => {
   }, [filteredData, devRate]);
 
   // Días hábil para proyección
-  const workDay = currentWorkDay > 0 ? currentWorkDay : (filteredData.salesDaily || []).filter(d => d.fecha && d.fecha !== 'general' && d.total > 0).length || 1;
+  const workDay = currentWorkDay > 0 ? currentWorkDay : countCalendarBusinessDays(filteredData.salesDaily);
+
   const proyectedEOM = kpis.totalSales > 0 ? Math.round(kpis.totalSales / workDay * 22) : 0;
   const proyEOMCompliance = totalBudget > 0 ? proyectedEOM / totalBudget : 0;
 

@@ -123,10 +123,29 @@ const useStore = create((set, get) => ({
     // Regenerar notificaciones con los nuevos datos
     setTimeout(() => get().generateNotifications(), 0);
   },
-  setCurrentWorkDay: (day) => {
+  setCurrentWorkDay: async (day) => {
     const d = Math.max(0, Math.min(31, parseInt(day, 10) || 0));
     try { localStorage.setItem(WORKDAY_KEY, String(d)); } catch(e) {}
     set({ currentWorkDay: d });
+
+    const currentPeriod = get().selectedPeriod;
+    if (supabase && currentPeriod) {
+      try {
+        await supabase.from('providers').delete().eq('proveedor', '_CONFIG_WORKDAY_').eq('periodo', currentPeriod);
+        if (d > 0) {
+          await supabase.from('providers').insert([{
+            proveedor: '_CONFIG_WORKDAY_',
+            ventas2026: 0,
+            ventas2025: 0,
+            margen2026: 0,
+            meta: d,
+            periodo: currentPeriod
+          }]);
+        }
+      } catch (e) {
+        console.warn('Error al guardar Día Hábil en Supabase:', e);
+      }
+    }
   },
   setChatMessages: (msgs) => {
     try { localStorage.setItem(CHAT_KEY, JSON.stringify(msgs)); } catch(e) {}
@@ -179,6 +198,18 @@ const useStore = create((set, get) => ({
       const dbProductDistrib = productDistribRes.data || [];
       const dbCityClients = cityClientsRes.data || [];
 
+      // Extraer y aplicar configuración global del Día Hábil guardada en Supabase
+      const configWorkDayRow = dbProviders.find(p => p.proveedor === '_CONFIG_WORKDAY_');
+      let activeWorkDay = get().currentWorkDay;
+      if (configWorkDayRow && Number(configWorkDayRow.meta) > 0) {
+        const remoteWD = Number(configWorkDayRow.meta);
+        if (remoteWD !== activeWorkDay) {
+          activeWorkDay = remoteWD;
+          try { localStorage.setItem(WORKDAY_KEY, String(remoteWD)); } catch(e) {}
+          set({ currentWorkDay: remoteWD });
+        }
+      }
+
       if (dbProviders.length === 0 && dbZones.length === 0) {
         // Período sin datos aún (ej: julio recién empezó) — mostrar estado vacío sin pisar localStorage
         console.log(`Período ${currentPeriod} sin datos en Supabase. Mostrando estado vacío para este período.`);
@@ -206,24 +237,22 @@ const useStore = create((set, get) => ({
       // Días hábiles por período (julio 2026 = 23, junio 2026 = 22, resto default 22)
       const DIAS_HABILES_POR_PERIODO = { '2026-06': 22, '2026-07': 23 };
       const TOTAL_BD = DIAS_HABILES_POR_PERIODO[currentPeriod] || 22;
-      const configuredWD = get().currentWorkDay;
-      const detectedDays = new Set(
-        dbSales.filter(s => Number(s.ventas) > 0 && s.fecha)
-          .map(s => s.fecha.substring(0, 10))
-      ).size;
-      const elapsedDays = (configuredWD > 0 && configuredWD <= TOTAL_BD) ? configuredWD : 16;
+      const configuredWD = activeWorkDay;
+      const elapsedDays = (configuredWD > 0 && configuredWD <= TOTAL_BD) ? configuredWD : 18;
       const projFactor = (elapsedDays >= 3 && elapsedDays < TOTAL_BD) ? TOTAL_BD / elapsedDays : 1;
 
-      const providers = dbProviders.map(p => ({
-        proveedor: p.proveedor,
-        ventas2026: Number(p.ventas2026) || 0,
-        ventas2025: Number(p.ventas2025) || 0,
-        proyectado2025: Number(p.ventas2025) || 0,
-        margen2025: 15,
-        proyectado2026: Math.round((Number(p.meta) || Number(p.ventas2026) || 0) * projFactor),
-        margen2026: Number(p.margen2026) || 15,
-        crecimiento: p.ventas2025 > 0 ? (p.ventas2026 - p.ventas2025) / p.ventas2025 : 0.2179
-      }));
+      const providers = dbProviders
+        .filter(p => p.proveedor !== '_CONFIG_WORKDAY_')
+        .map(p => ({
+          proveedor: p.proveedor,
+          ventas2026: Number(p.ventas2026) || 0,
+          ventas2025: Number(p.ventas2025) || 0,
+          proyectado2025: Number(p.ventas2025) || 0,
+          margen2025: 15,
+          proyectado2026: Math.round((Number(p.meta) || Number(p.ventas2026) || 0) * projFactor),
+          margen2026: Number(p.margen2026) || 15,
+          crecimiento: p.ventas2025 > 0 ? (p.ventas2026 - p.ventas2025) / p.ventas2025 : 0.2179
+        }));
 
       const zones = dbZones.map(z => {
         const net = Number(z.ventasnetas) || Number(z.ventasNetas) || 0;

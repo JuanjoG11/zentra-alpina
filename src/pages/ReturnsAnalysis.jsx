@@ -4,7 +4,8 @@ import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP } from '../utils/calcul
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import { BIHeatmapChart, BIRadarChart, BIFunnelChart } from '../components/charts/BICharts';
-import { AlertOctagon, TrendingDown, Users, ShieldAlert, MapPin, Percent } from 'lucide-react';
+import { AlertOctagon, TrendingDown, Users, ShieldAlert, MapPin, Percent, Search } from 'lucide-react';
+import { alpinaData } from '../data/alpina-data';
 
 const CITY_META = {
   PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400'    },
@@ -28,6 +29,67 @@ const ReturnsAnalysis = () => {
   const dbData = useStore(state => state.dbData);
   const filteredData = getFilteredData(dbData, filters);
   const kpis = calculateKPIs(filteredData);
+
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [sortField, setSortField] = React.useState('ejecutivo');
+  const [sortOrder, setSortOrder] = React.useState('asc');
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'ejecutivo' || field === 'nombre' ? 'asc' : 'desc');
+    }
+  };
+
+  const execsData = React.useMemo(() => {
+    const list = (filteredData.returnsSellers && filteredData.returnsSellers.length > 0)
+      ? filteredData.returnsSellers
+      : (alpinaData.returnsSellers || []);
+
+    return list.map(s => ({
+      ejecutivo: s.ejecutivo || '',
+      nombre: s.nombre || 'Sin Asignar',
+      ventas: Number(s.ventas) || 0,
+      devoluciones: Number(s.devoluciones) || 0,
+    }));
+  }, [filteredData.returnsSellers]);
+
+  const filteredExecs = React.useMemo(() => {
+    if (!searchTerm.trim()) return execsData;
+    const term = searchTerm.toLowerCase();
+    return execsData.filter(e =>
+      e.ejecutivo.toLowerCase().includes(term) ||
+      e.nombre.toLowerCase().includes(term)
+    );
+  }, [execsData, searchTerm]);
+
+  const sortedExecs = React.useMemo(() => {
+    return [...filteredExecs].sort((a, b) => {
+      let comp = 0;
+      if (sortField === 'ejecutivo') {
+        comp = a.ejecutivo.localeCompare(b.ejecutivo, undefined, { numeric: true, sensitivity: 'base' });
+      } else if (sortField === 'nombre') {
+        comp = a.nombre.localeCompare(b.nombre);
+      } else if (sortField === 'ventas') {
+        comp = a.ventas - b.ventas;
+      } else if (sortField === 'devoluciones') {
+        comp = a.devoluciones - b.devoluciones;
+      } else if (sortField === 'porcentaje') {
+        const rA = a.ventas > 0 ? a.devoluciones / a.ventas : 0;
+        const rB = b.ventas > 0 ? b.devoluciones / b.ventas : 0;
+        comp = rA - rB;
+      }
+      return sortOrder === 'asc' ? comp : -comp;
+    });
+  }, [filteredExecs, sortField, sortOrder]);
+
+  const totalsExecs = React.useMemo(() => {
+    const ventas = execsData.reduce((sum, e) => sum + e.ventas, 0);
+    const devoluciones = execsData.reduce((sum, e) => sum + e.devoluciones, 0);
+    return { ventas, devoluciones };
+  }, [execsData]);
 
   // Group returns by client to find critical ones (general returns only)
   const clientAgg = {};
@@ -74,6 +136,8 @@ const ReturnsAnalysis = () => {
   let totalGeneralReturns;
   let totalExpiryReturns;
 
+  // rawClientSum === 42557488 es la suma de junio que a veces se filtra mal;
+  // en ese caso usar el fallback exacto de julio.
   if (rawClientSum > 0 && rawClientSum !== 42557488) {
     totalGeneralReturns = rawClientSum;
     totalExpiryReturns = rawExpirySum > 0 ? rawExpirySum : Math.max(0, totalAllReturns - totalGeneralReturns);
@@ -84,6 +148,7 @@ const ReturnsAnalysis = () => {
     totalGeneralReturns = Math.round(totalAllReturns * rechazosRatio);
     totalExpiryReturns = totalAllReturns - totalGeneralReturns;
   }
+
 
   return (
     <div className="space-y-6">
@@ -161,16 +226,87 @@ const ReturnsAnalysis = () => {
         </GlassCard>
       </div>
 
-      {/* Heatmap Section */}
+      {/* Tabla de Devoluciones por Ejecutivo Comercial */}
       <GlassCard hoverable={false}>
-        <h3 className="text-base font-bold text-white mb-2">Matriz de Devoluciones por Vendedor y Concepto</h3>
-        <p className="text-xs text-slate-400 mb-4">
-          Visualice qué conceptos específicos representan la mayor pérdida por cada ejecutivo comercial (Cifras en Miles COP).
-        </p>
-        <BIHeatmapChart 
-          returnsSellers={filteredData.returnsSellers} 
-          clientReturns={filteredData.clientReturns} 
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-base font-bold text-white">Devoluciones por Ejecutivo Comercial</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Consolidado de venta, devoluciones y porcentaje de devolución por cada ejecutivo comercial.
+            </p>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar ejecutivo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-3 py-1.5 bg-slate-900/80 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 w-full sm:w-64"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto -mx-5 px-5 max-h-[500px] overflow-y-auto">
+          <table className="w-full min-w-[640px] text-left text-xs border-collapse">
+            <thead className="sticky top-0 bg-slate-950/90 backdrop-blur-md z-10">
+              <tr className="border-b border-slate-800 text-slate-400 font-semibold select-none">
+                <th className="pb-3 pl-2 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('ejecutivo')}>
+                  EJECUTIVO {sortField === 'ejecutivo' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('nombre')}>
+                  NOMEJECU {sortField === 'nombre' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('ventas')}>
+                  VENTA $ {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('devoluciones')}>
+                  DEVOLUCIONES $ {sortField === 'devoluciones' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="pb-3 text-right pr-2 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('porcentaje')}>
+                  % DEVOLUCION {sortField === 'porcentaje' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-900/60">
+              {sortedExecs.map((item, idx) => {
+                const rate = item.ventas > 0 ? item.devoluciones / item.ventas : 0;
+                const isHigh = rate > 0.05;
+                const isMedium = rate > 0.025;
+                return (
+                  <tr key={idx} className="hover:bg-slate-900/40 transition-colors">
+                    <td className="py-2.5 pl-2 font-bold font-mono text-slate-200">{item.ejecutivo}</td>
+                    <td className="py-2.5 font-semibold text-slate-200">{item.nombre}</td>
+                    <td className="py-2.5 text-right text-slate-300 font-medium">{formatCurrency(item.ventas)}</td>
+                    <td className="py-2.5 text-right font-semibold text-rose-400">{formatCurrency(item.devoluciones)}</td>
+                    <td className="py-2.5 text-right pr-2">
+                      <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        isHigh ? 'text-rose-400 bg-rose-500/10 border border-rose-500/20' :
+                        isMedium ? 'text-amber-400 bg-amber-500/10 border border-amber-500/20' :
+                        'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                      }`}>
+                        {formatPercent(rate)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot className="sticky bottom-0 bg-slate-900/95 backdrop-blur-md border-t-2 border-slate-700 font-bold">
+              <tr>
+                <td className="py-3 pl-2 text-sky-400 font-extrabold uppercase">Total general</td>
+                <td className="py-3 text-slate-500">—</td>
+                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatCurrency(totalsExecs.ventas)}</td>
+                <td className="py-3 text-right font-extrabold text-rose-400 text-xs md:text-sm">{formatCurrency(totalsExecs.devoluciones)}</td>
+                <td className="py-3 text-right pr-2">
+                  <span className="inline-block text-xs font-extrabold px-2.5 py-1 rounded-full text-rose-400 bg-rose-500/10 border border-rose-500/30">
+                    {formatPercent(totalsExecs.ventas > 0 ? totalsExecs.devoluciones / totalsExecs.ventas : 0)}
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </GlassCard>
 
       {/* Radar Comparison and Concepts Pipeline */}

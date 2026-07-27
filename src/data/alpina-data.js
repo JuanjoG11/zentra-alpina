@@ -406,104 +406,46 @@ export const alpinaData = {
     }
   ],
   "returnsSellers": [
-    {
-      "ejecutivo": "E7000",
-      "nombre": "SERVICIO  CLIENTE",
-      "ventas": 6206309,
-      "devoluciones": 0,
-      "porcentajeDevolucion": 0
-    },
-    {
-      "ejecutivo": "M9550",
-      "nombre": "LEIDY  JHOANA  RESTREPO",
-      "ventas": 51904863,
-      "devoluciones": 276954,
-      "porcentajeDevolucion": 0.005
-    },
-    {
-      "ejecutivo": "M9552",
-      "nombre": "ELIANA MARCELA CALVO IGLESIAS",
-      "ventas": 105487551,
-      "devoluciones": 2681538,
-      "porcentajeDevolucion": 0.025
-    },
-    {
-      "ejecutivo": "M9553",
-      "nombre": "SANDRA MILENA GARCIA",
-      "ventas": 92866017,
-      "devoluciones": 10586942,
-      "porcentajeDevolucion": 0.114
-    },
-    {
-      "ejecutivo": "M9554",
-      "nombre": "SEBASTIAN   MEZA SALAZAR",
-      "ventas": 124123999,
-      "devoluciones": 5686500,
-      "porcentajeDevolucion": 0.046
-    },
-    {
-      "ejecutivo": "M9555",
-      "nombre": "NATALIA  OSORIO OCAMPO",
-      "ventas": 115625223,
-      "devoluciones": 5571888,
-      "porcentajeDevolucion": 0.048
-    },
-    {
-      "ejecutivo": "M9556",
-      "nombre": "THANY YANINA ACOSTA ARIAS",
-      "ventas": 121310352,
-      "devoluciones": 7293467,
-      "porcentajeDevolucion": 0.06
-    },
-    {
-      "ejecutivo": "M9557",
-      "nombre": "DIANA MILENA ARANGO ARIAS",
-      "ventas": 190509927,
-      "devoluciones": 2222594,
-      "porcentajeDevolucion": 0.012
-    },
-    {
-      "ejecutivo": "M9558",
-      "nombre": "SANTIAGO  ARCILA ESCOBAR",
-      "ventas": 120274730,
-      "devoluciones": 456657,
-      "porcentajeDevolucion": 0.004
-    },
-    {
-      "ejecutivo": "M9559",
-      "nombre": "VIVIANA  VERA  ESPINOSA",
-      "ventas": 139844994,
-      "devoluciones": 1839793,
-      "porcentajeDevolucion": 0.013000000000000001
-    },
-    {
-      "ejecutivo": "M9560",
-      "nombre": "ANGIE PAOLA HERNANDEZ BANOL",
-      "ventas": 76647419,
-      "devoluciones": 1252841,
-      "porcentajeDevolucion": 0.016
-    },
-    {
-      "ejecutivo": "P7000",
-      "nombre": "NICOLAS ALFREDO BLANDON PATINO",
-      "ventas": 48222353,
-      "devoluciones": 1817003,
-      "porcentajeDevolucion": 0.038
-    },
-    {
-      "ejecutivo": "P7001",
-      "nombre": "ALEJANDRO   LOPEZ VANEGAS",
-      "ventas": 66758062,
-      "devoluciones": 966973,
-      "porcentajeDevolucion": 0.013999999999999999
-    },
-    {
-      "ejecutivo": "P7002",
-      "nombre": "VALENTINA MONTOYA GUEVARA",
-      "ventas": 110830676,
-      "devoluciones": 1883137,
-      "porcentajeDevolucion": 0.017
-    }
+    { "ejecutivo": "E7000", "nombre": "SERVICIO  CLIENTE", "ventas": 6206309, "devoluciones": 0, "porcentajeDevolucion": 0 },
+    { "ejecutivo": "E7001", "nombre": "SERVICIO  CLIENTE", "ventas": 7439762, "devoluciones": 50774, "porcentajeDevolucion": 0.007 },
+    { "ejecutivo": "M9450", "nombre": "MARIA FERNANDA LLANOS OROZCO", "ventas": 58468867, "devoluciones": 1282388, "porcentajeDevolucion": 0.022 },
+    { "ejecutivo": "M9451", "nombre": "BIBIANA ESMILDA MONTOYA", "ventas": 65616500, "devoluciones": 1458215, "porcentajeDevolucion": 0.022 },
+    { "ejecutivo": "M9453", "nombre": "JHONATAN ANDRES GUTIERREZ LEON", "ventas": 115818275, "devoluciones": 6180021, "porcentajeDevolucion": 0.053 },
+    { "ejecutivo": "M9454", "nombre": "SANDRA MILENA TORO MEJIA", "ventas": 131212125, "devoluciones": 11362844, "porcentajeDevolucion": 0.087 },
+    { "ejecutivo": "M9455", "nombre": "GENNY MARCELA GAVIRIA MORALES", "ventas": 131502409, "devoluciones": 10384005, "porcentajeDevolucion": 0.079 },
+    { "ejecutivo": "M9456", "nombre": "PAULA ANDREA RAMIREZ ISAZA", "ventas": 93343242, "devoluciones": 1761723, "porcentajeDevolucion": 0.019 },
+    { "ejecutivo": "M9457", "nombre": "GERMAN  HURTADO TORRES", "ventas": 117685999, "devoluciones": 2951827, "porcentajeDevolucion": 0.025 },
+    { "ejecutivo": "M9458", "nombre": "LUISA FERNANDA GRAJALES   GALEANO", "ventas": 108880612, "devoluciones": 1630918, "porcentajeDevolucion": 0.015 },
+    { "ejecutivo": "M9459", "nombre": "YUDI  MONDRAGON SEGURA", "ventas": 133220562, "devoluciones": 10694410, "porcentajeDevolucion": 0.080 },
+    { "ejecutivo": "M9460", "nombre": "ALEXANDER  OROZCO RAMIREZ", "ventas": 150090114, "devoluciones": 3849824, "porcentajeDevolucion": 0.026 },
+    { "ejecutivo": "M9461", "nombre": "MELISSA  BUITRAGO RODRIGUEZ", "ventas": 104158314, "devoluciones": 5617463, "porcentajeDevolucion": 0.054 },
+    { "ejecutivo": "M9550", "nombre": "LEIDY  JHOANA  RESTREPO", "ventas": 51904863, "devoluciones": 276954, "porcentajeDevolucion": 0.005 },
+    { "ejecutivo": "M9552", "nombre": "ELIANA MARCELA CALVO IGLESIAS", "ventas": 105487551, "devoluciones": 2681538, "porcentajeDevolucion": 0.025 },
+    { "ejecutivo": "M9553", "nombre": "SANDRA MILENA GARCIA", "ventas": 92866017, "devoluciones": 10586942, "porcentajeDevolucion": 0.114 },
+    { "ejecutivo": "M9554", "nombre": "SEBASTIAN   MEZA SALAZAR", "ventas": 124123999, "devoluciones": 5686500, "porcentajeDevolucion": 0.046 },
+    { "ejecutivo": "M9555", "nombre": "NATALIA  OSORIO OCAMPO", "ventas": 115625223, "devoluciones": 5571888, "porcentajeDevolucion": 0.048 },
+    { "ejecutivo": "M9556", "nombre": "THANY YANINA ACOSTA ARIAS", "ventas": 121310352, "devoluciones": 7293467, "porcentajeDevolucion": 0.060 },
+    { "ejecutivo": "M9557", "nombre": "DIANA MILENA ARANGO ARIAS", "ventas": 190509927, "devoluciones": 2222594, "porcentajeDevolucion": 0.012 },
+    { "ejecutivo": "M9558", "nombre": "SANTIAGO  ARCILA ESCOBAR", "ventas": 120274730, "devoluciones": 456657, "porcentajeDevolucion": 0.004 },
+    { "ejecutivo": "M9559", "nombre": "VIVIANA  VERA  ESPINOSA", "ventas": 139844994, "devoluciones": 1839793, "porcentajeDevolucion": 0.013 },
+    { "ejecutivo": "M9560", "nombre": "ANGIE PAOLA HERNANDEZ BANOL", "ventas": 76647419, "devoluciones": 1252841, "porcentajeDevolucion": 0.016 },
+    { "ejecutivo": "M9600", "nombre": "SANDRA MILENA CUBILLOS HENAO", "ventas": 49903711, "devoluciones": 1481198, "porcentajeDevolucion": 0.030 },
+    { "ejecutivo": "M9601", "nombre": "JEIMY ALEJANDRA TRUJILLO MALDO", "ventas": 108522030, "devoluciones": 10630073, "porcentajeDevolucion": 0.098 },
+    { "ejecutivo": "M9602", "nombre": "YOHANNA MARCELA OSORIO VILLADA", "ventas": 122239650, "devoluciones": 14574670, "porcentajeDevolucion": 0.119 },
+    { "ejecutivo": "M9603", "nombre": "JOHAN SEBASTIAN BURITICA GONZALEZ", "ventas": 113672813, "devoluciones": 4959020, "porcentajeDevolucion": 0.044 },
+    { "ejecutivo": "M9604", "nombre": "OLGA PATRICIA MANCERA", "ventas": 111600908, "devoluciones": 10412949, "porcentajeDevolucion": 0.093 },
+    { "ejecutivo": "M9605", "nombre": "CRISTHYAN JAIR PARRA CASTANO", "ventas": 118993227, "devoluciones": 4485779, "porcentajeDevolucion": 0.038 },
+    { "ejecutivo": "M9606", "nombre": "LOLA ANDREA GAVIRIA GONZALES", "ventas": 86202584, "devoluciones": 5588736, "porcentajeDevolucion": 0.065 },
+    { "ejecutivo": "P7000", "nombre": "NICOLAS ALFREDO BLANDON PATINO", "ventas": 48222353, "devoluciones": 1817003, "porcentajeDevolucion": 0.038 },
+    { "ejecutivo": "P7001", "nombre": "ALEJANDRO   LOPEZ VANEGAS", "ventas": 66758062, "devoluciones": 966973, "porcentajeDevolucion": 0.014 },
+    { "ejecutivo": "P7002", "nombre": "VALENTINA MONTOYA GUEVARA", "ventas": 110830676, "devoluciones": 1883137, "porcentajeDevolucion": 0.017 },
+    { "ejecutivo": "P7004", "nombre": "MARIA ALEXANDRA GONZALEZ TAMAY", "ventas": 152018011, "devoluciones": 12962885, "porcentajeDevolucion": 0.085 },
+    { "ejecutivo": "P7005", "nombre": "JHONIER ALEJANDRO QUINTERO MED", "ventas": 115576475, "devoluciones": 1622327, "porcentajeDevolucion": 0.014 },
+    { "ejecutivo": "P7006", "nombre": "ADRIAN AUGUSTO BENITES TORRES", "ventas": 155213706, "devoluciones": 1967066, "porcentajeDevolucion": 0.013 },
+    { "ejecutivo": "P7007", "nombre": "DUBERNEY  ZAPATA", "ventas": 172642875, "devoluciones": 9861054, "porcentajeDevolucion": 0.057 },
+    { "ejecutivo": "P7008", "nombre": "MARYORI VIVIAN PINTO ZAMBRANO", "ventas": 71670119, "devoluciones": 355463, "porcentajeDevolucion": 0.005 },
+    { "ejecutivo": "P7009", "nombre": "JOHN ANDERSON GARZON ORDONEZ", "ventas": 62574647, "devoluciones": 1949230, "porcentajeDevolucion": 0.031 },
+    { "ejecutivo": "P7010", "nombre": "CLAUDIA CAROLINA RUEDA HERRERA", "ventas": 52499409, "devoluciones": 1072266, "porcentajeDevolucion": 0.020 }
   ],
   "returnsConcepts": [
     {

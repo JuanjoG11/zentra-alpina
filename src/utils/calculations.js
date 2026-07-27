@@ -432,3 +432,28 @@ export const calculateKPIs = (filteredData) => {
     totalFacturas: totalFacturas || 14233
   };
 };
+
+export const countCalendarBusinessDays = (salesDaily) => {
+  if (!salesDaily || salesDaily.length === 0) return 1;
+  const dates = salesDaily
+    .filter(s => s && s.fecha && s.fecha !== 'general' && (Number(s.total || s.ventas || 0) > 0))
+    .map(s => new Date(s.fecha && !s.fecha.includes('T') ? s.fecha + 'T00:00:00' : s.fecha))
+    .filter(d => !isNaN(d.getTime()));
+  if (dates.length === 0) return 1;
+  dates.sort((a, b) => b - a);
+  const maxDate = dates[0];
+  const year = maxDate.getFullYear();
+  const month = maxDate.getMonth();
+  const monthStart = new Date(year, month, 1);
+  let bDays = 0;
+  const cur = new Date(monthStart);
+  while (cur <= maxDate) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) { // Mon-Fri
+      bDays++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return bDays || 1;
+};
+

@@ -171,44 +171,7 @@ export const BIStackedBarChart = ({ data = [] }) => {
 };
 
 // 4. DONUT CHART - Provider sales participation
-export const BIDonutChart = ({ data = [] }) => {
-  const filtered = (data || []).filter(item => item.ventas2026 > 0);
-  if (filtered.length === 0) return (
-    <div className="h-[340px] flex items-center justify-center text-slate-500 text-sm">Sin datos de proveedores</div>
-  );
-  const series = filtered.map(item => item.ventas2026);
-  const labels = filtered.map(item => item.proveedor);
-
-  const options = {
-    ...baseApexOptions,
-    labels: labels,
-    colors: ['#3b82f6', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e', '#a855f7'],
-    stroke: { show: false },
-    legend: { position: 'bottom', horizontalAlign: 'center' },
-    dataLabels: { enabled: true, formatter: (val) => `${val.toFixed(1)}%` },
-    plotOptions: {
-      pie: {
-        donut: {
-          size: '65%',
-          labels: {
-            show: true,
-            total: {
-              show: true,
-              label: 'Total Ventas',
-              color: '#94a3b8',
-              formatter: (w) => {
-                const sum = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                return formatShortCurrency(sum);
-              }
-            }
-          }
-        }
-      }
-    }
-  };
-
-  return <Chart options={options} series={series} type="donut" height={340} />;
-};
+// (Defined below as BIDonutChart with height parameter)
 
 // 6. TREEMAP CHART - Provider Sales distribution (using ECharts)
 export const BITreemapChart = ({ data = [] }) => {
@@ -711,4 +674,65 @@ export const BIZoneRankingChart = ({ zones = [] }) => {
   };
 
   return <ReactECharts option={option} style={{ height: '320px', width: '100%' }} />;
+};
+
+// 12. DONUT CHART - Distribution pie/donut chart for returns and zones
+export const BIDonutChart = ({ data = [], height = 300 }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[300px] flex items-center justify-center text-slate-500 text-sm">
+        Sin datos
+      </div>
+    );
+  }
+
+  const labels = data.map(item => item.name || item.label || item.concepto);
+  const series = data.map(item => Math.round(Number(item.value || item.devoluciones || item.ventas || 0)));
+
+  const options = {
+    ...baseApexOptions,
+    chart: {
+      ...baseApexOptions.chart,
+      type: 'donut'
+    },
+    labels,
+    colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'],
+    legend: {
+      position: 'bottom',
+      fontSize: '11px',
+      labels: { colors: '#94a3b8' }
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (val) => `${val.toFixed(1)}%`
+    },
+    tooltip: {
+      theme: 'dark',
+      y: {
+        formatter: (val) => formatShortCurrency(val)
+      }
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '65%',
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: 'Total',
+              color: '#94a3b8',
+              fontSize: '12px',
+              formatter: (w) => {
+                const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                return formatShortCurrency(total);
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  return <Chart options={options} series={series} type="donut" height={height} />;
 };

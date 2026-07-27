@@ -24,13 +24,14 @@ const Layout = () => {
     generateNotifications();
   }, [fetchDataFromSupabase, generateNotifications]);
 
-  // Re-sincronizar datos automáticamente cada 5 minutos
+  // Re-sincronizar datos automáticamente cada 30 segundos (tiempo real multiterminal)
   useEffect(() => {
     const interval = setInterval(() => {
       fetchDataFromSupabase();
-    }, 5 * 60 * 1000);
+    }, 30 * 1000);
     return () => clearInterval(interval);
   }, [fetchDataFromSupabase]);
+
 
   // Re-sincronizar cuando el usuario vuelve a la pestaña/app
   useEffect(() => {

@@ -959,9 +959,20 @@ const UploadExcel = () => {
             meta: p.proyectado2026,
             periodo: uploadPeriod
           }));
+          // Incluir configuración global del Día Hábil para que todos los dispositivos lo reciban
+          const activeWorkDay = useStore.getState().currentWorkDay;
+          providersDb.push({
+            proveedor: '_CONFIG_WORKDAY_',
+            ventas2026: 0,
+            ventas2025: 0,
+            margen2026: 0,
+            meta: activeWorkDay > 0 ? activeWorkDay : 18,
+            periodo: uploadPeriod
+          });
           await supabase.from('providers').delete().eq('periodo', uploadPeriod);
           const { error: errProv } = await supabase.from('providers').insert(providersDb);
           if (errProv) throw new Error('Error al cargar proveedores: ' + errProv.message);
+
 
           // 2. Zones — delete período actual + insert
           const zonesDb = processedData.zones.map(z => ({
