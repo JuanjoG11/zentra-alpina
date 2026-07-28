@@ -389,31 +389,29 @@ const channelTicket = React.useMemo(() => {
             <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
           </div>
         </GlassCard>
-{/* Gross Contado & Crédito Cards */}
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-  <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-    <div className="flex-1 min-w-0">
-      <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas de Contado (Bruta)</p>
-      <h3 className="text-xl md:text-2xl font-bold text-emerald-400 mt-1">{formatShortCurrency(grossCash)}</h3>
-      <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(1 - creditPercentage)} del total bruto</p>
-    </div>
-    <div className="p-2.5 md:p-3 bg-emerald-500/10 text-emerald-400 rounded-lg md:rounded-xl shrink-0">
-      <DollarSign className="h-5 w-5 md:h-6 md:w-6" />
-    </div>
-  </GlassCard>
-  <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-    <div className="flex-1 min-w-0">
-      <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas a Crédito (Bruta)</p>
-      <h3 className="text-xl md:text-2xl font-bold text-amber-400 mt-1">{formatShortCurrency(grossCredit)}</h3>
-      <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(creditPercentage)} del total bruto</p>
-    </div>
-    <div className="p-2.5 md:p-3 bg-amber-10 text-amber-400 rounded-lg md:rounded-xl shrink-0">
-      <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
-    </div>
-  </GlassCard>
-</div>
 
-        
+        <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
+          <div className="flex-1 min-w-0">
+            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas de Contado (Bruta)</p>
+            <h3 className="text-xl md:text-2xl font-bold text-emerald-400 mt-1">{formatShortCurrency(grossCash)}</h3>
+            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(1 - creditPercentage)} del total bruto</p>
+          </div>
+          <div className="p-2.5 md:p-3 bg-emerald-500/10 text-emerald-400 rounded-lg md:rounded-xl shrink-0">
+            <DollarSign className="h-5 w-5 md:h-6 md:w-6" />
+          </div>
+        </GlassCard>
+
+        <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
+          <div className="flex-1 min-w-0">
+            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas a Crédito (Bruta)</p>
+            <h3 className="text-xl md:text-2xl font-bold text-amber-400 mt-1">{formatShortCurrency(grossCredit)}</h3>
+            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(creditPercentage)} del total bruto</p>
+          </div>
+          <div className="p-2.5 md:p-3 bg-amber-500/10 text-amber-400 rounded-lg md:rounded-xl shrink-0">
+            <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
+          </div>
+        </GlassCard>
+
         <div className="md:col-span-2 lg:col-span-1 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
           <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-900/20 border-slate-800">
             <div className="flex items-start justify-between mb-2">
