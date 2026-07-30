@@ -7,17 +7,17 @@ import { BIAreaChart, BIStackedBarChart, BILineChart } from '../components/chart
 import { TrendingUp, ArrowUpRight, MapPin } from 'lucide-react';
 
 const CITY_META = {
-  PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400'    },
-  MANIZALES: { label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400'  },
-  ARMENIA:   { label: 'Eje Quindío',  bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
-  OTRO:      { label: 'Otro',         bg: 'bg-slate-500/10',   text: 'text-slate-400'   },
+  PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-50 border border-blue-200',    text: 'text-blue-700'    },
+  MANIZALES: { label: 'Eje Caldas',   bg: 'bg-indigo-50 border border-indigo-200',  text: 'text-indigo-700'  },
+  ARMENIA:   { label: 'Eje Quindío',  bg: 'bg-emerald-50 border border-emerald-200', text: 'text-emerald-700' },
+  OTRO:      { label: 'Otro',         bg: 'bg-slate-100 border border-slate-200',   text: 'text-slate-600'   },
 };
 
 const CityBadge = ({ zona }) => {
   const city = ZONA_CIUDAD_MAP[zona] || 'OTRO';
   const m = CITY_META[city] || CITY_META.OTRO;
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${m.bg} ${m.text}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${m.bg} ${m.text}`}>
       <MapPin className="h-2.5 w-2.5" />{m.label}
     </span>
   );
@@ -327,38 +327,38 @@ const channelTicket = React.useMemo(() => {
   const forecastLabels = getForecastLabels();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">Análisis de Ventas</h1>
-        <p className="text-slate-400 text-xs mt-0.5">
+        <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900">Análisis de Ventas</h1>
+        <p className="text-slate-600 text-xs mt-0.5 font-medium">
           Comportamiento de facturación comercial, métodos de pago, forecast y rankings de zona.
         </p>
       </div>
 
       {/* ── Resumen por eje comercial ── */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 md:gap-3">
         {[
-          { city: 'PEREIRA',   label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
-          { city: 'MANIZALES', label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
-          { city: 'ARMENIA',   label: 'Eje Quindío',  bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+          { city: 'PEREIRA',   label: 'Eje Pereira',  bg: 'bg-blue-50/80',    text: 'text-blue-700',    border: 'border-blue-200'    },
+          { city: 'MANIZALES', label: 'Eje Caldas',   bg: 'bg-indigo-50/80',  text: 'text-indigo-700',  border: 'border-indigo-200'  },
+          { city: 'ARMENIA',   label: 'Eje Quindío',  bg: 'bg-emerald-50/80', text: 'text-emerald-700', border: 'border-emerald-200' },
         ].map(({ city, label, bg, text, border }) => {
           const v = ejeTotals[city] || 0;
           const share = v / totalEjes;
           return (
-            <GlassCard key={city} hoverable={false} className={`border ${border} relative overflow-hidden !p-3`}>
-              <div className={`absolute inset-0 ${bg} opacity-25 pointer-events-none rounded-2xl`} />
+            <GlassCard key={city} hoverable={false} className={`border ${border} relative overflow-hidden !p-3 shadow-xs`}>
+              <div className={`absolute inset-0 ${bg} pointer-events-none rounded-2xl`} />
               <div className="relative flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[9px] font-bold uppercase tracking-widest ${text}`}>{label}</p>
-                  <p className="text-base font-extrabold text-white mt-0.5">{formatShortCurrency(v)}</p>
+                  <p className={`text-[9px] font-extrabold uppercase tracking-widest ${text}`}>{label}</p>
+                  <p className="text-base font-black text-slate-900 mt-0.5">{formatShortCurrency(v)}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className="w-14 h-1 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${text.replace('text-', 'bg-')}`} style={{ width: `${share * 100}%` }} />
                     </div>
                     <span className={`text-[9px] font-bold ${text}`}>{formatPercent(share)}</span>
                   </div>
                 </div>
-                <MapPin className={`h-5 w-5 opacity-10 ${text} shrink-0`} />
+                <MapPin className={`h-5 w-5 opacity-20 ${text} shrink-0`} />
               </div>
             </GlassCard>
           );
@@ -366,18 +366,18 @@ const channelTicket = React.useMemo(() => {
       </div>
 
       {/* Métricas de facturación — fila compacta */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         {[
-          { label: 'Contado neto',   value: formatShortCurrency(cashTotal),              sub: formatPercent(1 - creditPercentage), color: 'text-emerald-400', border: 'border-emerald-500/20' },
-          { label: 'Crédito neto',   value: formatShortCurrency(creditTotal),            sub: formatPercent(creditPercentage),     color: 'text-amber-400',   border: 'border-amber-500/20'   },
-          { label: 'Venta bruta',    value: formatShortCurrency(grossCash + grossCredit), sub: 'antes de devoluciones',            color: 'text-sky-400',     border: 'border-sky-500/20'     },
-          { label: 'Ticket Super',   value: formatCurrency(channelTicket.SUPERMERCADOS),  sub: 'por factura',                      color: 'text-blue-400',    border: 'border-blue-500/20'    },
-          { label: 'Ticket TAT',     value: formatCurrency(channelTicket.TAT),            sub: 'por factura',                      color: 'text-violet-400',  border: 'border-violet-500/20'  },
+          { label: 'Contado neto',   value: formatShortCurrency(cashTotal),              sub: formatPercent(1 - creditPercentage), color: 'text-emerald-700', border: 'border-emerald-200' },
+          { label: 'Crédito neto',   value: formatShortCurrency(creditTotal),            sub: formatPercent(creditPercentage),     color: 'text-amber-700',   border: 'border-amber-200'   },
+          { label: 'Venta bruta',    value: formatShortCurrency(grossCash + grossCredit), sub: 'antes de devoluciones',            color: 'text-blue-700',    border: 'border-blue-200'    },
+          { label: 'Ticket Super',   value: formatCurrency(channelTicket.SUPERMERCADOS),  sub: 'por factura',                      color: 'text-indigo-700',  border: 'border-indigo-200'  },
+          { label: 'Ticket TAT',     value: formatCurrency(channelTicket.TAT),            sub: 'por factura',                      color: 'text-violet-700',  border: 'border-violet-200'  },
         ].map(({ label, value, sub, color, border }) => (
-          <GlassCard key={label} hoverable={false} className={`bg-slate-900/30 border ${border} !p-2.5`}>
-            <p className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold truncate">{label}</p>
-            <p className={`text-sm font-black mt-0.5 ${color}`}>{value}</p>
-            <p className="text-[9px] text-slate-600 mt-0.5 truncate">{sub}</p>
+          <GlassCard key={label} hoverable={false} className={`bg-white border ${border} !p-2.5 shadow-xs`}>
+            <p className="text-[9px] text-slate-600 uppercase tracking-wider font-bold truncate">{label}</p>
+            <p className={`text-lg font-black mt-0.5 ${color}`}>{value}</p>
+            <p className="text-[9px] text-slate-600 font-medium mt-0.5 truncate">{sub}</p>
           </GlassCard>
         ))}
       </div>
@@ -385,7 +385,7 @@ const channelTicket = React.useMemo(() => {
       {/* Gráficas principales */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <GlassCard hoverable={false} className="!p-3 md:!p-4">
-          <h3 className="text-sm font-bold text-white mb-3">Avance vs Meta · {workDay} de {TOTAL_BD} días hábiles</h3>
+          <h3 className="text-sm font-bold text-slate-900 mb-3">Avance vs Meta · {workDay} de {TOTAL_BD} días hábiles</h3>
           <BIAreaChart
             data={filteredData.salesDaily.filter(d => d.fecha !== 'general')}
             presupuesto={paretoTotals.totalPresupuesto}
@@ -396,7 +396,7 @@ const channelTicket = React.useMemo(() => {
         </GlassCard>
 
         <GlassCard hoverable={false} className="!p-3 md:!p-4">
-          <h3 className="text-sm font-bold text-white mb-3">Tendencia y Pronóstico Comercial (Próximos 5 Días)</h3>
+          <h3 className="text-sm font-bold text-slate-900 mb-3">Tendencia y Pronóstico Comercial (Próximos 5 Días)</h3>
           <BILineChart
             data={forecastData}
             metaDiaria={paretoTotals.totalPresupuesto > 0 ? Math.round(paretoTotals.totalPresupuesto / TOTAL_BD) : 0}
@@ -408,74 +408,74 @@ const channelTicket = React.useMemo(() => {
       <GlassCard hoverable={false} className="!p-3 md:!p-4">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
           <div>
-            <h3 className="text-sm font-bold text-white">Análisis de Pareto 80/20 por Zonas</h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <h3 className="text-sm font-bold text-slate-900">Análisis de Pareto 80/20 por Zonas</h3>
+            <p className="text-[10px] text-slate-600 font-medium mt-0.5">
               Clasificación de zonas según su contribución al volumen total de ventas netas.
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1 text-[10px] text-amber-400 font-semibold uppercase tracking-wider shrink-0 w-fit">
-            <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1 text-[10px] text-amber-800 font-bold uppercase tracking-wider shrink-0 w-fit shadow-xs">
+            <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-amber-600" />
             <span>Zonas Core (80% Facturación)</span>
           </div>
         </div>
 
-        {/* Tabla Pareto — scroll horizontal en móvil */}
+        {/* Tabla Pareto */}
         <div className="overflow-x-auto -mx-5 px-5">
           <table className="w-full min-w-[640px] text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-500 font-semibold select-none">
-                <th className="pb-3 pl-2 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('zona')}>
+              <tr className="border-b border-slate-200 text-slate-600 font-bold select-none bg-slate-50">
+                <th className="pb-3 pt-2 pl-2 cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('zona')}>
                   Zona {sortField === 'zona' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('canal')}>
+                <th className="pb-3 pt-2 hidden sm:table-cell cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('canal')}>
                   Canal {sortField === 'canal' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3">Eje</th>
-                <th className="pb-3 hidden md:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('vendedor')}>
+                <th className="pb-3 pt-2">Eje</th>
+                <th className="pb-3 pt-2 hidden md:table-cell cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('vendedor')}>
                   Vendedor {sortField === 'vendedor' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 text-right hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('presupuesto')}>
+                <th className="pb-3 pt-2 text-right hidden sm:table-cell cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('presupuesto')}>
                   Presupuesto {sortField === 'presupuesto' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('ventas')}>
+                <th className="pb-3 pt-2 text-right cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('ventas')}>
                   Ventas Acum {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 text-right hidden sm:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('proyeccion')}>
+                <th className="pb-3 pt-2 text-right hidden sm:table-cell cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('proyeccion')}>
                   Proyección (Pesos) {sortField === 'proyeccion' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 text-right hidden md:table-cell cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('accumShare')}>
+                <th className="pb-3 pt-2 text-right hidden md:table-cell cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('accumShare')}>
                   Proy. % {sortField === 'accumShare' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('cambio')}>
+                <th className="pb-3 pt-2 text-right cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('cambio')}>
                   Cambio % {sortField === 'cambio' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-900/60">
+            <tbody className="divide-y divide-slate-200">
               {groupedByCanal.map((group, gIdx) => (
                 <React.Fragment key={gIdx}>
                   {group.items.map((item, idx) => {
                     const cambioRate = getZoneCambioRate(item);
                     return (
-                      <tr key={idx} className={`hover:bg-slate-900/20 transition-colors ${item.isCore ? 'bg-blue-600/[0.02]' : ''}`}>
-                        <td className="py-2.5 pl-2 font-bold text-slate-200">{item.zona}</td>
-                        <td className="py-2.5 hidden sm:table-cell">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
+                      <tr key={idx} className={`hover:bg-blue-50/50 transition-colors ${item.isCore ? 'bg-blue-50/20' : ''}`}>
+                        <td className="py-2.5 pl-2 font-bold text-slate-900">{item.zona}</td>
+                        <td className="py-2.5 hidden sm:table-cell font-semibold text-slate-700">{ZONE_TYPE_MAP[item.zona] || 'TAT'}</td>
                         <td className="py-2.5"><CityBadge zona={item.zona} /></td>
-                        <td className="py-2.5 text-slate-400 text-[11px] max-w-[120px] truncate hidden md:table-cell">{item.vendedor}</td>
-                        <td className="py-2.5 text-right text-slate-400 hidden sm:table-cell">{formatCurrency(item.presupuesto)}</td>
-                        <td className="py-2.5 text-right text-slate-400">{formatCurrency(item.ventasNetas)}</td>
-                        <td className="py-2.5 text-right hidden sm:table-cell text-sky-300 font-semibold">
+                        <td className="py-2.5 text-slate-600 text-[11px] max-w-[120px] truncate hidden md:table-cell font-medium">{item.vendedor}</td>
+                        <td className="py-2.5 text-right text-slate-600 hidden sm:table-cell font-semibold">{formatCurrency(item.presupuesto)}</td>
+                        <td className="py-2.5 text-right text-slate-900 font-bold">{formatCurrency(item.ventasNetas)}</td>
+                        <td className="py-2.5 text-right hidden sm:table-cell text-blue-700 font-extrabold">
                           {formatCurrency(item.proyeccion)}
                         </td>
                         <td className="py-2.5 text-right hidden md:table-cell">
                           {(() => {
                             const ratio = item.proyeccion / (item.presupuesto || 1);
                             const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
-                            return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
+                            return <span className={`font-extrabold ${isGreen ? 'text-emerald-700' : 'text-rose-700'}`}>{formatPercent(ratio)}</span>;
                           })()}
                         </td>
                         <td className="py-2.5 text-right">
-                          <span className={`font-bold ${cambioRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                          <span className={`font-extrabold ${cambioRate > 0.015 ? 'text-rose-700' : 'text-emerald-700'}`}>
                             {formatPercent(cambioRate)}
                           </span>
                         </td>
@@ -483,24 +483,24 @@ const channelTicket = React.useMemo(() => {
                     );
                   })}
                   {/* Fila Subtotal por Canal */}
-                  <tr className="bg-slate-900/75 border-t border-b border-amber-500/30 font-semibold">
-                    <td className="py-2.5 pl-2 text-amber-400 font-extrabold uppercase text-[11px] tracking-wider" colSpan={2}>
+                  <tr className="bg-amber-50/70 border-t border-b border-amber-200 font-semibold">
+                    <td className="py-2.5 pl-2 text-amber-900 font-black uppercase text-[11px] tracking-wider" colSpan={2}>
                       SUBTOTAL {group.canal}
                     </td>
-                    <td className="py-2.5 text-slate-500">—</td>
-                    <td className="py-2.5 hidden md:table-cell text-slate-500">—</td>
-                    <td className="py-2.5 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.presupuesto)}</td>
-                    <td className="py-2.5 text-right font-extrabold text-amber-300 text-xs">{formatCurrency(group.subtotal.ventasNetas)}</td>
-                    <td className="py-2.5 text-right font-extrabold text-sky-300 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.proyeccion)}</td>
-                    <td className="py-2.5 text-right font-extrabold text-slate-300 hidden md:table-cell text-xs">
+                    <td className="py-2.5 text-slate-600">—</td>
+                    <td className="py-2.5 hidden md:table-cell text-slate-600">—</td>
+                    <td className="py-2.5 text-right font-extrabold text-slate-800 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.presupuesto)}</td>
+                    <td className="py-2.5 text-right font-black text-amber-900 text-xs">{formatCurrency(group.subtotal.ventasNetas)}</td>
+                    <td className="py-2.5 text-right font-black text-blue-800 hidden sm:table-cell text-xs">{formatCurrency(group.subtotal.proyeccion)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-slate-800 hidden md:table-cell text-xs">
                       {(() => {
                         const ratio = group.subtotal.proyeccion / (group.subtotal.presupuesto || 1);
                         const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
-                        return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
+                        return <span className={`font-black ${isGreen ? 'text-emerald-700' : 'text-rose-700'}`}>{formatPercent(ratio)}</span>;
                       })()}
                     </td>
                     <td className="py-2.5 text-right">
-                      <span className={`font-extrabold text-xs ${group.subtotal.changeRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      <span className={`font-black text-xs ${group.subtotal.changeRate > 0.015 ? 'text-rose-700' : 'text-emerald-700'}`}>
                         {formatPercent(group.subtotal.changeRate)}
                       </span>
                     </td>
@@ -509,23 +509,23 @@ const channelTicket = React.useMemo(() => {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-slate-700 bg-slate-900/90 font-bold">
-                <td className="py-3 pl-2 text-sky-400 font-extrabold uppercase tracking-wider">TOTALES</td>
-                <td className="py-3 hidden sm:table-cell text-slate-500">—</td>
-                <td className="py-3 text-slate-500">—</td>
-                <td className="py-3 hidden md:table-cell text-slate-500">—</td>
-                <td className="py-3 text-right font-extrabold text-slate-200 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalPresupuesto)}</td>
-                <td className="py-3 text-right font-extrabold text-white text-xs md:text-sm">{formatCurrency(paretoTotals.totalVentas)}</td>
-                <td className="py-3 text-right font-extrabold text-sky-300 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalProyeccion)}</td>
-                <td className="py-3 text-right font-extrabold text-slate-300 hidden md:table-cell text-xs md:text-sm">
+              <tr className="border-t-2 border-slate-300 bg-slate-100 font-black text-slate-900">
+                <td className="py-3 pl-2 text-blue-800 font-black uppercase tracking-wider">TOTALES</td>
+                <td className="py-3 hidden sm:table-cell text-slate-600">—</td>
+                <td className="py-3 text-slate-600">—</td>
+                <td className="py-3 hidden md:table-cell text-slate-600">—</td>
+                <td className="py-3 text-right font-black text-slate-900 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalPresupuesto)}</td>
+                <td className="py-3 text-right font-black text-slate-900 text-xs md:text-sm">{formatCurrency(paretoTotals.totalVentas)}</td>
+                <td className="py-3 text-right font-black text-blue-800 hidden sm:table-cell text-xs md:text-sm">{formatCurrency(paretoTotals.totalProyeccion)}</td>
+                <td className="py-3 text-right font-black text-slate-900 hidden md:table-cell text-xs md:text-sm">
                   {(() => {
                     const ratio = paretoTotals.totalProyeccion / (paretoTotals.totalPresupuesto || 1);
                     const isGreen = Math.round(ratio * 1000) / 1000 >= 1;
-                    return <span className={`font-bold ${isGreen ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPercent(ratio)}</span>;
+                    return <span className={`font-black ${isGreen ? 'text-emerald-700' : 'text-rose-700'}`}>{formatPercent(ratio)}</span>;
                   })()}
                 </td>
                 <td className="py-3 text-right">
-                  <span className={`font-extrabold text-xs md:text-sm ${paretoTotals.changeRate > 0.015 ? 'text-rose-400' : 'text-emerald-400'}`}>{formatPercent(paretoTotals.changeRate)}</span>
+                  <span className={`font-black text-xs md:text-sm ${paretoTotals.changeRate > 0.015 ? 'text-rose-700' : 'text-emerald-700'}`}>{formatPercent(paretoTotals.changeRate)}</span>
                 </td>
               </tr>
             </tfoot>

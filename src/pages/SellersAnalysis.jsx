@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD } from '../utils/calculations';
@@ -17,7 +17,7 @@ const CITY_META = {
   PEREIRA:   { label: 'Eje Pereira',   color: 'blue',    bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
   MANIZALES: { label: 'Eje Caldas',    color: 'indigo',  bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
   ARMENIA:   { label: 'Eje Quindío',   color: 'emerald', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
-  OTRO:      { label: 'Otro',          color: 'slate',   bg: 'bg-slate-500/10',   text: 'text-slate-400',   border: 'border-slate-700'      },
+  OTRO:      { label: 'Otro',          color: 'slate',   bg: 'bg-slate-500/10',   text: 'text-slate-600',   border: 'border-slate-300'      },
 };
 
 const CityBadge = ({ zona }) => {
@@ -136,8 +136,8 @@ const SellersAnalysis = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Rendimiento de Vendedores</h1>
-        <p className="text-slate-400 text-xs md:text-sm mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Rendimiento de Vendedores</h1>
+        <p className="text-slate-600 text-xs md:text-sm mt-1">
           Zonas y ejecutivos agrupados por eje comercial — Pereira · Caldas · Quindío
         </p>
       </div>
@@ -158,10 +158,10 @@ const SellersAnalysis = () => {
                     {zonas} zonas
                   </span>
                 </div>
-                <p className="text-2xl font-extrabold text-white">{formatShortCurrency(ventas)}</p>
-                <p className="text-[10px] text-slate-400 mt-1">Presupuesto: {formatShortCurrency(presupuesto)}</p>
+                <p className="text-2xl font-extrabold text-slate-900">{formatShortCurrency(ventas)}</p>
+                <p className="text-[10px] text-slate-600 mt-1">Presupuesto: {formatShortCurrency(presupuesto)}</p>
                 <div className="mt-3 flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${
                         rate >= 1 ? 'bg-emerald-500' : rate >= 0.8 ? 'bg-amber-500' : 'bg-rose-500'
@@ -184,8 +184,8 @@ const SellersAnalysis = () => {
             <Trophy className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Zona Líder</p>
-            <h4 className="text-base font-bold text-white mt-0.5 truncate">
+            <p className="text-slate-600 text-[10px] font-bold uppercase tracking-wider">Zona Líder</p>
+            <h4 className="text-base font-bold text-slate-900 mt-0.5 truncate">
               {topZone ? topZone.zona : 'N/A'}
             </h4>
             {topZone && <CityBadge zona={topZone.zona} />}
@@ -197,8 +197,8 @@ const SellersAnalysis = () => {
             <Users className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Mejor Ejecutivo</p>
-            <h4 className="text-sm font-bold text-white mt-0.5 truncate">
+            <p className="text-slate-600 text-[10px] font-bold uppercase tracking-wider">Mejor Ejecutivo</p>
+            <h4 className="text-sm font-bold text-slate-900 mt-0.5 truncate">
               {topSeller ? topSeller.nombre : 'N/A'}
             </h4>
             {topSeller && <CityBadge zona={topSeller.ejecutivo} />}
@@ -211,7 +211,7 @@ const SellersAnalysis = () => {
           </div>
           <div>
             <p className="text-rose-500/80 text-[10px] font-bold uppercase tracking-wider">Alertas &gt;5% Dev</p>
-            <h4 className="text-xl font-bold text-white mt-0.5">{criticalAlerts.length} ejecutivos</h4>
+            <h4 className="text-xl font-bold text-slate-900 mt-0.5">{criticalAlerts.length} ejecutivos</h4>
             <p className="text-[10px] text-rose-400">Requieren atención</p>
           </div>
         </GlassCard>
@@ -220,8 +220,8 @@ const SellersAnalysis = () => {
       {/* ── Chart ventas vs presupuesto ── */}
       <GlassCard hoverable={false}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white">Ventas Netas vs Presupuesto por Zona</h3>
-          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+          <h3 className="text-sm font-bold text-slate-900">Ventas Netas vs Presupuesto por Zona</h3>
+          <div className="flex items-center gap-2 text-[10px] text-slate-600">
             <span className="flex items-center gap-1"><span className="font-bold text-blue-400">P</span> Eje Pereira</span>
             <span className="flex items-center gap-1"><span className="font-bold text-indigo-400">M</span> Eje Caldas</span>
             <span className="flex items-center gap-1"><span className="font-bold text-emerald-400">Q</span> Eje Quindío</span>
@@ -236,34 +236,34 @@ const SellersAnalysis = () => {
         <GlassCard hoverable={false} className="border-rose-950/30">
           <div className="flex items-center gap-2 mb-4">
             <ShieldAlert className="h-4 w-4 text-rose-500" />
-            <h3 className="text-sm font-bold text-white">Alertas Devoluciones</h3>
+            <h3 className="text-sm font-bold text-slate-900">Alertas Devoluciones</h3>
           </div>
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
             {criticalAlerts.map((item, i) => (
-              <div key={i} className="p-3 rounded-xl bg-slate-900/40 border border-rose-500/10 flex justify-between items-center gap-2">
+              <div key={i} className="p-3 rounded-xl bg-slate-50 border border-rose-500/10 flex justify-between items-center gap-2">
                 <div className="min-w-0">
                   <h4 className="text-xs font-bold text-slate-200 truncate">{item.nombre}</h4>
                   <CityBadge zona={item.ejecutivo} />
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-sm font-bold text-rose-400">{formatPercent(item.porcentajeDevolucion)}</span>
-                  <p className="text-[9px] text-slate-500 mt-0.5">{formatShortCurrency(item.devoluciones)}</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">{formatShortCurrency(item.devoluciones)}</p>
                 </div>
               </div>
             ))}
             {criticalAlerts.length === 0 && (
-              <p className="text-xs text-slate-500 italic text-center py-8">Sin alertas activas.</p>
+              <p className="text-xs text-slate-600 italic text-center py-8">Sin alertas activas.</p>
             )}
           </div>
         </GlassCard>
 
         {/* Tabla zonas */}
         <GlassCard hoverable={false} className="col-span-1 lg:col-span-2">
-          <h3 className="text-sm font-bold text-white mb-4">Desempeño por Zona</h3>
+          <h3 className="text-sm font-bold text-slate-900 mb-4">Desempeño por Zona</h3>
           <div className="overflow-auto max-h-80">
             <table className="w-full min-w-[480px] text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-500 font-semibold sticky top-0 bg-slate-950/90 backdrop-blur-sm">
+                <tr className="border-b border-slate-200 text-slate-600 font-semibold sticky top-0 bg-white/90 backdrop-blur-sm">
                   <th className="pb-3 pl-2">Zona</th>
                   <th className="pb-3">Eje</th>
                   <th className="pb-3 hidden sm:table-cell">Vendedor</th>
@@ -272,21 +272,21 @@ const SellersAnalysis = () => {
                   <th className="pb-3 text-right pr-2 hidden sm:table-cell">Facturas</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-900/60">
+              <tbody className="divide-y divide-slate-200">
                 {rankedZones.map((z, i) => {
                   const rate = z.presupuesto > 0 ? z.ventasNetas / z.presupuesto : 0;
                   const cm = complianceMeta(rate);
                   const CmIcon = cm.Icon;
                   const meta = CITY_META[z.ciudad] || CITY_META.OTRO;
                   return (
-                    <tr key={i} className="hover:bg-slate-900/20 transition-colors">
+                    <tr key={i} className="hover:bg-slate-50 transition-colors">
                       <td className="py-2.5 pl-2 font-bold text-slate-200">{z.zona}</td>
                       <td className="py-2.5">
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.text}`}>
                           {meta.label}
                         </span>
                       </td>
-                      <td className="py-2.5 text-slate-400 text-[11px] max-w-[140px] truncate hidden sm:table-cell">{z.vendedor}</td>
+                      <td className="py-2.5 text-slate-600 text-[11px] max-w-[140px] truncate hidden sm:table-cell">{z.vendedor}</td>
                       <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(z.ventasNetas)}</td>
                       <td className="py-2.5 text-right">
                         <span className={`flex items-center justify-end gap-1 font-bold ${cm.color}`}>
@@ -294,7 +294,7 @@ const SellersAnalysis = () => {
                           {formatPercent(rate)}
                         </span>
                       </td>
-                      <td className="py-2.5 text-right pr-2 font-mono text-slate-400 hidden sm:table-cell">{z.facturas.toLocaleString('es-CO')}</td>
+                      <td className="py-2.5 text-right pr-2 font-mono text-slate-600 hidden sm:table-cell">{z.facturas.toLocaleString('es-CO')}</td>
                     </tr>
                   );
                 })}
@@ -307,13 +307,13 @@ const SellersAnalysis = () => {
       {/* ── Tabla vendedores con ciudad ── */}
       <GlassCard hoverable={false}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white">Ejecutivos Comerciales · Ventas y Calidad de Entrega</h3>
-          <span className="text-[10px] text-slate-500 font-medium">Click en el ejecutivo para ver perfil detallado</span>
+          <h3 className="text-sm font-bold text-slate-900">Ejecutivos Comerciales · Ventas y Calidad de Entrega</h3>
+          <span className="text-[10px] text-slate-600 font-medium">Click en el ejecutivo para ver perfil detallado</span>
         </div>
         <div className="overflow-x-auto -mx-5 px-5">
           <table className="w-full min-w-[520px] text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-500 font-semibold">
+              <tr className="border-b border-slate-200 text-slate-600 font-semibold">
                 <th className="pb-3 pl-2">Ejecutivo</th>
                 <th className="pb-3 hidden sm:table-cell">Eje</th>
                 <th className="pb-3 text-right">Ventas</th>
@@ -322,14 +322,14 @@ const SellersAnalysis = () => {
                 <th className="pb-3 text-right pr-2">Calidad</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-900/60">
+            <tbody className="divide-y divide-slate-200">
               {rankedSellers.map((s, i) => {
                 const meta = CITY_META[s.ciudad] || CITY_META.OTRO;
                 const isAlert = s.porcentajeDevolucion > 0.05;
                 return (
                   <tr 
                     key={i} 
-                    className={`hover:bg-slate-900/20 transition-colors cursor-pointer group ${isAlert ? 'bg-rose-950/10' : ''}`}
+                    className={`hover:bg-slate-50 transition-colors cursor-pointer group ${isAlert ? 'bg-rose-950/10' : ''}`}
                     onClick={() => navigate(`/ejecutivo?seller=${s.ejecutivo}`)}
                     title="Ver perfil detallado"
                   >
@@ -353,7 +353,7 @@ const SellersAnalysis = () => {
                     </td>
                     <td className="py-2.5 text-right pr-2">
                       <div className="flex items-center justify-end gap-1.5">
-                        <div className="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden hidden sm:block">
+                        <div className="w-12 h-1.5 bg-slate-200 rounded-full overflow-hidden hidden sm:block">
                           <div className={`h-full rounded-full ${s.porcentajeDevolucion <= 0.02 ? 'bg-emerald-500' : s.porcentajeDevolucion <= 0.05 ? 'bg-amber-500' : 'bg-rose-500'}`}
                             style={{ width: `${Math.max(0, (1 - s.porcentajeDevolucion) * 100)}%` }} />
                         </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
@@ -50,11 +50,11 @@ const Layout = () => {
   }, [fetchDataFromSupabase]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans overflow-x-hidden">
 
       {/* Banner de nueva versión disponible */}
       {needRefresh && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-600 shadow-xl shadow-blue-500/30 border border-blue-400/30 text-white text-sm font-medium animate-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-600 shadow-xl shadow-blue-500/20 border border-blue-400/30 text-slate-900 text-sm font-medium animate-in slide-in-from-bottom-4 duration-300">
           <span>🚀 Nueva versión disponible</span>
           <button
             onClick={async () => {
@@ -68,18 +68,18 @@ const Layout = () => {
           </button>
           <button
             onClick={() => setNeedRefresh(false)}
-            className="text-blue-200 hover:text-white text-xs"
+            className="text-blue-100 hover:text-slate-900 text-xs"
           >
             Después
           </button>
         </div>
       )}
-      {/* Fondo decorativo */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-500/10 blur-[150px] animate-pulse" />
-        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-emerald-500/5 blur-[100px] animate-pulse" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20" />
+      {/* Fondo decorativo tema claro */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
+        <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] rounded-full bg-blue-200/40 blur-[130px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-200/40 blur-[150px] animate-pulse" />
+        <div className="absolute top-[25%] right-[10%] w-[35%] h-[35%] rounded-full bg-sky-200/35 blur-[110px] animate-pulse" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-35" />
       </div>
 
       {/* Sidebar */}
@@ -88,7 +88,7 @@ const Layout = () => {
       {/* Overlay móvil para cerrar el sidebar */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-slate-950/70 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-20 bg-slate-50 backdrop-blur-xs lg:hidden"
           onClick={toggleSidebar}
         />
       )}

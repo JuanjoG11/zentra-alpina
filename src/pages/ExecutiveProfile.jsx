@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, ZONA_CIUDAD_MAP } from '../utils/calculations';
@@ -93,11 +93,11 @@ const ExecutiveProfile = () => {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <AlertCircle className="h-12 w-12 text-slate-600 mb-4" />
-        <h2 className="text-xl font-bold text-slate-300">Ejecutivo no especificado</h2>
-        <p className="text-slate-500 text-sm mt-2">Usa el parámetro ?seller=codigo en la URL</p>
+        <h2 className="text-xl font-bold text-slate-700">Ejecutivo no especificado</h2>
+        <p className="text-slate-600 text-sm mt-2">Usa el parámetro ?seller=codigo en la URL</p>
         <button
           onClick={() => navigate('/vendedores')}
-          className="mt-6 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+          className="mt-6 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl font-medium transition-colors flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver a Vendedores
@@ -110,11 +110,11 @@ const ExecutiveProfile = () => {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <XCircle className="h-12 w-12 text-rose-500 mb-4" />
-        <h2 className="text-xl font-bold text-slate-300">Ejecutivo no encontrado</h2>
-        <p className="text-slate-500 text-sm mt-2">Código: {sellerCode}</p>
+        <h2 className="text-xl font-bold text-slate-700">Ejecutivo no encontrado</h2>
+        <p className="text-slate-600 text-sm mt-2">Código: {sellerCode}</p>
         <button
           onClick={() => navigate('/vendedores')}
-          className="mt-6 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+          className="mt-6 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-slate-900 rounded-xl font-medium transition-colors flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver a Vendedores
@@ -182,7 +182,7 @@ const ExecutiveProfile = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/vendedores')}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-slate-300 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100/60 hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span className="text-sm font-medium">Volver</span>
@@ -195,19 +195,19 @@ const ExecutiveProfile = () => {
         <div className="relative flex flex-col md:flex-row gap-6 items-start">
           {/* Avatar */}
           <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br from-${cityMeta.color}-600 to-${cityMeta.color}-800 flex items-center justify-center shrink-0 shadow-lg`}>
-            <User className="h-12 w-12 text-white" />
+            <User className="h-12 w-12 text-slate-900" />
           </div>
           
           {/* Info básica */}
           <div className="flex-1 space-y-3">
             <div>
-              <h1 className="text-3xl font-bold text-white">{sellerData.name}</h1>
+              <h1 className="text-3xl font-bold text-slate-900">{sellerData.name}</h1>
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-${cityMeta.color}-500/10 text-${cityMeta.color}-400 border-${cityMeta.color}-500/20`}>
                   <MapPin className="h-3 w-3" />
                   {cityMeta.label}
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-slate-800/60 text-slate-300 border-slate-700">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-slate-100 text-slate-700 border-slate-300">
                   Zona {sellerData.zone}
                 </span>
               </div>
@@ -216,24 +216,24 @@ const ExecutiveProfile = () => {
             {/* Stats inline */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Ventas Acumuladas</p>
-                <p className="text-lg font-bold text-white mt-0.5">{formatShortCurrency(sellerData.ventas)}</p>
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider">Ventas Acumuladas</p>
+                <p className="text-lg font-bold text-slate-900 mt-0.5">{formatShortCurrency(sellerData.ventas)}</p>
               </div>
               <div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Cumplimiento</p>
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider">Cumplimiento</p>
                 <p className={`text-lg font-bold mt-0.5 ${compliance >= 1 ? 'text-emerald-400' : compliance >= 0.8 ? 'text-amber-400' : 'text-rose-400'}`}>
                   {formatPercent(compliance)}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Devoluciones</p>
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider">Devoluciones</p>
                 <p className={`text-lg font-bold mt-0.5 ${isDevAlert ? 'text-rose-400 animate-pulse' : 'text-emerald-400'}`}>
                   {formatPercent(sellerData.porcentajeDevolucion)}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Facturas</p>
-                <p className="text-lg font-bold text-white mt-0.5">{sellerData.facturas.toLocaleString('es-CO')}</p>
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider">Facturas</p>
+                <p className="text-lg font-bold text-slate-900 mt-0.5">{sellerData.facturas.toLocaleString('es-CO')}</p>
               </div>
             </div>
           </div>
@@ -257,8 +257,8 @@ const ExecutiveProfile = () => {
             <DollarSign className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Presupuesto</p>
-            <p className="text-xl font-bold text-white mt-0.5">{formatShortCurrency(sellerData.presupuesto)}</p>
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider">Presupuesto</p>
+            <p className="text-xl font-bold text-slate-900 mt-0.5">{formatShortCurrency(sellerData.presupuesto)}</p>
           </div>
         </GlassCard>
 
@@ -267,8 +267,8 @@ const ExecutiveProfile = () => {
             <TrendingUp className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Proyectado</p>
-            <p className="text-xl font-bold text-white mt-0.5">{formatShortCurrency(sellerData.proyectado)}</p>
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider">Proyectado</p>
+            <p className="text-xl font-bold text-slate-900 mt-0.5">{formatShortCurrency(sellerData.proyectado)}</p>
           </div>
         </GlassCard>
 
@@ -277,8 +277,8 @@ const ExecutiveProfile = () => {
             <TrendingDown className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Devoluciones</p>
-            <p className="text-xl font-bold text-white mt-0.5">{formatShortCurrency(sellerData.devoluciones)}</p>
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider">Devoluciones</p>
+            <p className="text-xl font-bold text-slate-900 mt-0.5">{formatShortCurrency(sellerData.devoluciones)}</p>
           </div>
         </GlassCard>
       </div>
@@ -286,8 +286,8 @@ const ExecutiveProfile = () => {
       {/* Tendencia de ventas diarias */}
       <GlassCard hoverable={false}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white">Tendencia de Ventas Diarias</h3>
-          <span className="text-[10px] text-slate-500 font-medium">Últimos 15 días</span>
+          <h3 className="text-sm font-bold text-slate-900">Tendencia de Ventas Diarias</h3>
+          <span className="text-[10px] text-slate-600 font-medium">Últimos 15 días</span>
         </div>
         <Chart options={chartOptions} series={chartSeries} type="area" height={240} />
       </GlassCard>
@@ -298,14 +298,14 @@ const ExecutiveProfile = () => {
         <GlassCard hoverable={false}>
           <div className="flex items-center gap-2 mb-4">
             <Package className="h-4 w-4 text-rose-500" />
-            <h3 className="text-sm font-bold text-white">Clientes con Mayor Devolución</h3>
+            <h3 className="text-sm font-bold text-slate-900">Clientes con Mayor Devolución</h3>
           </div>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {topReturnClients.map((client, i) => (
-              <div key={i} className="p-3 rounded-xl bg-slate-900/40 border border-slate-800/60 flex justify-between items-center gap-2">
+              <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-slate-200 truncate">{client.cliente}</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{client.concepto}</p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">{client.concepto}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-sm font-bold text-rose-400">{formatShortCurrency(client.valor)}</span>
@@ -313,7 +313,7 @@ const ExecutiveProfile = () => {
               </div>
             ))}
             {topReturnClients.length === 0 && (
-              <p className="text-xs text-slate-500 italic text-center py-8">Sin datos de clientes disponibles.</p>
+              <p className="text-xs text-slate-600 italic text-center py-8">Sin datos de clientes disponibles.</p>
             )}
           </div>
         </GlassCard>
@@ -322,16 +322,16 @@ const ExecutiveProfile = () => {
         <GlassCard hoverable={false}>
           <div className="flex items-center gap-2 mb-4">
             <AlertCircle className="h-4 w-4 text-amber-500" />
-            <h3 className="text-sm font-bold text-white">Conceptos de Devolución</h3>
+            <h3 className="text-sm font-bold text-slate-900">Conceptos de Devolución</h3>
           </div>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {topReturnConcepts.map((concept, i) => (
-              <div key={i} className="p-3 rounded-xl bg-slate-900/40 border border-slate-800/60">
+              <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex justify-between items-center gap-2 mb-2">
                   <h4 className="text-xs font-bold text-slate-200 truncate flex-1">{concept.concepto}</h4>
                   <span className="text-sm font-bold text-amber-400">{formatShortCurrency(concept.total)}</span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-amber-500 to-rose-500 rounded-full"
                     style={{ width: `${Math.min((concept.total / (topReturnConcepts[0]?.total || 1)) * 100, 100)}%` }}
@@ -340,7 +340,7 @@ const ExecutiveProfile = () => {
               </div>
             ))}
             {topReturnConcepts.length === 0 && (
-              <p className="text-xs text-slate-500 italic text-center py-8">Sin conceptos de devolución disponibles.</p>
+              <p className="text-xs text-slate-600 italic text-center py-8">Sin conceptos de devolución disponibles.</p>
             )}
           </div>
         </GlassCard>
@@ -350,27 +350,27 @@ const ExecutiveProfile = () => {
       <GlassCard hoverable={false}>
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="h-4 w-4 text-blue-400" />
-          <h3 className="text-sm font-bold text-white">Información del Periodo</h3>
+          <h3 className="text-sm font-bold text-slate-900">Información del Periodo</h3>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div>
-            <p className="text-[10px] text-slate-500 uppercase">Día Hábil Actual</p>
+            <p className="text-[10px] text-slate-600 uppercase">Día Hábil Actual</p>
             <p className="text-lg font-bold text-blue-400 mt-1">{currentWorkDay > 0 ? currentWorkDay : 'Auto'} / 22</p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 uppercase">Ticket Promedio</p>
-            <p className="text-lg font-bold text-white mt-1">
+            <p className="text-[10px] text-slate-600 uppercase">Ticket Promedio</p>
+            <p className="text-lg font-bold text-slate-900 mt-1">
               {sellerData.facturas > 0 ? formatShortCurrency(sellerData.ventas / sellerData.facturas) : '-'}
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 uppercase">Calidad de Entrega</p>
+            <p className="text-[10px] text-slate-600 uppercase">Calidad de Entrega</p>
             <p className={`text-lg font-bold mt-1 ${isDevAlert ? 'text-rose-400' : 'text-emerald-400'}`}>
               {formatPercent(1 - sellerData.porcentajeDevolucion)}
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-500 uppercase">Estado</p>
+            <p className="text-[10px] text-slate-600 uppercase">Estado</p>
             <div className="flex items-center justify-center gap-1 mt-1">
               {compliance >= 1 ? (
                 <><CheckCircle2 className="h-4 w-4 text-emerald-400" /><span className="text-sm font-bold text-emerald-400">Cumplido</span></>

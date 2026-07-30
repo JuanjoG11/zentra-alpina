@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import useStore from '../store/useStore';
 import GlassCard from '../components/ui/GlassCard';
@@ -1457,8 +1457,8 @@ const UploadExcel = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Cargar Archivos de Ventas</h1>
-        <p className="text-slate-400 text-xs md:text-sm mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Cargar Archivos de Ventas</h1>
+        <p className="text-slate-600 text-xs md:text-sm mt-1">
           Suba sus reportes Excel (Ventas, Devoluciones, Proveedores o Zonas). El pipeline ETL procesará, limpiará y normalizará los datos automáticamente en Supabase.
         </p>
         {/* Indicador del período activo */}
@@ -1470,7 +1470,7 @@ const UploadExcel = () => {
             <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
               <span className="text-[10px] text-blue-300 font-medium uppercase tracking-wider">Cargando en período:</span>
               <span className="text-xs font-bold text-blue-200">{label}</span>
-              <span className="text-[10px] text-slate-500">· Cambiá el selector arriba para cargar otro mes</span>
+              <span className="text-[10px] text-slate-600">· Cambiá el selector arriba para cargar otro mes</span>
             </div>
           );
         })()}
@@ -1487,23 +1487,23 @@ const UploadExcel = () => {
                 className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 ${
                   isDragActive 
                     ? 'border-blue-500 bg-blue-500/5' 
-                    : 'border-slate-800 hover:border-slate-700 bg-slate-900/10'
+                    : 'border-slate-200 hover:border-slate-300 bg-slate-50'
                 }`}
               >
                 <input {...getInputProps()} />
                 <div className="flex flex-col items-center gap-4">
-                  <div className="p-4 rounded-full bg-slate-900 border border-slate-800 text-slate-400">
+                  <div className="p-4 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
                     <UploadCloud className="h-10 w-10 text-blue-500" />
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-sm font-bold text-slate-200">
                       {isDragActive ? 'Suelte los archivos aquí' : 'Arrastre y suelte sus archivos Excel o CSV'}
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-600">
                       Formatos compatibles: .xlsx, .xlsm, .xls, .csv
                     </p>
                   </div>
-                  <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white rounded-xl shadow-lg shadow-blue-500/25 transition-all mt-2">
+                  <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-slate-900 rounded-xl shadow-lg shadow-blue-500/25 transition-all mt-2">
                     Seleccionar Archivos
                   </button>
                 </div>
@@ -1517,7 +1517,7 @@ const UploadExcel = () => {
                   <Loader2 className="h-10 w-10 text-blue-500 animate-spin" />
                   <div>
                     <h3 className="text-sm font-bold text-slate-200">Procesando Pipeline ETL</h3>
-                    <p className="text-xs text-slate-500 mt-1">Limpiando e inyectando datos comerciales en tiempo real</p>
+                    <p className="text-xs text-slate-600 mt-1">Limpiando e inyectando datos comerciales en tiempo real</p>
                   </div>
                 </div>
 
@@ -1535,7 +1535,7 @@ const UploadExcel = () => {
                             ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' 
                             : isActive 
                               ? 'bg-blue-500/5 border-blue-500/25 text-blue-400 scale-[1.02]' 
-                              : 'bg-slate-900/10 border-transparent text-slate-500'
+                              : 'bg-slate-50 border-transparent text-slate-600'
                         }`}
                       >
                         {isCompleted ? (
@@ -1561,8 +1561,8 @@ const UploadExcel = () => {
                     <CheckCircle className="h-10 w-10" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-white">¡Sincronización Completada!</h3>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <h3 className="text-base font-bold text-slate-900">¡Sincronización Completada!</h3>
+                    <p className="text-xs text-slate-600 mt-1">
                       El pipeline ETL ha limpiado y cargado sus archivos con éxito. Los dashboards ya están actualizados.
                     </p>
                   </div>
@@ -1571,7 +1571,7 @@ const UploadExcel = () => {
                 <div className="flex justify-center gap-4">
                   <button 
                     onClick={() => setSuccess(false)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-xl transition-all"
+                    className="px-4 py-2 bg-slate-200 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-xl transition-all"
                   >
                     Cargar más archivos
                   </button>
@@ -1588,31 +1588,31 @@ const UploadExcel = () => {
 
             {/* Files selection queue */}
             {files.length > 0 && !uploading && (
-              <div className="mt-6 border-t border-slate-800/80 pt-5 space-y-4">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Archivos seleccionados ({files.length})</h4>
+              <div className="mt-6 border-t border-slate-200 pt-5 space-y-4">
+                <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Archivos seleccionados ({files.length})</h4>
                 <div className="space-y-2">
                   {files.map((file, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 flex justify-between items-center text-xs">
+                    <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center text-xs">
                       <div className="flex items-center gap-2 min-w-0">
                         <FileText className="h-4 w-4 text-blue-500 shrink-0" />
                         <span className="text-slate-200 font-bold truncate">{file.name}</span>
                       </div>
-                      <span className="text-slate-500 shrink-0">{(file.size / 1024).toFixed(1)} KB</span>
+                      <span className="text-slate-600 shrink-0">{(file.size / 1024).toFixed(1)} KB</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Parsed sheets preview + selection */}
                 {Object.keys(parsedFiles).length > 0 && (
-                  <div className="mt-4 border-t border-slate-800/60 pt-4 space-y-3">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hojas detectadas</h4>
+                  <div className="mt-4 border-t border-slate-200 pt-4 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Hojas detectadas</h4>
                     <div className="space-y-2">
                       {Object.entries(parsedFiles).map(([fName, sheets]) => (
-                        <div key={fName} className="p-3 rounded-lg bg-slate-900/40 border border-slate-800 text-xs">
+                        <div key={fName} className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs">
                           <div className="font-semibold text-slate-200 truncate">{fName}</div>
                           <div className="mt-2 grid grid-cols-1 gap-2">
                             {sheets.map((sh) => (
-                              <label key={sh.name} className="flex items-center gap-2 text-slate-300">
+                              <label key={sh.name} className="flex items-center gap-2 text-slate-700">
                                 <input
                                   type="checkbox"
                                   checked={(selectedSheets[fName] || []).includes(sh.name)}
@@ -1620,7 +1620,7 @@ const UploadExcel = () => {
                                   className="accent-blue-500"
                                 />
                                 <span className="text-sm font-medium">{sh.name}</span>
-                                <span className="ml-2 text-xs text-slate-500">{sh.rows.length} filas</span>
+                                <span className="ml-2 text-xs text-slate-600">{sh.rows.length} filas</span>
                               </label>
                             ))}
                           </div>
@@ -1638,9 +1638,9 @@ const UploadExcel = () => {
                       </button>
                       <button onClick={handleProcess} className="py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded text-xs font-semibold">Procesar en Pipeline ETL</button>
                     </div>
-                    {uploadingSheets && <div className="text-xs text-slate-400">Subiendo hojas...</div>}
+                    {uploadingSheets && <div className="text-xs text-slate-600">Subiendo hojas...</div>}
                     {!hasSupabase && (
-                      <div className="text-xs text-slate-500 mt-2">No configurado Supabase en entorno. Las hojas se descargarán localmente como JSON.</div>
+                      <div className="text-xs text-slate-600 mt-2">No configurado Supabase en entorno. Las hojas se descargarán localmente como JSON.</div>
                     )}
                   </div>
                 )}
@@ -1657,12 +1657,12 @@ const UploadExcel = () => {
                 <RefreshCw className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Día Hábil del Periodo</h3>
-                <p className="text-[10px] text-slate-400">Indica en qué día hábil del mes están los datos cargados</p>
+                <h3 className="text-sm font-bold text-slate-900">Día Hábil del Periodo</h3>
+                <p className="text-[10px] text-slate-600">Indica en qué día hábil del mes están los datos cargados</p>
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 leading-relaxed">
-              La proyección de cierre de mes en la IA se basa en este número. Si el cubo tiene datos hasta el día 13, ingresa <strong className="text-white">13</strong>. Si pon <strong className="text-white">0</strong> para que se auto-detecte desde las fechas del cubo.
+            <p className="text-[10px] text-slate-600 leading-relaxed">
+              La proyección de cierre de mes en la IA se basa en este número. Si el cubo tiene datos hasta el día 13, ingresa <strong className="text-slate-900">13</strong>. Si pon <strong className="text-slate-900">0</strong> para que se auto-detecte desde las fechas del cubo.
             </p>
             <div className="flex items-center gap-3">
               <input
@@ -1671,17 +1671,17 @@ const UploadExcel = () => {
                 max="31"
                 value={currentWorkDay}
                 onChange={e => setCurrentWorkDay(e.target.value)}
-                className="w-20 bg-slate-900 border border-slate-700 focus:border-emerald-500/60 rounded-xl px-3 py-2 text-sm font-bold text-white text-center focus:outline-none transition-colors"
+                className="w-20 bg-slate-100 border border-slate-300 focus:border-emerald-500/60 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 text-center focus:outline-none transition-colors"
                 placeholder="0"
               />
               <div className="flex-1">
-                <p className="text-xs text-slate-300 font-semibold">
+                <p className="text-xs text-slate-700 font-semibold">
                   {currentWorkDay === 0
                     ? 'Auto-detectando desde fechas del cubo'
                     : `Día hábil ${currentWorkDay} de 22 del mes`}
                 </p>
                 {currentWorkDay > 0 && (
-                  <div className="mt-1.5 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div className="mt-1.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
                       style={{ width: `${Math.min((currentWorkDay / 22) * 100, 100)}%` }}
@@ -1693,8 +1693,8 @@ const UploadExcel = () => {
           </GlassCard>
 
           <GlassCard hoverable={false} className="border-blue-950/40 bg-blue-950/[0.01]">
-            <h3 className="text-sm font-bold text-white mb-3">Integración de Archivos</h3>
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
+            <h3 className="text-sm font-bold text-slate-900 mb-3">Integración de Archivos</h3>
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">
               La plataforma consolida información de cuatro fuentes principales del ecosistema comercial de Alpina:
             </p>
             <div className="space-y-3.5 text-xs">
@@ -1702,28 +1702,28 @@ const UploadExcel = () => {
                 <div className="p-1 rounded bg-blue-500/10 text-blue-400 mt-0.5 font-bold font-mono text-[9px]">1</div>
                 <div>
                   <h4 className="font-semibold text-slate-200">Informe Ventas Crédito/Contado</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Analiza composición de cartera comercial.</p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">Analiza composición de cartera comercial.</p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
                 <div className="p-1 rounded bg-blue-500/10 text-blue-400 mt-0.5 font-bold font-mono text-[9px]">2</div>
                 <div>
                   <h4 className="font-semibold text-slate-200">Resumen de Control Zonal</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Mide metas de cumplimiento y facturación.</p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">Mide metas de cumplimiento y facturación.</p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
                 <div className="p-1 rounded bg-blue-500/10 text-blue-400 mt-0.5 font-bold font-mono text-[9px]">3</div>
                 <div>
                   <h4 className="font-semibold text-slate-200">Informe Devoluciones</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Mapea causas y tasa de devoluciones.</p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">Mapea causas y tasa de devoluciones.</p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
                 <div className="p-1 rounded bg-blue-500/10 text-blue-400 mt-0.5 font-bold font-mono text-[9px]">4</div>
                 <div>
                   <h4 className="font-semibold text-slate-200">Seguimiento por Proveedor</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Mide participación YoY de marcas.</p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">Mide participación YoY de marcas.</p>
                 </div>
               </div>
             </div>
@@ -1734,13 +1734,13 @@ const UploadExcel = () => {
               <Sparkles className="h-4 w-4" />
               Importador del Cubo de Ventas (CLI)
             </h3>
-            <p className="text-xs text-slate-400 leading-relaxed mb-3">
+            <p className="text-xs text-slate-600 leading-relaxed mb-3">
               Para procesar el archivo completo del <strong>Cubo de Ventas</strong> (archivos de más de 20MB o 300,000 registros), se recomienda utilizar el importador de consola optimizado por streaming:
             </p>
-            <div className="bg-slate-950 rounded-lg p-2.5 font-mono text-[10px] text-slate-300 border border-slate-900 select-all overflow-x-auto">
+            <div className="bg-white rounded-lg p-2.5 font-mono text-[10px] text-slate-700 border border-slate-200 select-all overflow-x-auto">
               node scripts/import_cubo.cjs C:\Ruta\Al\Cubo.csv
             </div>
-            <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+            <p className="text-[10px] text-slate-600 mt-2 leading-relaxed">
               Esto procesará, agrupará la información y la sincronizará directamente en Supabase y el archivo local de la plataforma.
             </p>
           </GlassCard>

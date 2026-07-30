@@ -4,19 +4,18 @@ import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../../utils/formatters';
 
-// Common ApexCharts configuration options for dark mode
+// Common ApexCharts configuration options for light theme
 const baseApexOptions = {
   theme: {
-    mode: 'dark',
+    mode: 'light',
     palette: 'palette1'
   },
   chart: {
     background: 'transparent',
-    foreColor: '#94a3b8',
+    foreColor: '#475569',
     toolbar: { show: false },
     fontFamily: 'Inter, sans-serif',
-    // Desactivar animaciones previene el error "Cannot read properties of null (reading 'node')"
-    // cuando el componente se desmonta antes de que termine la animación
+    // Desactivar animaciones previene errores al desmontar componentes
     animations: {
       enabled: false
     },
@@ -24,23 +23,23 @@ const baseApexOptions = {
     redrawOnWindowResize: true
   },
   grid: {
-    borderColor: '#1e293b',
+    borderColor: '#e2e8f0',
     strokeDashArray: 4
   },
   tooltip: {
-    theme: 'dark',
+    theme: 'light',
     x: { show: true }
   },
   noData: {
     text: 'Sin datos',
-    style: { color: '#475569', fontSize: '13px' }
+    style: { color: '#94a3b8', fontSize: '13px' }
   }
 };
 
 // 1. LINE CHART — Barras diarias (verde/rojo vs meta) + tendencia + pronóstico
 export const BILineChart = ({ data = [], metaDiaria = 0 }) => {
   if (!data || data.length === 0) return (
-    <div className="h-[300px] flex items-center justify-center text-slate-500 text-sm">Sin datos de ventas diarias</div>
+    <div className="h-[300px] flex items-center justify-center text-slate-600 text-sm">Sin datos de ventas diarias</div>
   );
 
   const historial  = data.filter(d => d.type !== 'pronostico');
@@ -81,23 +80,23 @@ export const BILineChart = ({ data = [], metaDiaria = 0 }) => {
 
   const yAnnotations = metaDiaria > 0 ? [{
     y: Math.round(metaDiaria),
-    borderColor: '#f59e0b',
+    borderColor: '#d97706',
     strokeDashArray: 5,
     borderWidth: 1.5,
     label: {
       text: `Meta/día ${formatShortCurrency(metaDiaria)}`,
-      style: { color: '#f59e0b', background: '#0f172a', fontSize: '9px', fontWeight: 600 },
+      style: { color: '#d97706', background: '#ffffff', fontSize: '9px', fontWeight: 700 },
       position: 'right', offsetX: -8, offsetY: -4
     }
   }] : [];
 
   const xAnnotations = pronostico.length > 0 && n > 0 ? [{
     x: historial[n - 1]?.fecha,
-    borderColor: '#334155',
+    borderColor: '#94a3b8',
     strokeDashArray: 4,
     label: {
       text: 'Hoy',
-      style: { color: '#64748b', background: '#0f172a', fontSize: '9px' },
+      style: { color: '#475569', background: '#ffffff', fontSize: '9px', fontWeight: 600 },
       orientation: 'horizontal', offsetY: -6
     }
   }] : [];
@@ -105,26 +104,26 @@ export const BILineChart = ({ data = [], metaDiaria = 0 }) => {
   const options = {
     ...baseApexOptions,
     chart: { ...baseApexOptions.chart, type: 'line', animations: { enabled: false } },
-    colors: ['#38bdf8', '#818cf8', '#f59e0b'],
+    colors: ['#0284c7', '#6366f1', '#d97706'],
     plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
     stroke: { curve: 'smooth', width: [0, 2.5, 2], dashArray: [0, 0, 6] },
     fill: { type: ['solid', 'solid', 'solid'] },
-    markers: { size: [0, 0, 4], colors: ['#38bdf8', '#818cf8', '#f59e0b'], strokeColors: '#0f172a', strokeWidth: 2 },
+    markers: { size: [0, 0, 4], colors: ['#0284c7', '#6366f1', '#d97706'], strokeColors: '#ffffff', strokeWidth: 2 },
     dataLabels: { enabled: false },
     xaxis: {
       categories,
-      labels: { rotate: -45, style: { fontSize: '9px', colors: '#475569' }, hideOverlappingLabels: true },
+      labels: { rotate: -45, style: { fontSize: '9px', colors: '#64748b' }, hideOverlappingLabels: true },
       axisBorder: { show: false }, axisTicks: { show: false }
     },
-    yaxis: { labels: { formatter: v => formatShortCurrency(v), style: { colors: '#475569' } } },
+    yaxis: { labels: { formatter: v => formatShortCurrency(v), style: { colors: '#64748b' } } },
     legend: {
       show: true, position: 'top', horizontalAlign: 'left', fontSize: '11px',
-      labels: { colors: '#94a3b8' },
+      labels: { colors: '#475569' },
       markers: { width: 10, height: 10, radius: 2 }
     },
     annotations: { xaxis: xAnnotations, yaxis: yAnnotations },
     tooltip: {
-      theme: 'dark', shared: true, intersect: false,
+      theme: 'light', shared: true, intersect: false,
       y: { formatter: v => v != null ? formatCurrency(v) : '—' }
     }
   };
@@ -135,7 +134,7 @@ export const BILineChart = ({ data = [], metaDiaria = 0 }) => {
 // 2. AVANCE VS META — Gauge velocímetro + semáforo de proyección
 export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, workDay = 0, ventaNeta = 0 }) => {
   if (!data || data.length === 0) return (
-    <div className="h-[280px] flex items-center justify-center text-slate-500 text-sm">Sin datos de ventas diarias</div>
+    <div className="h-[280px] flex items-center justify-center text-slate-600 text-sm">Sin datos de ventas diarias</div>
   );
 
   const diasTranscurridos = workDay > 0 ? workDay : data.length;
@@ -162,54 +161,27 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
   const color     = pctEjecutado >= 100 ? '#10b981' : pctEjecutado >= 85 ? '#f59e0b' : '#ef4444';
   const colorProy = pctProyeccion >= 100 ? '#10b981' : pctProyeccion >= 90 ? '#f59e0b' : '#ef4444';
 
-  const gaugeVal = Math.min(Math.round(pctEjecutado), 200);
-
-  const gaugeOptions = {
-    ...baseApexOptions,
-    chart: { ...baseApexOptions.chart, type: 'radialBar', animations: { enabled: false } },
-    colors: [color],
-    plotOptions: {
-      radialBar: {
-        startAngle: -135,
-        endAngle: 135,
-        hollow: { size: '62%', background: 'transparent' },
-        track: { background: '#1e293b', strokeWidth: '100%' },
-        dataLabels: {
-          name: {
-            show: true, offsetY: 52, fontSize: '9px', fontWeight: 600, color: '#64748b',
-            formatter: () => 'vs Meta acumulada'
-          },
-          value: {
-            show: true, offsetY: 12, fontSize: '28px', fontWeight: 900, color,
-            formatter: () => `${pctEjecutado.toFixed(1)}%`
-          }
-        }
-      }
-    },
-    stroke: { lineCap: 'round' },
-    fill: {
-      type: 'gradient',
-      gradient: {
-        shade: 'dark', type: 'horizontal',
-        gradientToColors: [color === '#10b981' ? '#34d399' : color === '#f59e0b' ? '#fcd34d' : '#f87171'],
-        stops: [0, 100]
-      }
-    },
-    tooltip: { enabled: false }
-  };
-
   // % cumplimiento real = venta neta / presupuesto TOTAL del mes (sin proporcionar por días)
   const pctCumplReal = presupuesto > 0 ? (ventaAcumulada / presupuesto) * 100 : 0;
   const colorReal    = pctCumplReal >= 100 ? '#10b981' : pctCumplReal >= 85 ? '#f59e0b' : '#ef4444';
+  const colorRealGrad = colorReal === '#10b981' ? '#34d399' : colorReal === '#f59e0b' ? '#fcd34d' : '#f87171';
+  const colorGrad = color === '#10b981' ? '#34d399' : color === '#f59e0b' ? '#fcd34d' : '#f87171';
 
   // Semáforo de proyección: ícono + estado + frase
   const proyEstado = pctProyeccion >= 100
-    ? { icono: '🟢', titulo: 'Cierre en verde', frase: 'Al ritmo actual cierras sobre presupuesto', bg: '#10b98115', border: '#10b98140' }
+    ? { icono: '🟢', titulo: 'Cierre en verde', frase: 'Al ritmo actual cierras sobre presupuesto', bg: '#10b98112', border: '#10b98135' }
     : pctProyeccion >= 90
-    ? { icono: '🟡', titulo: 'Cierre ajustado', frase: 'Necesitas acelerar para llegar al 100%', bg: '#f59e0b15', border: '#f59e0b40' }
+    ? { icono: '🟡', titulo: 'Cierre ajustado', frase: 'Necesitas acelerar para llegar al 100%', bg: '#f59e0b12', border: '#f59e0b35' }
     : pctProyeccion >= 75
-    ? { icono: '🔴', titulo: 'Cierre en riesgo', frase: 'El ritmo actual no alcanza el presupuesto', bg: '#ef444415', border: '#ef444440' }
-    : { icono: '🚨', titulo: 'Brecha crítica', frase: 'Requiere intervención comercial urgente', bg: '#ef444420', border: '#ef444460' };
+    ? { icono: '🔴', titulo: 'Cierre en riesgo', frase: 'El ritmo actual no alcanza el presupuesto', bg: '#ef444412', border: '#ef444435' }
+    : { icono: '🚨', titulo: 'Brecha crítica', frase: 'Requiere intervención comercial urgente', bg: '#ef444420', border: '#ef444450' };
+
+  // SVG Gauge helper parameters
+  const r = 52;
+  const circ = 2 * Math.PI * r; // ~326.7
+  const arcLen = circ * 0.75; // 270 deg = 245.0
+  const off1 = arcLen - (arcLen * Math.min(pctEjecutado, 100)) / 100;
+  const off2 = arcLen - (arcLen * Math.min(pctCumplReal, 100)) / 100;
 
   return (
     <div className="flex flex-col gap-4">
@@ -217,57 +189,81 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
       <div className="grid grid-cols-2 gap-2">
 
         {/* Gauge 1 — avance vs meta acumulada proporcional */}
-        <div className="relative flex flex-col items-center">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none"
+        <div className="relative flex flex-col items-center justify-center p-2 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-xs">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full blur-2xl opacity-15 pointer-events-none"
             style={{ background: color }} />
-          <Chart options={gaugeOptions} series={[gaugeVal]} type="radialBar" height={170} width="100%" />
-          <p className="text-[10px] font-bold -mt-4 text-center" style={{ color }}>
-            {estaArriba ? `▲ +${formatShortCurrency(brecha)}` : `▼ ${formatShortCurrency(Math.abs(brecha))}`}
-          </p>
-          <p className="text-[9px] text-slate-600 mt-0.5 text-center">vs meta día {diasTranscurridos}</p>
+
+          <div className="relative w-36 h-32 flex items-center justify-center">
+            <svg width="140" height="140" viewBox="0 0 130 130" className="transform rotate-[135deg]">
+              <defs>
+                <linearGradient id="gaugeGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={color} />
+                  <stop offset="100%" stopColor={colorGrad} />
+                </linearGradient>
+              </defs>
+              <circle cx="65" cy="65" r={r} fill="none" stroke="#e2e8f0" strokeWidth="13"
+                strokeDasharray={`${arcLen} ${circ}`} strokeLinecap="round" />
+              <circle cx="65" cy="65" r={r} fill="none" stroke="url(#gaugeGrad1)" strokeWidth="13"
+                strokeDasharray={`${arcLen} ${circ}`} strokeDashoffset={off1} strokeLinecap="round"
+                className="transition-all duration-700 ease-out" />
+            </svg>
+
+            {/* Texto central perfectamente posicionado */}
+            <div className="absolute inset-0 pb-3 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-2xl font-black tracking-tight" style={{ color }}>
+                {pctEjecutado.toFixed(1)}%
+              </span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                vs Meta acumulada
+              </span>
+            </div>
+          </div>
+
+          <div className="text-center -mt-2">
+            <p className="text-[11px] font-extrabold" style={{ color }}>
+              {estaArriba ? `▲ +${formatShortCurrency(brecha)}` : `▼ ${formatShortCurrency(Math.abs(brecha))}`}
+            </p>
+            <p className="text-[9px] text-slate-500 font-medium">vs meta día {diasTranscurridos}</p>
+          </div>
         </div>
 
         {/* Gauge 2 — cumplimiento real venta neta / presupuesto total */}
-        <div className="relative flex flex-col items-center">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none"
+        <div className="relative flex flex-col items-center justify-center p-2 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-xs">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full blur-2xl opacity-15 pointer-events-none"
             style={{ background: colorReal }} />
-          <Chart
-            options={{
-              ...gaugeOptions,
-              colors: [colorReal],
-              plotOptions: {
-                radialBar: {
-                  ...gaugeOptions.plotOptions.radialBar,
-                  dataLabels: {
-                    name: {
-                      show: true, offsetY: 52, fontSize: '9px', fontWeight: 600, color: '#64748b',
-                      formatter: () => 'del presupuesto'
-                    },
-                    value: {
-                      show: true, offsetY: 12, fontSize: '28px', fontWeight: 900, color: colorReal,
-                      formatter: () => `${pctCumplReal.toFixed(1)}%`
-                    }
-                  }
-                }
-              },
-              fill: {
-                type: 'gradient',
-                gradient: {
-                  shade: 'dark', type: 'horizontal',
-                  gradientToColors: [colorReal === '#10b981' ? '#34d399' : colorReal === '#f59e0b' ? '#fcd34d' : '#f87171'],
-                  stops: [0, 100]
-                }
-              }
-            }}
-            series={[Math.min(Math.round(pctCumplReal), 200)]}
-            type="radialBar"
-            height={170}
-            width="100%"
-          />
-          <p className="text-[10px] font-bold -mt-4 text-center" style={{ color: colorReal }}>
-            {formatShortCurrency(ventaAcumulada)}
-          </p>
-          <p className="text-[9px] text-slate-600 mt-0.5 text-center">venta neta real</p>
+
+          <div className="relative w-36 h-32 flex items-center justify-center">
+            <svg width="140" height="140" viewBox="0 0 130 130" className="transform rotate-[135deg]">
+              <defs>
+                <linearGradient id="gaugeGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={colorReal} />
+                  <stop offset="100%" stopColor={colorRealGrad} />
+                </linearGradient>
+              </defs>
+              <circle cx="65" cy="65" r={r} fill="none" stroke="#e2e8f0" strokeWidth="13"
+                strokeDasharray={`${arcLen} ${circ}`} strokeLinecap="round" />
+              <circle cx="65" cy="65" r={r} fill="none" stroke="url(#gaugeGrad2)" strokeWidth="13"
+                strokeDasharray={`${arcLen} ${circ}`} strokeDashoffset={off2} strokeLinecap="round"
+                className="transition-all duration-700 ease-out" />
+            </svg>
+
+            {/* Texto central perfectamente posicionado */}
+            <div className="absolute inset-0 pb-3 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-2xl font-black tracking-tight" style={{ color: colorReal }}>
+                {pctCumplReal.toFixed(1)}%
+              </span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                del presupuesto
+              </span>
+            </div>
+          </div>
+
+          <div className="text-center -mt-2">
+            <p className="text-[11px] font-extrabold" style={{ color: colorReal }}>
+              {formatShortCurrency(ventaAcumulada)}
+            </p>
+            <p className="text-[9px] text-slate-500 font-medium">venta neta real</p>
+          </div>
         </div>
       </div>
 
@@ -275,14 +271,14 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
       <div className="grid grid-cols-2 gap-2">
 
         {/* Semáforo de proyección */}
-        <div className="rounded-xl p-2.5 border relative overflow-hidden"
+        <div className="rounded-xl p-2.5 border relative overflow-hidden shadow-xs"
           style={{ background: proyEstado.bg, borderColor: proyEstado.border }}>
           <div className="flex items-start gap-2">
             <span className="text-xl leading-none mt-0.5">{proyEstado.icono}</span>
             <div className="min-w-0">
-              <p className="text-[11px] font-black text-white leading-tight">{proyEstado.titulo}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5 leading-snug">{proyEstado.frase}</p>
-              <div className="mt-1.5 w-full h-1 bg-slate-800/60 rounded-full overflow-hidden">
+              <p className="text-[11px] font-black text-slate-900 leading-tight">{proyEstado.titulo}</p>
+              <p className="text-[9px] text-slate-600 mt-0.5 leading-snug font-medium">{proyEstado.frase}</p>
+              <div className="mt-1.5 w-full h-1 bg-slate-200 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-700"
                   style={{ width: `${Math.min(pctProyeccion, 100)}%`, background: colorProy }} />
               </div>
@@ -294,20 +290,20 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
         </div>
 
         {/* Segmentos de días hábiles */}
-        <div className="rounded-xl p-2.5 border border-slate-800/60 bg-slate-900/40">
+        <div className="rounded-xl p-2.5 border border-slate-200/80 bg-white/70 shadow-xs">
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[9px] uppercase tracking-widest text-slate-500 font-semibold">Días hábiles</p>
-            <span className="text-sm font-black text-white">{diasTranscurridos}
-              <span className="text-slate-500 font-normal text-[9px]"> / {diasHabiles}</span>
+            <p className="text-[9px] uppercase tracking-widest text-slate-600 font-bold">Días hábiles</p>
+            <span className="text-sm font-black text-slate-900">{diasTranscurridos}
+              <span className="text-slate-600 font-medium text-[9px]"> / {diasHabiles}</span>
             </span>
           </div>
           <div className="flex gap-0.5">
             {Array.from({ length: diasHabiles }).map((_, i) => (
               <div key={i} className="flex-1 h-1.5 rounded-sm"
-                style={{ background: i < diasTranscurridos ? '#38bdf8' : '#1e293b', opacity: i < diasTranscurridos ? 1 : 0.4 }} />
+                style={{ background: i < diasTranscurridos ? '#0284c7' : '#e2e8f0', opacity: i < diasTranscurridos ? 1 : 0.6 }} />
             ))}
           </div>
-          <p className="text-[9px] text-slate-500 mt-1 text-right">
+          <p className="text-[9px] text-slate-600 font-medium mt-1 text-right">
             {Math.round((diasTranscurridos / diasHabiles) * 100)}% del mes
           </p>
         </div>
@@ -320,7 +316,7 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
 // 3. STACKED BAR CHART - Cash vs Credit Sales
 export const BIStackedBarChart = ({ data = [] }) => {
   if (!data || data.length === 0) return (
-    <div className="h-[320px] flex items-center justify-center text-slate-500 text-sm">Sin datos</div>
+    <div className="h-[320px] flex items-center justify-center text-slate-600 text-sm">Sin datos</div>
   );
   const normalizedData = data.map(item => ({
     ...item,
@@ -417,18 +413,18 @@ export const BITreemapChart = ({ data = [] }) => {
         upperLabel: {
           show: true,
           height: 30,
-          color: '#f8fafc',
-          backgroundColor: '#1e293b'
+          color: '#0f172a',
+          backgroundColor: '#f1f5f9'
         },
         itemStyle: {
-          borderColor: '#0f172a',
+          borderColor: '#ffffff',
           borderWidth: 2
         },
         levels: [
           {
             itemStyle: {
               borderWidth: 3,
-              borderColor: '#0f172a',
+              borderColor: '#ffffff',
               gapWidth: 3
             }
           },
@@ -509,10 +505,10 @@ export const BIHeatmapChart = ({ returnsSellers = [], clientReturns = [] }) => {
         return (
           <div
             key={idx}
-            className="rounded-xl border transition-all duration-200 cursor-default"
+            className="rounded-xl border transition-all duration-200 cursor-default shadow-xs"
             style={{
-              background: isHovered ? 'rgba(30,41,59,0.8)' : 'rgba(15,23,42,0.5)',
-              borderColor: isHovered ? 'rgba(99,102,241,0.4)' : 'rgba(30,41,59,0.6)',
+              background: isHovered ? 'rgba(241,245,249,0.95)' : 'rgba(255,255,255,0.85)',
+              borderColor: isHovered ? 'rgba(99,102,241,0.4)' : 'rgba(226,232,240,0.9)',
             }}
             onMouseEnter={() => setHoveredSeller(idx)}
             onMouseLeave={() => setHoveredSeller(null)}
@@ -520,24 +516,24 @@ export const BIHeatmapChart = ({ returnsSellers = [], clientReturns = [] }) => {
             <div className="px-4 pt-3 pb-1 flex items-center justify-between gap-3">
               {/* Rank + Name */}
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="text-[11px] font-black w-5 text-center flex-shrink-0" style={{ color: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#475569' }}>
+                <span className="text-[11px] font-black w-5 text-center flex-shrink-0" style={{ color: idx === 0 ? '#d97706' : idx === 1 ? '#64748b' : idx === 2 ? '#b45309' : '#94a3b8' }}>
                   #{idx + 1}
                 </span>
-                <p className="text-xs font-bold text-slate-200 truncate">{seller.nombre}</p>
+                <p className="text-xs font-bold text-slate-900 truncate">{seller.nombre}</p>
               </div>
               {/* Total */}
-              <span className="text-sm font-black text-rose-400 flex-shrink-0">
+              <span className="text-sm font-black text-rose-600 flex-shrink-0">
                 {formatShortCurrency(seller.total)}
               </span>
             </div>
 
             {/* Stacked bar */}
             <div className="px-4 pb-1 mt-1">
-              <div className="w-full h-4 rounded-lg overflow-hidden bg-slate-900 flex" style={{ width: '100%' }}>
+              <div className="w-full h-4 rounded-lg overflow-hidden bg-slate-100 flex" style={{ width: '100%' }}>
                 {segments.map(([concept, val], sIdx) => {
                   const segWidth = (val / seller.total) * barWidth;
                   const color = concept === 'OTROS'
-                    ? '#475569'
+                    ? '#64748b'
                     : (CONCEPT_COLORS[concept]?.bg || '#64748b');
                   return (
                     <div
@@ -549,7 +545,7 @@ export const BIHeatmapChart = ({ returnsSellers = [], clientReturns = [] }) => {
                   );
                 })}
                 {/* Grey remainder */}
-                <div className="flex-1 h-full bg-slate-900/60" />
+                <div className="flex-1 h-full bg-slate-200/60" />
               </div>
             </div>
 
@@ -557,13 +553,12 @@ export const BIHeatmapChart = ({ returnsSellers = [], clientReturns = [] }) => {
             {isHovered && (
               <div className="px-4 pb-3 pt-1 flex flex-wrap gap-1.5">
                 {segments.map(([concept, val]) => {
-                  const color = concept === 'OTROS' ? '#475569' : (CONCEPT_COLORS[concept]?.bg || '#64748b');
-                  const textColor = concept === 'OTROS' ? '#94a3b8' : (CONCEPT_COLORS[concept]?.text || '#94a3b8');
+                  const color = concept === 'OTROS' ? '#64748b' : (CONCEPT_COLORS[concept]?.bg || '#64748b');
                   return (
                     <span
                       key={concept}
-                      className="px-2 py-0.5 rounded-full text-[9px] font-bold border"
-                      style={{ background: `${color}20`, color: textColor, borderColor: `${color}40` }}
+                      className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-white shadow-xs text-slate-800"
+                      style={{ borderColor: `${color}60` }}
                     >
                       {concept}: {formatShortCurrency(val)}
                     </span>
@@ -594,7 +589,7 @@ export const BIGaugeChart = ({ val = 0 }) => {
         dataLabels: {
           name: {
             fontSize: '14px',
-            color: '#94a3b8',
+            color: '#64748b',
             offsetY: 80,
             show: true,
             label: 'Cumplimiento'
@@ -602,7 +597,7 @@ export const BIGaugeChart = ({ val = 0 }) => {
           value: {
             offsetY: 35,
             fontSize: '32px',
-            color: '#ffffff',
+            color: '#0f172a',
             fontWeight: 'bold',
             formatter: (val) => `${val}%`
           }
@@ -634,15 +629,15 @@ export const BIWaterfallChart = ({ sales = 5347429635, returns = 42536287 }) => 
       type: 'category',
       splitLine: { show: false },
       data: ['Ventas Brutas', 'Devoluciones', 'Ventas Netas'],
-      axisLabel: { color: '#94a3b8' }
+      axisLabel: { color: '#475569' }
     },
     yAxis: {
       type: 'value',
       axisLabel: {
-        color: '#94a3b8',
+        color: '#475569',
         formatter: (val) => formatShortCurrency(val)
       },
-      splitLine: { lineStyle: { color: '#1e293b' } }
+      splitLine: { lineStyle: { color: '#e2e8f0' } }
     },
     series: [
       {
@@ -766,7 +761,7 @@ export const BIScatterPlot = ({ clientReturns = [] }) => {
 // 11. FUNNEL CHART - Returns reasons ranking
 export const BIFunnelChart = ({ data = [] }) => {
   if (!data || data.length === 0) return (
-    <div className="h-[320px] flex items-center justify-center text-slate-500 text-sm">Sin conceptos de devolución</div>
+    <div className="h-[320px] flex items-center justify-center text-slate-600 text-sm">Sin conceptos de devolución</div>
   );
   const sortedConcepts = [...data]
     .sort((a, b) => b.porcentaje - a.porcentaje)
@@ -833,12 +828,12 @@ export const BIZoneRankingChart = ({ zones = [] }) => {
     xAxis: {
       type: 'value',
       axisLabel: { color: '#64748b', formatter: v => formatShortCurrency(v) },
-      splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } }
+      splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } }
     },
     yAxis: {
       type: 'category',
       data: top.map(z => z.zona).reverse(),
-      axisLabel: { color: '#94a3b8', fontSize: 11, fontWeight: 600 }
+      axisLabel: { color: '#334155', fontSize: 11, fontWeight: 700 }
     },
     series: [
       {
@@ -846,7 +841,7 @@ export const BIZoneRankingChart = ({ zones = [] }) => {
         type: 'bar',
         data: top.map(z => z.presupuesto).reverse(),
         barMaxWidth: 14,
-        itemStyle: { color: '#1e293b', borderRadius: [0,4,4,0] },
+        itemStyle: { color: '#e2e8f0', borderRadius: [0,4,4,0] },
         z: 1
       },
       {
@@ -876,7 +871,7 @@ export const BIZoneRankingChart = ({ zones = [] }) => {
             return `{pct|${pct}%}`;
           },
           rich: {
-            pct: { fontSize: 10, fontWeight: 700, color: '#e2e8f0' }
+            pct: { fontSize: 10, fontWeight: 700, color: '#0f172a' }
           }
         },
         z: 2
@@ -891,7 +886,7 @@ export const BIZoneRankingChart = ({ zones = [] }) => {
 export const BIDonutChart = ({ data = [], height = 300 }) => {
   if (!data || data.length === 0) {
     return (
-      <div className="h-[300px] flex items-center justify-center text-slate-500 text-sm">
+      <div className="h-[300px] flex items-center justify-center text-slate-600 text-sm">
         Sin datos
       </div>
     );
@@ -926,7 +921,7 @@ export const BIDonutChart = ({ data = [], height = 300 }) => {
     plotOptions: {
       pie: {
         donut: {
-          size: '65%',
+          size: '45%',
           labels: {
             show: true,
             total: {

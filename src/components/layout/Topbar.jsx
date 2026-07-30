@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { ZONAS_POR_CIUDAD, getFilteredData, calculateKPIs } from '../../utils/calculations';
@@ -12,7 +12,7 @@ import { applyPlugin } from 'jspdf-autotable';
 
 applyPlugin(jsPDF);
 
-const selectCls = "w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 font-medium focus:outline-none focus:border-blue-500 transition-colors";
+const selectCls = "w-full bg-white border border-slate-200 shadow-xs rounded-lg px-2.5 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all";
 
 const Topbar = () => {
   const {
@@ -354,10 +354,10 @@ const Topbar = () => {
 
   return (
     <>
-      {/* ── TOPBAR FIJO ───────────────────────────────────────────────── */}
+      {/* ── TOPBAR FIJO TEMA CLARO ───────────────────────────────────────── */}
       <header className={`
         fixed top-0 right-0 z-20 h-20
-        border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-xl
+        border-b border-slate-200/80 bg-white/85 backdrop-blur-xl shadow-xs
         flex items-center justify-between px-4 md:px-5
         transition-all duration-300 ease-in-out
         left-0
@@ -369,43 +369,43 @@ const Topbar = () => {
           {/* Hamburguesa — solo móvil */}
           <button
             onClick={toggleSidebar}
-            className="md:hidden p-2 rounded-xl border border-slate-800/60 bg-slate-900/30 text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all shrink-0"
+            className="md:hidden p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all shrink-0"
           >
             <Menu className="h-4 w-4" />
           </button>
 
           {/* Filtros en línea — solo desktop (md+) */}
           <div className="hidden md:flex items-center gap-2 overflow-x-auto scrollbar-none">
-            <div className="flex items-center gap-1 text-slate-500 text-xs font-medium shrink-0">
-              <Filter className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1 text-slate-600 text-xs font-semibold shrink-0">
+              <Filter className="h-3.5 w-3.5 text-blue-600" />
               <span>Filtros:</span>
             </div>
 
             {/* Periodo */}
             <select value={selectedPeriod} onChange={e => setPeriod(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 font-medium focus:outline-none focus:border-blue-500 transition-colors shrink-0">
+              className="bg-white border border-slate-200 shadow-xs rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all shrink-0">
               {getPeriodsList().map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
             </select>
 
             {/* Ciudad */}
             <div className="relative shrink-0">
-              <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-blue-400 pointer-events-none" />
+              <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-blue-600 pointer-events-none" />
               <select value={selectedCity} onChange={e => handleCityChange(e.target.value)}
-                className="bg-slate-900 border border-blue-500/30 rounded-lg pl-6 pr-2.5 py-1.5 text-xs text-blue-300 font-semibold focus:outline-none focus:border-blue-500 transition-colors">
+                className="bg-blue-50/70 border border-blue-200/80 shadow-xs rounded-lg pl-6 pr-2.5 py-1.5 text-xs text-blue-800 font-bold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all">
                 {cities.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
 
             {/* Zona */}
             <select value={selectedZone} onChange={e => setZone(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 font-medium focus:outline-none focus:border-blue-500 transition-colors shrink-0">
+              className="bg-white border border-slate-200 shadow-xs rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all shrink-0">
               <option value="Todas">Zona: Todas</option>
               {zonasDisponibles.map(z => <option key={z} value={z}>{z}</option>)}
             </select>
 
             {/* Vendedor */}
             <select value={selectedSeller} onChange={e => setSeller(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 font-medium focus:outline-none focus:border-blue-500 transition-colors shrink-0">
+              className="bg-white border border-slate-200 shadow-xs rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all shrink-0">
               <option value="Todas">Vendedor: Todos</option>
               {vendedoresDisponibles.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -414,12 +414,12 @@ const Topbar = () => {
           {/* Botón filtros — solo móvil */}
           <button
             onClick={() => setFiltersOpen(v => !v)}
-            className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 text-xs text-slate-300 font-medium shrink-0 transition-all hover:border-blue-500/40"
+            className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white shadow-xs text-xs text-slate-700 font-semibold shrink-0 transition-all hover:border-blue-400"
           >
-            <Filter className="h-3.5 w-3.5" />
+            <Filter className="h-3.5 w-3.5 text-blue-600" />
             <span>Filtros</span>
             {activeFilters > 0 && (
-              <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{activeFilters}</span>
+              <span className="bg-blue-600 text-slate-900 text-[9px] font-bold px-1.5 py-0.5 rounded-full">{activeFilters}</span>
             )}
             <ChevronDown className={`h-3 w-3 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -431,10 +431,10 @@ const Topbar = () => {
           <button
             onClick={handleExportPDF}
             disabled={isExporting}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/30 text-xs text-blue-400 font-semibold hover:bg-slate-800 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/80 text-xs text-blue-700 font-bold hover:bg-blue-600 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs"
           >
             {isExporting ? (
-              <span className="h-3.5 w-3.5 border-2 border-t-transparent border-blue-400 rounded-full animate-spin" />
+              <span className="h-3.5 w-3.5 border-2 border-t-transparent border-blue-600 rounded-full animate-spin" />
             ) : (
               <FileText className="h-4 w-4" />
             )}
@@ -443,46 +443,46 @@ const Topbar = () => {
 
           {/* Búsqueda — solo xl */}
           <div className="relative hidden xl:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-600 pointer-events-none" />
             <input type="text" placeholder="Buscar vendedor..."
-              className="bg-slate-900/60 border border-slate-800/80 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-300 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 w-44 transition-all" />
+              className="bg-slate-100/80 border border-slate-200 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white w-44 transition-all" />
           </div>
 
         </div>
       </header>
 
-      {/* ── PANEL DE FILTROS MÓVIL (desplegable bajo el topbar) ──────── */}
+      {/* ── PANEL DE FILTROS MÓVIL ──────── */}
       {filtersOpen && (
-        <div className="fixed top-20 left-0 right-0 z-20 md:hidden border-b border-slate-800 bg-slate-950/95 backdrop-blur-xl shadow-xl p-4 space-y-3">
+        <div className="fixed top-20 left-0 right-0 z-20 md:hidden border-b border-slate-200 bg-white/95 backdrop-blur-xl shadow-xl p-4 space-y-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Filtros</span>
-            <button onClick={() => setFiltersOpen(false)} className="text-slate-500 hover:text-white transition-colors">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Filtros</span>
+            <button onClick={() => setFiltersOpen(false)} className="text-slate-600 hover:text-slate-800 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-[10px] text-slate-500 mb-1 font-medium">Periodo</p>
+              <p className="text-[10px] text-slate-600 mb-1 font-semibold">Periodo</p>
               <select value={selectedPeriod} onChange={e => setPeriod(e.target.value)} className={selectCls}>
                 {getPeriodsList().map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
               </select>
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 mb-1 font-medium">Ciudad / Eje</p>
+              <p className="text-[10px] text-slate-600 mb-1 font-semibold">Ciudad / Eje</p>
               <select value={selectedCity} onChange={e => handleCityChange(e.target.value)} className={selectCls}>
                 {cities.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 mb-1 font-medium">Zona</p>
+              <p className="text-[10px] text-slate-600 mb-1 font-semibold">Zona</p>
               <select value={selectedZone} onChange={e => setZone(e.target.value)} className={selectCls}>
                 <option value="Todas">Todas</option>
                 {zonasDisponibles.map(z => <option key={z} value={z}>{z}</option>)}
               </select>
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 mb-1 font-medium">Vendedor</p>
+              <p className="text-[10px] text-slate-600 mb-1 font-semibold">Vendedor</p>
               <select value={selectedSeller} onChange={e => setSeller(e.target.value)} className={selectCls}>
                 <option value="Todas">Todos</option>
                 {vendedoresDisponibles.map(s => <option key={s} value={s}>{s}</option>)}
@@ -493,7 +493,7 @@ const Topbar = () => {
           {activeFilters > 0 && (
             <button
               onClick={() => { setCity('Todas'); setZone('Todas'); setSeller('Todas'); }}
-              className="w-full text-center text-xs text-rose-400 hover:text-rose-300 py-1 font-medium transition-colors"
+              className="w-full text-center text-xs text-rose-600 hover:text-rose-700 py-1 font-semibold transition-colors"
             >
               Limpiar {activeFilters} filtro{activeFilters > 1 ? 's' : ''} activo{activeFilters > 1 ? 's' : ''}
             </button>

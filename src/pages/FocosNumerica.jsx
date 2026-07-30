@@ -97,7 +97,7 @@ const SedeProgressRing = ({ percentage, color = 'sky' }) => {
     <div className="relative flex items-center justify-center">
       <svg height={radius * 2} width={radius * 2} className="transform -rotate-90">
         <circle
-          stroke="#1e293b"
+          stroke="#e2e8f0"
           fill="transparent"
           strokeWidth={stroke}
           r={normalizedRadius}
@@ -601,8 +601,8 @@ const FocosNumerica = () => {
     dataLabels: { enabled: false },
     xaxis: { categories: citySummary.map((c) => c.city), labels: { style: { fontSize: '10px' } } },
     yaxis: { labels: { formatter: (val) => formatShortCurrency(val) } },
-    tooltip: { theme: 'dark', y: { formatter: (val) => formatCurrency(val) } },
-    grid: { borderColor: '#1e293b' }
+    tooltip: { theme: 'light', y: { formatter: (val) => formatCurrency(val) } },
+    grid: { borderColor: '#e2e8f0' }
   };
 
 
@@ -617,16 +617,16 @@ const FocosNumerica = () => {
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
-                <div className="h-6 w-[1px] bg-slate-800"></div>
-                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">Focos Numérica</h1>
+                <div className="h-6 w-[1px] bg-slate-200"></div>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">Focos Numérica</h1>
                 <span className="text-[9px] md:text-[10px] bg-sky-500/20 text-sky-300 font-semibold px-2 py-0.5 rounded-full border border-sky-500/30">Cobertura & Eficiencia</span>
               </div>
-              <p className="text-slate-300 text-xs md:text-sm mt-1">
+              <p className="text-slate-700 text-xs md:text-sm mt-1">
                 Panel exclusivo de análisis de focos, cobertura y eficiencia por zona. Todo el insight financiero y operativo en un solo lugar.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <label className="text-xs text-slate-400">Filtrar ciudad:</label>
-                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="bg-slate-900 text-slate-200 text-xs md:text-sm rounded px-2 py-1.5 border border-slate-800">
+                <label className="text-xs text-slate-600">Filtrar ciudad:</label>
+                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="bg-slate-100 text-slate-800 text-xs md:text-sm rounded px-2 py-1.5 border border-slate-200">
                   <option value="ALL">Todas</option>
                   <option value="ARMENIA">ARMENIA</option>
                   <option value="MANIZALES">MANIZALES</option>
@@ -638,16 +638,16 @@ const FocosNumerica = () => {
           </div>
         </div>
 
-        <GlassCard hoverable={false} className="bg-slate-950/70 border border-sky-500/20 p-4 md:p-5 shadow-[0_25px_80px_-45px_rgba(56,189,248,0.6)]">
+        <GlassCard hoverable={false} className="bg-white border border-sky-500/20 p-4 md:p-5 shadow-[0_25px_80px_-45px_rgba(56,189,248,0.6)]">
           {/* Banner de avance del mes */}
-          <div className="mb-4 pb-4 border-b border-slate-800/60">
+          <div className="mb-4 pb-4 border-b border-slate-200">
             <div className="flex flex-col gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Avance {NOMBRE_MES} · Día hábil {DIA_ACTUAL} de {DIAS_HABILES}</p>
-                <p className="text-lg md:text-xl font-extrabold text-white mt-1">
+                <p className="text-lg md:text-xl font-extrabold text-slate-900 mt-1">
                   Venta acumulada: <span className="text-sky-300 block sm:inline mt-1 sm:mt-0">{formatCurrency(avanceReal)}</span>
                 </p>
-                <p className="text-[10px] md:text-[11px] text-slate-400 mt-1 flex flex-wrap gap-1">
+                <p className="text-[10px] md:text-[11px] text-slate-600 mt-1 flex flex-wrap gap-1">
                   <span>Meta día {DIA_ACTUAL}: <span className={`font-semibold ${avanceReal >= META_ACUMULADA ? 'text-emerald-400' : 'text-rose-400'}`}>{formatShortCurrency(META_ACUMULADA)}</span></span>
                   <span className="hidden sm:inline">·</span>
                   <span className={avanceReal >= META_ACUMULADA ? 'text-emerald-400' : 'text-rose-400'}>
@@ -659,53 +659,53 @@ const FocosNumerica = () => {
               </div>
               <div className="flex flex-col items-start sm:items-end gap-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500">Progreso del mes</span>
+                  <span className="text-[10px] text-slate-600">Progreso del mes</span>
                   <span className="text-sm font-bold text-sky-400">{DIA_ACTUAL}/{DIAS_HABILES} días</span>
                 </div>
-                <div className="w-full sm:w-40 h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full sm:w-40 h-2 bg-slate-200 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-500 transition-all"
                     style={{ width: `${(DIA_ACTUAL / DIAS_HABILES) * 100}%` }}
                   />
                 </div>
-                <span className="text-[10px] text-slate-500">{Math.round((DIA_ACTUAL / DIAS_HABILES) * 100)}% del mes transcurrido</span>
+                <span className="text-[10px] text-slate-600">{Math.round((DIA_ACTUAL / DIAS_HABILES) * 100)}% del mes transcurrido</span>
               </div>
             </div>
           </div>
           <div className="flex flex-col gap-3">
-            <p className="text-slate-400 text-xs md:text-sm">
-              Esta sección destaca las zonas más críticas y las oportunidades de eficiencia con datos Alpina 100% filtrados. Faltan <strong className="text-white">{formatNumber(estimatedClientsToGoal)}</strong> clientes de ticket promedio para cerrar la meta de presupuesto.
+            <p className="text-slate-600 text-xs md:text-sm">
+              Esta sección destaca las zonas más críticas y las oportunidades de eficiencia con datos Alpina 100% filtrados. Faltan <strong className="text-slate-900">{formatNumber(estimatedClientsToGoal)}</strong> clientes de ticket promedio para cerrar la meta de presupuesto.
             </p>
-            <div className="rounded-2xl md:rounded-3xl bg-slate-950/60 border border-slate-800 p-3 md:p-4 flex items-center gap-3 w-fit">
+            <div className="rounded-2xl md:rounded-3xl bg-white/80 border border-slate-200 p-3 md:p-4 flex items-center gap-3 w-fit">
               <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-300" />
               <div>
-                <p className="text-slate-500 text-[10px] uppercase tracking-wider">Facturas de foco</p>
-                <p className="text-xl md:text-2xl font-bold text-white mt-1">{formatNumber(totalFocusFacturas)}</p>
+                <p className="text-slate-600 text-[10px] uppercase tracking-wider">Facturas de foco</p>
+                <p className="text-xl md:text-2xl font-bold text-slate-900 mt-1">{formatNumber(totalFocusFacturas)}</p>
               </div>
             </div>
           </div>
         </GlassCard>
 
         <div className="grid grid-cols-1 gap-3 xs:grid-cols-2 lg:grid-cols-4">
-          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-3 md:p-4 shadow-lg shadow-slate-950/20">
-            <p className="text-slate-400 text-[10px] uppercase tracking-wider">Cobertura promedio</p>
-            <p className="text-xl md:text-2xl font-bold text-white mt-2">{formatPercent(averageCoverage)}</p>
-            <p className="text-slate-500 text-[9px] md:text-[10px] mt-2">Porcentaje medio de ejecución de presupuesto</p>
+          <GlassCard hoverable={false} className="bg-white border border-slate-200 p-3 md:p-4 shadow-lg shadow-slate-200/50">
+            <p className="text-slate-600 text-[10px] uppercase tracking-wider">Cobertura promedio</p>
+            <p className="text-xl md:text-2xl font-bold text-slate-900 mt-2">{formatPercent(averageCoverage)}</p>
+            <p className="text-slate-600 text-[9px] md:text-[10px] mt-2">Porcentaje medio de ejecución de presupuesto</p>
           </GlassCard>
-          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-3 md:p-4 shadow-lg shadow-slate-950/20">
-            <p className="text-slate-400 text-[10px] uppercase tracking-wider">Clientes faltantes</p>
-            <p className="text-xl md:text-2xl font-bold text-white mt-2">{formatNumber(estimatedClientsToGoal)}</p>
-            <p className="text-slate-500 text-[9px] md:text-[10px] mt-2">Estimado con ticket promedio actual</p>
+          <GlassCard hoverable={false} className="bg-white border border-slate-200 p-3 md:p-4 shadow-lg shadow-slate-200/50">
+            <p className="text-slate-600 text-[10px] uppercase tracking-wider">Clientes faltantes</p>
+            <p className="text-xl md:text-2xl font-bold text-slate-900 mt-2">{formatNumber(estimatedClientsToGoal)}</p>
+            <p className="text-slate-600 text-[9px] md:text-[10px] mt-2">Estimado con ticket promedio actual</p>
           </GlassCard>
-          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-3 md:p-4 shadow-lg shadow-slate-950/20">
-            <p className="text-slate-400 text-[10px] uppercase tracking-wider">Brecha comercial</p>
-            <p className="text-xl md:text-2xl font-bold text-white mt-2">{formatShortCurrency(salesGap)}</p>
-            <p className="text-slate-500 text-[9px] md:text-[10px] mt-2">Ventas faltantes para presupuesto</p>
+          <GlassCard hoverable={false} className="bg-white border border-slate-200 p-3 md:p-4 shadow-lg shadow-slate-200/50">
+            <p className="text-slate-600 text-[10px] uppercase tracking-wider">Brecha comercial</p>
+            <p className="text-xl md:text-2xl font-bold text-slate-900 mt-2">{formatShortCurrency(salesGap)}</p>
+            <p className="text-slate-600 text-[9px] md:text-[10px] mt-2">Ventas faltantes para presupuesto</p>
           </GlassCard>
-          <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-3 md:p-4 shadow-lg shadow-slate-950/20">
-            <p className="text-slate-400 text-[10px] uppercase tracking-wider">Zonas en alerta</p>
-            <p className="text-xl md:text-2xl font-bold text-white mt-2">{zonesBelowTarget}</p>
-            <p className="text-slate-500 text-[9px] md:text-[10px] mt-2">Zonas con cobertura menor al 75%</p>
+          <GlassCard hoverable={false} className="bg-white border border-slate-200 p-3 md:p-4 shadow-lg shadow-slate-200/50">
+            <p className="text-slate-600 text-[10px] uppercase tracking-wider">Zonas en alerta</p>
+            <p className="text-xl md:text-2xl font-bold text-slate-900 mt-2">{zonesBelowTarget}</p>
+            <p className="text-slate-600 text-[9px] md:text-[10px] mt-2">Zonas con cobertura menor al 75%</p>
           </GlassCard>
         </div>
 
@@ -720,7 +720,7 @@ const FocosNumerica = () => {
               <GlassCard 
                 key={item.city} 
                 hoverable={true} 
-                className="bg-slate-950/70 border border-slate-800/80 p-5 relative overflow-hidden group hover:border-slate-700/80 transition-all duration-300 shadow-md"
+                className="bg-white border border-slate-200 p-5 relative overflow-hidden group hover:border-slate-300/80 transition-all duration-300 shadow-md"
               >
                 {/* Glow effect on hover */}
                 <div className={`absolute -right-16 -top-16 w-32 h-32 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none ${
@@ -736,36 +736,36 @@ const FocosNumerica = () => {
 
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+                    <span className="text-[10px] text-slate-600 uppercase tracking-widest font-semibold">
                       {item.city === 'ARMENIA' ? 'Eje Quindío' : item.city === 'MANIZALES' ? 'Eje Caldas' : 'Eje Risaralda'}
                     </span>
-                    <h4 className="text-lg font-bold text-white tracking-tight">{item.city}</h4>
+                    <h4 className="text-lg font-bold text-slate-900 tracking-tight">{item.city}</h4>
                   </div>
                   <SedeProgressRing percentage={progressPercent} color={color} />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-900/60 text-center">
+                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-200 text-center">
                   <div>
-                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Universo</p>
-                    <p className="text-xs font-bold text-slate-300 mt-1">{formatNumber(item.universeClients)}</p>
+                    <p className="text-[9px] text-slate-600 uppercase tracking-wider">Universo</p>
+                    <p className="text-xs font-bold text-slate-700 mt-1">{formatNumber(item.universeClients)}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Impactados</p>
-                    <p className="text-xs font-bold text-white mt-1">{formatNumber(item.impactedClients)}</p>
+                    <p className="text-[9px] text-slate-600 uppercase tracking-wider">Impactados</p>
+                    <p className="text-xs font-bold text-slate-900 mt-1">{formatNumber(item.impactedClients)}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Por Impactar</p>
-                    <p className="text-xs font-bold text-slate-400 mt-1">{formatNumber(Math.max(0, item.universeClients - item.impactedClients))}</p>
+                    <p className="text-[9px] text-slate-600 uppercase tracking-wider">Por Impactar</p>
+                    <p className="text-xs font-bold text-slate-600 mt-1">{formatNumber(Math.max(0, item.universeClients - item.impactedClients))}</p>
                   </div>
                 </div>
                 
                 {/* Mini progress bar showing percentage of meta */}
                 <div className="mt-4 space-y-1">
                   <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-400">Progreso vs Meta ({formatNumber(item.metaClients)})</span>
-                    <span className="text-slate-300 font-bold">{Math.round((item.impactedClients / item.metaClients) * 100)}%</span>
+                    <span className="text-slate-600">Progreso vs Meta ({formatNumber(item.metaClients)})</span>
+                    <span className="text-slate-700 font-bold">{Math.round((item.impactedClients / item.metaClients) * 100)}%</span>
                   </div>
-                  <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden">
+                  <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all duration-500 ${
                         color === 'sky' ? 'bg-sky-400' : color === 'emerald' ? 'bg-emerald-400' : 'bg-amber-400'
@@ -779,21 +779,21 @@ const FocosNumerica = () => {
           })}
         </div>
 
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-4 md:p-5 shadow-lg shadow-slate-950/20">
+        <GlassCard hoverable={false} className="bg-white border border-slate-200 p-4 md:p-5 shadow-lg shadow-slate-200/50">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm md:text-base font-bold text-white">Cumplimiento por ciudad</h3>
-              <p className="text-[10px] md:text-xs text-slate-400 mt-1">Universo de clientes, meta numérica (70% del universo) y faltantes por ciudad.</p>
+              <h3 className="text-sm md:text-base font-bold text-slate-900">Cumplimiento por ciudad</h3>
+              <p className="text-[10px] md:text-xs text-slate-600 mt-1">Universo de clientes, meta numérica (70% del universo) y faltantes por ciudad.</p>
             </div>
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] uppercase tracking-widest text-slate-400">Impacto Global</p>
+              <p className="text-[10px] uppercase tracking-widest text-slate-600">Impacto Global</p>
               <p className="text-sm font-bold text-sky-400">{formatPercent(goalTotals.impactedClients / goalTotals.universeClients)}</p>
             </div>
           </div>
           <div className="overflow-x-auto -mx-4 md:-mx-5 px-4 md:px-5">
             <table className="w-full min-w-[600px] text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-[0.12em] text-[9px] md:text-[10px]">
+                <tr className="border-b border-slate-200 text-slate-600 uppercase tracking-[0.12em] text-[9px] md:text-[10px]">
                   <th className="pb-3 pr-3 md:pr-4">Ciudad</th>
                   <th className="pb-3 pr-3 md:pr-4">Universo</th>
                   <th className="pb-3 pr-3 md:pr-4">Meta (70%)</th>
@@ -802,18 +802,18 @@ const FocosNumerica = () => {
                   <th className="pb-3 pr-2">Faltan</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-900/60">
+              <tbody className="divide-y divide-slate-200">
                 {cityGoalData.map((city) => (
-                  <tr key={city.city} className="hover:bg-slate-900/10 transition-colors">
-                    <td className="py-2.5 pr-3 md:pr-4 text-slate-300 font-semibold text-xs md:text-sm">{city.city}</td>
-                    <td className="py-2.5 pr-3 md:pr-4 text-slate-400">{formatNumber(city.universeClients)}</td>
-                    <td className="py-2.5 pr-3 md:pr-4 text-slate-300">{formatNumber(city.metaClients)}</td>
-                    <td className="py-2.5 pr-3 md:pr-4 text-slate-300">{formatNumber(city.impactedClients)}</td>
+                  <tr key={city.city} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-2.5 pr-3 md:pr-4 text-slate-700 font-semibold text-xs md:text-sm">{city.city}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 text-slate-600">{formatNumber(city.universeClients)}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 text-slate-700">{formatNumber(city.metaClients)}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 text-slate-700">{formatNumber(city.impactedClients)}</td>
                     <td className="py-2.5 pr-3 md:pr-4 font-bold text-slate-100">{formatPercent(city.numericalCoverage)}</td>
                     <td className="py-2.5 pr-2 text-slate-100">{formatNumber(city.clientsMissing)}</td>
                   </tr>
                 ))}
-                <tr className="bg-slate-900/40">
+                <tr className="bg-slate-50">
                   <td className="py-3 pr-3 md:pr-4 text-slate-200 font-semibold text-xs md:text-sm">Total</td>
                   <td className="py-3 pr-3 md:pr-4 text-slate-200">{formatNumber(goalTotals.universeClients)}</td>
                   <td className="py-3 pr-3 md:pr-4 text-slate-200">{formatNumber(goalTotals.metaClients)}</td>
@@ -828,22 +828,22 @@ const FocosNumerica = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
+        <GlassCard hoverable={false} className="bg-white border border-slate-200 p-5 shadow-lg shadow-slate-200/50">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-white">Cobertura por zona</h3>
-              <p className="text-xs text-slate-400 mt-1">Análisis de riesgo presupuestal por zona.</p>
+              <h3 className="text-base font-bold text-slate-900">Cobertura por zona</h3>
+              <p className="text-xs text-slate-600 mt-1">Análisis de riesgo presupuestal por zona.</p>
             </div>
             <BarChart3 className="h-5 w-5 text-sky-400" />
           </div>
           <Chart options={coverageOptions} series={coverageSeries} type="bar" height={320} />
         </GlassCard>
 
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-5 shadow-lg shadow-slate-950/20">
+        <GlassCard hoverable={false} className="bg-white border border-slate-200 p-5 shadow-lg shadow-slate-200/50">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-white">Eficiencia por ciudad</h3>
-              <p className="text-xs text-slate-400 mt-1">Costo por factura y rendimiento operativo.</p>
+              <h3 className="text-base font-bold text-slate-900">Eficiencia por ciudad</h3>
+              <p className="text-xs text-slate-600 mt-1">Costo por factura y rendimiento operativo.</p>
             </div>
             <CircleDollarSign className="h-5 w-5 text-amber-400" />
           </div>
@@ -852,25 +852,25 @@ const FocosNumerica = () => {
       </div>
 
 
-      <GlassCard hoverable={false} className="bg-slate-950/85 border border-slate-800/70 p-4 md:p-5 shadow-lg shadow-slate-950/20">
+      <GlassCard hoverable={false} className="bg-white border border-slate-200 p-4 md:p-5 shadow-lg shadow-slate-200/50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
           <div>
-            <h3 className="text-sm md:text-base font-bold text-white">Impacto Numérico · Marca / Familia / Producto</h3>
-            <p className="text-[10px] md:text-xs text-slate-400 mt-1">
+            <h3 className="text-sm md:text-base font-bold text-slate-900">Impacto Numérico · Marca / Familia / Producto</h3>
+            <p className="text-[10px] md:text-xs text-slate-600 mt-1">
               Cobertura real de clientes únicos por nivel jerárquico sobre el universo de la sede seleccionada.
             </p>
           </div>
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-600" />
             <input
               type="text"
               placeholder="Buscar marca, familia o producto..."
               value={productSearch}
               onChange={e => setProductSearch(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg pl-8 pr-10 py-2 outline-none focus:border-sky-500/50 transition-colors"
+              className="w-full bg-slate-100 border border-slate-200 text-slate-200 text-xs rounded-lg pl-8 pr-10 py-2 outline-none focus:border-sky-500/50 transition-colors"
             />
             {productSearch && (
-              <button onClick={() => setProductSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+              <button onClick={() => setProductSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-900">
                 ✕
               </button>
             )}
@@ -878,7 +878,7 @@ const FocosNumerica = () => {
         </div>
 
         {/* Header columns - Hidden on mobile, visible on md+ */}
-        <div className="hidden md:flex items-center gap-4 px-4 pb-2 border-b border-slate-800 text-[9px] uppercase tracking-widest text-slate-500 font-semibold">
+        <div className="hidden md:flex items-center gap-4 px-4 pb-2 border-b border-slate-200 text-[9px] uppercase tracking-widest text-slate-600 font-semibold">
           <span className="flex-1 text-left">Nombre</span>
           <span className="w-32 text-right">Ventas</span>
           <span className="w-16 text-right">Facturas</span>
@@ -890,7 +890,7 @@ const FocosNumerica = () => {
         <div className="space-y-1 mt-2">
           {filteredHierarchy.length === 0 && (
             <div className="text-center py-10">
-              <p className="text-slate-400 text-sm font-semibold">Sin datos de distribución por producto</p>
+              <p className="text-slate-600 text-sm font-semibold">Sin datos de distribución por producto</p>
               <p className="text-slate-600 text-xs mt-2">
                 El cubo cargado no incluye columnas de producto (<span className="font-mono">nbProducto</span>, <span className="font-mono">nmTpMarca</span>, <span className="font-mono">nmTpFamilia</span>)
                 o aún no se ha subido el archivo del período activo.
@@ -907,7 +907,7 @@ const FocosNumerica = () => {
                {/* ── MARCA ROW ── */}
               <button
                 onClick={() => toggleBrand(brand.label)}
-                className="w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 transition-all group"
+                className="w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300/40 transition-all group"
               >
                 <span
                   className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full shrink-0 transition-all duration-200 ring-2 ring-offset-1 ring-offset-slate-900"
@@ -917,14 +917,14 @@ const FocosNumerica = () => {
                     ringColor: brandColor
                   }}
                 />
-                <span className="flex-1 text-left text-xs md:text-sm font-bold text-white tracking-wide truncate">{brand.label}</span>
+                <span className="flex-1 text-left text-xs md:text-sm font-bold text-slate-900 tracking-wide truncate">{brand.label}</span>
                 <div className="hidden md:flex items-center gap-4 text-xs">
                   <span className="w-32 text-right text-slate-200 font-semibold">{formatCurrency(brand.ventas)}</span>
-                  <span className="w-16 text-right text-slate-300">{formatNumber(brand.facturas)}</span>
+                  <span className="w-16 text-right text-slate-700">{formatNumber(brand.facturas)}</span>
                   <span className="w-20 text-right text-sky-300 font-bold">{formatNumber(brand.clientesCount)}</span>
                   <div className="w-32 flex items-center justify-end gap-2">
                     <span className="text-sky-400 font-bold">{formatPercent(brand.coverage)}</span>
-                    <div className="w-16 h-2 bg-slate-900 rounded-full overflow-hidden">
+                    <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, brand.coverage * 100)}%`, background: brand.coverage >= 0.7 ? '#10b981' : brand.coverage >= 0.4 ? '#38bdf8' : '#f59e0b' }} />
                     </div>
                   </div>
@@ -933,8 +933,8 @@ const FocosNumerica = () => {
                 {/* Mobile summary */}
                 <div className="flex md:hidden items-center gap-2 text-[10px]">
                   <span className="text-sky-400 font-bold">{formatPercent(brand.coverage)}</span>
-                  <span className="text-slate-400">·</span>
-                  <span className="text-slate-300">{formatShortCurrency(brand.ventas)}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-700">{formatShortCurrency(brand.ventas)}</span>
                 </div>
               </button>
 
@@ -949,7 +949,7 @@ const FocosNumerica = () => {
                         {/* Familia row */}
                         <button
                           onClick={() => toggleFamily(fKey)}
-                          className="w-full flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg bg-slate-900/70 hover:bg-slate-900 border border-slate-700/30 transition-all"
+                          className="w-full flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg bg-slate-100/70 hover:bg-slate-100 border border-slate-300/30 transition-all"
                         >
                           <span
                             className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shrink-0 transition-all duration-200"
@@ -961,11 +961,11 @@ const FocosNumerica = () => {
                           <span className="flex-1 text-left text-[11px] md:text-xs font-semibold text-slate-100 truncate">{fam.label}</span>
                           <div className="hidden md:flex items-center gap-4 text-xs">
                             <span className="w-32 text-right text-slate-200">{formatCurrency(fam.ventas)}</span>
-                            <span className="w-16 text-right text-slate-300">{formatNumber(fam.facturas)}</span>
+                            <span className="w-16 text-right text-slate-700">{formatNumber(fam.facturas)}</span>
                             <span className="w-20 text-right text-violet-300 font-semibold">{formatNumber(fam.clientesCount)}</span>
                             <div className="w-32 flex items-center justify-end gap-2">
                               <span className="text-violet-400 font-semibold">{formatPercent(fam.coverage)}</span>
-                              <div className="w-16 h-2 bg-slate-900 rounded-full overflow-hidden">
+                              <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
                                 <div className="h-full bg-violet-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, fam.coverage * 100)}%` }} />
                               </div>
                             </div>
@@ -974,8 +974,8 @@ const FocosNumerica = () => {
                           {/* Mobile summary */}
                           <div className="flex md:hidden items-center gap-2 text-[10px]">
                             <span className="text-violet-400 font-semibold">{formatPercent(fam.coverage)}</span>
-                            <span className="text-slate-400">·</span>
-                            <span className="text-slate-300">{formatShortCurrency(fam.ventas)}</span>
+                            <span className="text-slate-600">·</span>
+                            <span className="text-slate-700">{formatShortCurrency(fam.ventas)}</span>
                           </div>
                         </button>
 
@@ -986,17 +986,17 @@ const FocosNumerica = () => {
                               <div 
                                 key={`${p.nbProducto}-${i}`} 
                                 onClick={() => setSelectedProduct(p)}
-                                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 rounded-md hover:bg-slate-800/40 transition-colors border border-transparent hover:border-slate-700/30 cursor-pointer group"
+                                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 rounded-md hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-300/30 cursor-pointer group"
                               >
-                                <span className="text-[9px] md:text-[10px] font-mono text-slate-400 w-10 md:w-12 shrink-0">{p.nbProducto}</span>
+                                <span className="text-[9px] md:text-[10px] font-mono text-slate-600 w-10 md:w-12 shrink-0">{p.nbProducto}</span>
                                 <span className="flex-1 text-[11px] md:text-xs text-slate-100 font-medium truncate max-w-[150px] md:max-w-[220px] group-hover:text-sky-400 transition-colors">{p.nmProducto}</span>
                                 <div className="hidden md:flex items-center gap-4 text-xs">
                                   <span className="w-32 text-right text-slate-200">{formatCurrency(p.ventas)}</span>
-                                  <span className="w-16 text-right text-slate-300">{formatNumber(p.facturas)}</span>
-                                  <span className="w-20 text-right text-white font-semibold">{formatNumber(p.clientesCount)}</span>
+                                  <span className="w-16 text-right text-slate-700">{formatNumber(p.facturas)}</span>
+                                  <span className="w-20 text-right text-slate-900 font-semibold">{formatNumber(p.clientesCount)}</span>
                                   <div className="w-32 flex items-center justify-end gap-2">
                                     <span className="text-teal-300 font-bold">{formatPercent(p.coverage)}</span>
-                                    <div className="w-16 h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                       <div className="h-full bg-teal-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, p.coverage * 100)}%` }} />
                                     </div>
                                   </div>
@@ -1005,8 +1005,8 @@ const FocosNumerica = () => {
                                 {/* Mobile summary */}
                                 <div className="flex md:hidden items-center gap-1.5 text-[10px] shrink-0">
                                   <span className="text-teal-300 font-bold">{formatPercent(p.coverage)}</span>
-                                  <span className="text-slate-500">·</span>
-                                  <span className="text-slate-300">{formatShortCurrency(p.ventas)}</span>
+                                  <span className="text-slate-600">·</span>
+                                  <span className="text-slate-700">{formatShortCurrency(p.ventas)}</span>
                                 </div>
                               </div>
                             ))}
@@ -1028,16 +1028,16 @@ const FocosNumerica = () => {
       {selectedProduct && productStats && (
         <div 
           onClick={() => setSelectedProduct(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-slate-950/80 backdrop-blur-sm transition-opacity overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-white/80 backdrop-blur-sm transition-opacity overflow-y-auto"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-slate-800 rounded-xl md:rounded-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto shadow-2xl p-4 md:p-6 relative flex flex-col gap-4 md:gap-6 text-slate-300 my-auto"
+            className="bg-slate-100 border border-slate-200 rounded-xl md:rounded-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto shadow-2xl p-4 md:p-6 relative flex flex-col gap-4 md:gap-6 text-slate-700 my-auto"
           >
             {/* Close Button */}
             <button 
               onClick={() => setSelectedProduct(null)} 
-              className="absolute right-2 top-2 md:right-4 md:top-4 text-slate-500 hover:text-slate-200 transition-colors p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer z-10"
+              className="absolute right-2 top-2 md:right-4 md:top-4 text-slate-600 hover:text-slate-900 transition-colors p-1.5 rounded-lg hover:bg-slate-200 cursor-pointer z-10"
             >
               <X className="h-4 w-4 md:h-5 md:w-5" />
             </button>
@@ -1047,13 +1047,13 @@ const FocosNumerica = () => {
               <span className="text-[9px] md:text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-bold uppercase tracking-wider">
                 Ficha de Producto · Focos Numérica
               </span>
-              <h2 className="text-lg md:text-xl font-bold text-white mt-3">{selectedProduct.nmProducto}</h2>
-              <div className="flex flex-wrap gap-x-3 md:gap-x-4 gap-y-1 mt-1.5 text-[10px] md:text-xs text-slate-400">
-                <span>Código: <strong className="font-mono text-slate-300">{selectedProduct.nbProducto}</strong></span>
+              <h2 className="text-lg md:text-xl font-bold text-slate-900 mt-3">{selectedProduct.nmProducto}</h2>
+              <div className="flex flex-wrap gap-x-3 md:gap-x-4 gap-y-1 mt-1.5 text-[10px] md:text-xs text-slate-600">
+                <span>Código: <strong className="font-mono text-slate-700">{selectedProduct.nbProducto}</strong></span>
                 <span>·</span>
-                <span>Marca: <strong className="text-slate-300">{selectedProduct.nmTpMarca}</strong></span>
+                <span>Marca: <strong className="text-slate-700">{selectedProduct.nmTpMarca}</strong></span>
                 <span>·</span>
-                <span>Familia: <strong className="text-slate-300">{selectedProduct.nmTpFamilia}</strong></span>
+                <span>Familia: <strong className="text-slate-700">{selectedProduct.nmTpFamilia}</strong></span>
               </div>
             </div>
 
@@ -1066,28 +1066,28 @@ const FocosNumerica = () => {
                 { label: 'Clientes Únicos', value: formatNumber(productStats.totalClients), color: 'text-violet-400' },
                 { label: 'Cobertura Numérica', value: formatPercent(productStats.coverage), color: 'text-teal-400' }
               ].map((kpi, idx) => (
-                <div key={idx} className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-2.5 md:p-3.5 flex flex-col gap-0.5 md:gap-1">
-                  <span className="text-[9px] md:text-[10px] text-slate-500 uppercase tracking-wider font-semibold line-clamp-2">{kpi.label}</span>
+                <div key={idx} className="bg-white/40 border border-slate-200 rounded-lg md:rounded-xl p-2.5 md:p-3.5 flex flex-col gap-0.5 md:gap-1">
+                  <span className="text-[9px] md:text-[10px] text-slate-600 uppercase tracking-wider font-semibold line-clamp-2">{kpi.label}</span>
                   <span className={`text-base md:text-lg font-bold ${kpi.color} mt-0.5`}>{kpi.value}</span>
                 </div>
               ))}
             </div>
 
             {/* Additional Info */}
-            <div className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-3 md:p-4">
-              <h4 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mb-2 md:mb-3">Información Adicional</h4>
+            <div className="bg-white/40 border border-slate-200 rounded-lg md:rounded-xl p-3 md:p-4">
+              <h4 className="text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 md:mb-3">Información Adicional</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 text-[11px] md:text-xs">
                 <div>
-                  <span className="text-slate-500">Precio Promedio Unitario</span>
-                  <p className="text-white font-bold mt-1">{formatCurrency(productStats.avgPrice)}</p>
+                  <span className="text-slate-600">Precio Promedio Unitario</span>
+                  <p className="text-slate-900 font-bold mt-1">{formatCurrency(productStats.avgPrice)}</p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Peso Total</span>
-                  <p className="text-white font-bold mt-1">{formatKg(selectedProduct.pesoTotalKg || 0)}</p>
+                  <span className="text-slate-600">Peso Total</span>
+                  <p className="text-slate-900 font-bold mt-1">{formatKg(selectedProduct.pesoTotalKg || 0)}</p>
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <span className="text-slate-500">Ticket Promedio</span>
-                  <p className="text-white font-bold mt-1">{formatCurrency(productStats.totalInvoices > 0 ? productStats.totalSales / productStats.totalInvoices : 0)}</p>
+                  <span className="text-slate-600">Ticket Promedio</span>
+                  <p className="text-slate-900 font-bold mt-1">{formatCurrency(productStats.totalInvoices > 0 ? productStats.totalSales / productStats.totalInvoices : 0)}</p>
                 </div>
               </div>
             </div>
@@ -1095,8 +1095,8 @@ const FocosNumerica = () => {
             {/* Charts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               {/* Sede Donut */}
-              <div className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-4 md:p-5 flex flex-col">
-                <h4 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mb-3 md:mb-4">Ventas por Sede (Eje)</h4>
+              <div className="bg-white/40 border border-slate-200 rounded-lg md:rounded-xl p-4 md:p-5 flex flex-col">
+                <h4 className="text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 md:mb-4">Ventas por Sede (Eje)</h4>
                 <div className="flex-1 flex items-center justify-center min-h-[200px] md:min-h-[220px]">
                   {productStats.activeSedes.length > 0 ? (
                     <Chart options={productStats.donutOptions} series={productStats.donutSeries} type="donut" width="100%" height={200} />
@@ -1107,8 +1107,8 @@ const FocosNumerica = () => {
               </div>
 
               {/* Zones Bar */}
-              <div className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-4 md:p-5 flex flex-col">
-                <h4 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mb-3 md:mb-4">Top 5 Zonas por Ventas</h4>
+              <div className="bg-white/40 border border-slate-200 rounded-lg md:rounded-xl p-4 md:p-5 flex flex-col">
+                <h4 className="text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 md:mb-4">Top 5 Zonas por Ventas</h4>
                 <div className="flex-1 flex items-center justify-center min-h-[200px] md:min-h-[220px]">
                   {productStats.zoneList.length > 0 ? (
                     <Chart options={productStats.barOptions} series={productStats.barSeries} type="bar" width="100%" height={200} />
@@ -1121,22 +1121,22 @@ const FocosNumerica = () => {
 
             {/* Top Sellers Table */}
             {productStats.sellerList.length > 0 && (
-              <div className="bg-slate-950/40 border border-slate-800/80 rounded-lg md:rounded-xl p-4 md:p-5">
-                <h4 className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mb-3 md:mb-4">Top Vendedores</h4>
+              <div className="bg-white/40 border border-slate-200 rounded-lg md:rounded-xl p-4 md:p-5">
+                <h4 className="text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 md:mb-4">Top Vendedores</h4>
                 <div className="overflow-x-auto -mx-4 md:-mx-5 px-4 md:px-5">
                   <table className="w-full min-w-[400px] text-[11px] md:text-xs">
                     <thead>
-                      <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-wider text-[9px] md:text-[10px]">
+                      <tr className="border-b border-slate-200 text-slate-600 uppercase tracking-wider text-[9px] md:text-[10px]">
                         <th className="pb-2 pr-3 md:pr-4 text-left font-semibold">Vendedor</th>
                         <th className="pb-2 pr-3 md:pr-4 text-right font-semibold">Ventas</th>
                         <th className="pb-2 text-right font-semibold">Participación</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-900/60">
+                    <tbody className="divide-y divide-slate-200">
                       {productStats.sellerList.slice(0, 10).map((seller, idx) => (
-                        <tr key={idx} className="hover:bg-slate-800/20 transition-colors">
+                        <tr key={idx} className="hover:bg-slate-200/20 transition-colors">
                           <td className="py-2 pr-3 md:pr-4 text-slate-200 truncate max-w-[150px]">{seller.seller}</td>
-                          <td className="py-2 pr-3 md:pr-4 text-right text-white font-semibold whitespace-nowrap">{formatShortCurrency(seller.sales)}</td>
+                          <td className="py-2 pr-3 md:pr-4 text-right text-slate-900 font-semibold whitespace-nowrap">{formatShortCurrency(seller.sales)}</td>
                           <td className="py-2 text-right text-sky-400 font-bold">{formatPercent(seller.sales / productStats.totalSales)}</td>
                         </tr>
                       ))}

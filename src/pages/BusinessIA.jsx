@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs } from '../utils/calculations';
@@ -51,7 +51,7 @@ const renderMessageText = (text, isUser) => {
 
   const lines = clean.split('\n');
   return lines.map((line, idx) => (
-    <span key={idx} className={isUser ? 'text-white' : 'text-slate-100'}>
+    <span key={idx} className={isUser ? 'text-slate-900' : 'text-slate-100'}>
       {line}
       {idx < lines.length - 1 && <br />}
     </span>
@@ -298,7 +298,7 @@ ${cuboContext}`;
         return {
           ...c,
           risk: riskLevels[idx] || 'Bajo',
-          badgeColor: colors[idx] || 'bg-slate-500/10 text-slate-400',
+          badgeColor: colors[idx] || 'bg-slate-500/10 text-slate-600',
           daysInactive: days[idx] || 10
         };
       });
@@ -504,32 +504,32 @@ ${cuboContext}`;
   return (
     <div className="space-y-6">
       {/* 1. HEADER SECTOR PREMIUM */}
-      <div className="relative overflow-hidden rounded-3xl bg-slate-950/80 border border-purple-500/20 p-6 shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-white/80 border border-purple-500/20 p-6 shadow-2xl">
         <div className="absolute top-0 right-0 -mt-6 -mr-6 w-80 h-80 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
         
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="relative p-3.5 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-xl shadow-purple-500/25">
+            <div className="relative p-3.5 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-slate-900 shadow-xl shadow-purple-500/25">
               <Brain className="h-7 w-7" />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border border-slate-950 animate-ping"></div>
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
-                <div className="h-6 w-[1px] bg-slate-800"></div>
-                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">IA Empresarial</h1>
+                <div className="h-6 w-[1px] bg-slate-200"></div>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">IA Empresarial</h1>
                 <span className="text-[9px] md:text-[10px] bg-purple-500/20 text-purple-300 font-semibold px-2 py-0.5 rounded-full border border-purple-500/30">Motor Predictivo Activo</span>
               </div>
-              <p className="text-slate-300 text-sm mt-1">
+              <p className="text-slate-700 text-sm mt-1">
                 Análisis profundo, predicción lineal de tendencias y diagnóstico continuo del canal comercial regional.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4 bg-slate-900/60 border border-slate-800 rounded-2xl p-3 shrink-0">
+          <div className="flex items-center gap-4 bg-slate-100/60 border border-slate-200 rounded-2xl p-3 shrink-0">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-emerald-400 animate-pulse" />
-              <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">Monitoreo Comercial:</span>
+              <span className="text-[10px] text-slate-600 font-mono uppercase tracking-wider">Monitoreo Comercial:</span>
               <span className="text-[11px] text-emerald-400 font-bold font-mono">100% OK</span>
             </div>
           </div>
@@ -537,7 +537,7 @@ ${cuboContext}`;
       </div>
 
       {/* 2. TABS NAVIGATION */}
-      <div className="flex flex-nowrap overflow-x-auto scrollbar-none gap-2 p-1.5 rounded-2xl bg-slate-950/60 border border-slate-900 backdrop-blur-md">
+      <div className="flex flex-nowrap overflow-x-auto scrollbar-none gap-2 p-1.5 rounded-2xl bg-white/80 border border-slate-200 backdrop-blur-md">
         {[
           { id: 'overview',   label: 'Vista General',       icon: Compass    },
           { id: 'ai',         label: 'Diagnóstico IA',      icon: Brain,     badge: anomalies.length },
@@ -551,14 +551,14 @@ ${cuboContext}`;
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 text-xs font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-300 whitespace-nowrap shrink-0 ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-slate-900 shadow-lg shadow-purple-500/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               <Icon className="h-4 w-4" />
               <span>{tab.label}</span>
               {tab.badge > 0 && (
-                <span className="bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                <span className="bg-rose-500 text-slate-900 text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
                   {tab.badge}
                 </span>
               )}
@@ -572,16 +572,16 @@ ${cuboContext}`;
         <div className="space-y-6">
           {/* Executive KPI Grid */}
           <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
-            <GlassCard hoverable={true} className="bg-slate-950/70 border border-slate-900 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
+            <GlassCard hoverable={true} className="bg-white border border-slate-200 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 bg-blue-500/5 text-blue-400 rounded-bl-3xl group-hover:bg-blue-500/10 transition-colors">
                 <DollarSign className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Ventas Brutas Totales</p>
-                <p className="text-2xl font-extrabold text-white mt-3">{formatCurrency(totalSales)}</p>
+                <p className="text-slate-600 text-[10px] uppercase font-bold tracking-wider">Ventas Brutas Totales</p>
+                <p className="text-2xl font-extrabold text-slate-900 mt-3">{formatCurrency(totalSales)}</p>
               </div>
-              <div className="mt-4 pt-3 border-t border-slate-900 flex items-center justify-between">
-                <span className="text-[10px] text-slate-500">Crecimiento YoY</span>
+              <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between">
+                <span className="text-[10px] text-slate-600">Crecimiento YoY</span>
                 <span className="text-xs text-emerald-400 font-bold flex items-center gap-0.5">
                   <TrendingUp className="h-3 w-3" />
                   {formatPercent(growth)}
@@ -589,46 +589,46 @@ ${cuboContext}`;
               </div>
             </GlassCard>
 
-            <GlassCard hoverable={true} className="bg-slate-950/70 border border-slate-900 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
+            <GlassCard hoverable={true} className="bg-white border border-slate-200 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 bg-emerald-500/5 text-emerald-400 rounded-bl-3xl group-hover:bg-emerald-500/10 transition-colors">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Ventas Netas Consolidadas</p>
-                <p className="text-2xl font-extrabold text-white mt-3">{formatCurrency(netSales)}</p>
+                <p className="text-slate-600 text-[10px] uppercase font-bold tracking-wider">Ventas Netas Consolidadas</p>
+                <p className="text-2xl font-extrabold text-slate-900 mt-3">{formatCurrency(netSales)}</p>
               </div>
-              <div className="mt-4 pt-3 border-t border-slate-900 flex items-center justify-between">
-                <span className="text-[10px] text-slate-500">Fuga por Retornos</span>
+              <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between">
+                <span className="text-[10px] text-slate-600">Fuga por Retornos</span>
                 <span className="text-xs text-rose-400 font-semibold">
                   {formatPercent(totalReturns / totalSales)}
                 </span>
               </div>
             </GlassCard>
 
-            <GlassCard hoverable={true} className="bg-slate-950/70 border border-slate-900 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
+            <GlassCard hoverable={true} className="bg-white border border-slate-200 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 bg-amber-500/5 text-amber-400 rounded-bl-3xl group-hover:bg-amber-500/10 transition-colors">
                 <Percent className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Margen de Rentabilidad</p>
-                <p className="text-2xl font-extrabold text-white mt-3">{formatPercent(profitability)}</p>
+                <p className="text-slate-600 text-[10px] uppercase font-bold tracking-wider">Margen de Rentabilidad</p>
+                <p className="text-2xl font-extrabold text-slate-900 mt-3">{formatPercent(profitability)}</p>
               </div>
-              <div className="mt-4 pt-3 border-t border-slate-900 flex items-center justify-between">
-                <span className="text-[10px] text-slate-500">Desempeño Promedio</span>
+              <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between">
+                <span className="text-[10px] text-slate-600">Desempeño Promedio</span>
                 <span className="text-xs text-amber-400 font-semibold">Saludable</span>
               </div>
             </GlassCard>
 
-            <GlassCard hoverable={true} className="bg-slate-950/70 border border-slate-900 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
+            <GlassCard hoverable={true} className="bg-white border border-slate-200 p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 bg-indigo-500/5 text-indigo-400 rounded-bl-3xl group-hover:bg-indigo-500/10 transition-colors">
                 <Truck className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Calidad de Entrega Logística</p>
-                <p className="text-2xl font-extrabold text-white mt-3">{formatPercent(logisticsQuality)}</p>
+                <p className="text-slate-600 text-[10px] uppercase font-bold tracking-wider">Calidad de Entrega Logística</p>
+                <p className="text-2xl font-extrabold text-slate-900 mt-3">{formatPercent(logisticsQuality)}</p>
               </div>
-              <div className="mt-4 pt-3 border-t border-slate-900 flex items-center justify-between">
-                <span className="text-[10px] text-slate-500">Tasa de Efectividad</span>
+              <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between">
+                <span className="text-[10px] text-slate-600">Tasa de Efectividad</span>
                 <span className="text-xs text-indigo-400 font-semibold">Tolerancia: &gt;95%</span>
               </div>
             </GlassCard>
@@ -639,8 +639,8 @@ ${cuboContext}`;
             <GlassCard hoverable={false} className="lg:col-span-2 p-6 flex flex-col justify-between shadow-xl">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-base font-bold text-white">Cumplimiento Consolidado vs Meta</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Indicador de avance de ventas contra el presupuesto asignado regional.</p>
+                  <h3 className="text-base font-bold text-slate-900">Cumplimiento Consolidado vs Meta</h3>
+                  <p className="text-xs text-slate-600 mt-0.5">Indicador de avance de ventas contra el presupuesto asignado regional.</p>
                 </div>
                 <div className="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono font-bold">
                   Meta: {formatCurrency(totalSales / compliance)}
@@ -652,20 +652,20 @@ ${cuboContext}`;
                   <BIGaugeChart val={compliance} />
                 </div>
                 <div className="flex-1 space-y-4">
-                  <div className="p-4 rounded-2xl bg-slate-900/30 border border-slate-900/80">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Ticket Promedio por Factura</p>
-                    <p className="text-xl font-bold text-white mt-1">{formatCurrency(averageTicket)}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Estimado sobre {formatShortCurrency(totalFacturas)} facturas generadas.</p>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <p className="text-xs text-slate-600 uppercase tracking-wider font-semibold">Ticket Promedio por Factura</p>
+                    <p className="text-xl font-bold text-slate-900 mt-1">{formatCurrency(averageTicket)}</p>
+                    <p className="text-[10px] text-slate-600 mt-1">Estimado sobre {formatShortCurrency(totalFacturas)} facturas generadas.</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-slate-900/30 border border-slate-900/80 space-y-2">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Líderes de Desempeño</p>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <p className="text-xs text-slate-600 uppercase tracking-wider font-semibold">Líderes de Desempeño</p>
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Mejor Vendedor:</span>
-                      <span className="text-white font-bold">{topSeller}</span>
+                      <span className="text-slate-600">Mejor Vendedor:</span>
+                      <span className="text-slate-900 font-bold">{topSeller}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Zona Comercial Top:</span>
-                      <span className="text-white font-bold">Zona {topZone}</span>
+                      <span className="text-slate-600">Zona Comercial Top:</span>
+                      <span className="text-slate-900 font-bold">Zona {topZone}</span>
                     </div>
                   </div>
                 </div>
@@ -674,8 +674,8 @@ ${cuboContext}`;
 
             <GlassCard hoverable={false} className="p-6 flex flex-col justify-between shadow-xl">
               <div>
-                <h3 className="text-base font-bold text-white mb-1">Participación de Marcas</h3>
-                <p className="text-xs text-slate-400 mb-4">Contribución de ventas de cada marca comercial en 2026.</p>
+                <h3 className="text-base font-bold text-slate-900 mb-1">Participación de Marcas</h3>
+                <p className="text-xs text-slate-600 mb-4">Contribución de ventas de cada marca comercial en 2026.</p>
               </div>
               <div className="flex-1 min-h-[300px] flex items-center justify-center">
                 <BIDonutChart data={filteredData.providers} />
@@ -690,14 +690,14 @@ ${cuboContext}`;
               <Zap className="h-8 w-8" />
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h4 className="text-base font-bold text-white">¿Sabías qué? — Análisis Logístico IA</h4>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                El <strong className="text-purple-300">52,2%</strong> de las devoluciones del periodo consolidan la justificación <strong className="text-white">"SIN PLATA"</strong>. Esto representa un problema de liquidez en el punto de venta y no una falla en la frescura o calidad de los productos de Alpina.
+              <h4 className="text-base font-bold text-slate-900">¿Sabías qué? — Análisis Logístico IA</h4>
+              <p className="text-xs text-slate-700 mt-1 leading-relaxed">
+                El <strong className="text-purple-300">52,2%</strong> de las devoluciones del periodo consolidan la justificación <strong className="text-slate-900">"SIN PLATA"</strong>. Esto representa un problema de liquidez en el punto de venta y no una falla en la frescura o calidad de los productos de Alpina.
               </p>
             </div>
             <button 
               onClick={() => setActiveTab('ai')}
-              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs text-white font-bold transition-all duration-300 flex items-center gap-1.5 shadow-lg shadow-purple-500/20 hover:scale-105 shrink-0"
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs text-slate-900 font-bold transition-all duration-300 flex items-center gap-1.5 shadow-lg shadow-purple-500/20 hover:scale-105 shrink-0"
             >
               <span>Ver Diagnóstico IA</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -716,7 +716,7 @@ ${cuboContext}`;
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-rose-500 animate-bounce" />
-                    <h3 className="text-base font-extrabold text-white">Anomalías Detectadas</h3>
+                    <h3 className="text-base font-extrabold text-slate-900">Anomalías Detectadas</h3>
                   </div>
                   <span className="text-[10px] bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded-full border border-rose-500/30">
                     {anomalies.length} Alertas Activas
@@ -751,10 +751,10 @@ ${cuboContext}`;
                         }`}></div>
                       </div>
                       <h4 className="text-xs font-bold text-slate-100">{anom.title}</h4>
-                      <p className="text-[10px] text-slate-300 leading-relaxed font-medium">{anom.description}</p>
+                      <p className="text-[10px] text-slate-700 leading-relaxed font-medium">{anom.description}</p>
 
-                      <div className="pt-3 border-t border-slate-900/60 flex flex-col gap-1">
-                        <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Impacto Comercial Esperado:</span>
+                      <div className="pt-3 border-t border-slate-200 flex flex-col gap-1">
+                        <span className="text-[8px] text-slate-600 font-bold uppercase tracking-wider">Impacto Comercial Esperado:</span>
                         <span className="text-[10px] text-slate-200 font-semibold">{anom.impact}</span>
                       </div>
                       {anom.route && (
@@ -766,7 +766,7 @@ ${cuboContext}`;
                   {anomalies.length === 0 && (
                     <div className="text-center py-16">
                       <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto animate-pulse" />
-                      <p className="text-xs text-slate-400 font-semibold mt-3">¡Excelente! Sin anomalías en los umbrales monitoreados.</p>
+                      <p className="text-xs text-slate-600 font-semibold mt-3">¡Excelente! Sin anomalías en los umbrales monitoreados.</p>
                     </div>
                   )}
                 </div>
@@ -781,61 +781,61 @@ ${cuboContext}`;
               <div className="flex items-center gap-2.5">
                 <Compass className="h-5 w-5 text-indigo-400" />
                 <div>
-                  <h3 className="text-base font-bold text-white">Contexto Competitivo</h3>
-                  <p className="text-xs text-slate-400">Participación nacional estimada · Lácteos Colombia</p>
+                  <h3 className="text-base font-bold text-slate-900">Contexto Competitivo</h3>
+                  <p className="text-xs text-slate-600">Participación nacional estimada · Lácteos Colombia</p>
                 </div>
               </div>
 
               <div className="space-y-4 pt-2">
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <span className="text-slate-700 font-semibold flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                       Colanta
                     </span>
                     <span className="text-emerald-400 font-bold">~21,9%</span>
                   </div>
-                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                     <div className="bg-gradient-to-r from-emerald-600 to-teal-500 h-full rounded-full" style={{ width: '44%' }}></div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <span className="text-slate-700 font-semibold flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                       Alpina
                     </span>
                     <span className="text-blue-400 font-bold">~12,0%</span>
                   </div>
-                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                     <div className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full" style={{ width: '24%' }}></div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <span className="text-slate-700 font-semibold flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
                       Alquería
                     </span>
                     <span className="text-red-400 font-bold">~10,6%</span>
                   </div>
-                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                     <div className="bg-gradient-to-r from-red-600 to-orange-500 h-full rounded-full" style={{ width: '21%' }}></div>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-900/60 space-y-2">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Participación nacional estimada · Euromonitor / La República · ref. 2024–2025</span>
+              <div className="pt-3 border-t border-slate-200 space-y-2">
+                <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Participación nacional estimada · Euromonitor / La República · ref. 2024–2025</span>
                 <div className="grid grid-cols-2 gap-2 text-[10px]">
-                  <div className="p-2 rounded-xl bg-slate-900/40 border border-slate-900">
-                    <p className="text-slate-400 font-semibold">Leche Líquida (UHT)</p>
+                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-slate-600 font-semibold">Leche Líquida (UHT)</p>
                     <p className="text-red-400 font-bold mt-0.5">Alquería activa</p>
                   </div>
-                  <div className="p-2 rounded-xl bg-slate-900/40 border border-slate-900">
-                    <p className="text-slate-400 font-semibold">Hard Discount</p>
+                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-slate-600 font-semibold">Hard Discount</p>
                     <p className="text-amber-400 font-bold mt-0.5">D1 / Ara creciendo</p>
                   </div>
                 </div>
@@ -847,32 +847,32 @@ ${cuboContext}`;
               <div className="flex items-center gap-2.5">
                 <Activity className="h-5 w-5 text-amber-500" />
                 <div>
-                  <h3 className="text-base font-bold text-white">Semáforo de Clientes en Riesgo</h3>
-                  <p className="text-xs text-slate-400">Monitoreo de deserción y alta fricción</p>
+                  <h3 className="text-base font-bold text-slate-900">Semáforo de Clientes en Riesgo</h3>
+                  <p className="text-xs text-slate-600">Monitoreo de deserción y alta fricción</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 {clientsInRisk.map((c, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-slate-950/40 border border-slate-900 flex flex-col gap-2">
+                  <div key={idx} className="p-3.5 rounded-2xl bg-white/40 border border-slate-200 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-white truncate max-w-[150px]">{c.cliente}</span>
+                      <span className="text-[10px] font-bold text-slate-900 truncate max-w-[150px]">{c.cliente}</span>
                       <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${c.badgeColor}`}>
                         {c.risk}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <div className="flex items-center justify-between text-[10px] text-slate-600">
                       <span>Inactivo: <strong className="text-slate-200">{c.daysInactive} días</strong></span>
                       <span>Devolución: <strong className="text-rose-400">{formatCurrency(c.totalReturns)}</strong></span>
                     </div>
-                    <div className="text-[9px] text-slate-500 leading-normal">
-                      Causal: <strong className="text-slate-300">{c.concept}</strong>
+                    <div className="text-[9px] text-slate-600 leading-normal">
+                      Causal: <strong className="text-slate-700">{c.concept}</strong>
                     </div>
                   </div>
                 ))}
                 
                 {clientsInRisk.length === 0 && (
-                  <div className="text-center py-6 text-slate-500 text-xs">
+                  <div className="text-center py-6 text-slate-600 text-xs">
                     No se detectaron clientes con nivel de riesgo crítico en este periodo.
                   </div>
                 )}
@@ -887,8 +887,8 @@ ${cuboContext}`;
               <div className="flex items-center gap-2.5 mb-4">
                 <Sparkles className="h-5 w-5 text-indigo-400" />
                 <div>
-                  <h3 className="text-base font-bold text-white">Insights Automáticos</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Hallazgos extraídos del modelo de datos.</p>
+                  <h3 className="text-base font-bold text-slate-900">Insights Automáticos</h3>
+                  <p className="text-xs text-slate-600 mt-0.5">Hallazgos extraídos del modelo de datos.</p>
                 </div>
               </div>
               
@@ -896,13 +896,13 @@ ${cuboContext}`;
                 {insights.map((ins, idx) => {
                   const Icon = ins.icon;
                   return (
-                    <div key={idx} className="p-4 rounded-2xl bg-slate-950/40 border border-slate-900 flex items-start gap-4 hover:border-purple-500/20 transition-all duration-300">
+                    <div key={idx} className="p-4 rounded-2xl bg-white/40 border border-slate-200 flex items-start gap-4 hover:border-purple-500/20 transition-all duration-300">
                       <div className={`p-2.5 rounded-xl shrink-0 ${ins.badgeColor}`}>
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="space-y-1">
                         <h4 className="text-sm font-bold text-slate-100">{ins.title}</h4>
-                        <p className="text-xs text-slate-400 leading-relaxed">{ins.text}</p>
+                        <p className="text-xs text-slate-600 leading-relaxed">{ins.text}</p>
                       </div>
                     </div>
                   );
@@ -916,19 +916,19 @@ ${cuboContext}`;
                 <div className="flex items-center gap-2.5">
                   <Lightbulb className="h-5 w-5 text-amber-400" />
                   <div>
-                    <h3 className="text-base font-bold text-white">Consejero de Negocios</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Acciones generadas para mitigar riesgos.</p>
+                    <h3 className="text-base font-bold text-slate-900">Consejero de Negocios</h3>
+                    <p className="text-xs text-slate-600 mt-0.5">Acciones generadas para mitigar riesgos.</p>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4">
                 {recommendations.slice(0, 2).map((rec, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-slate-900/30 border border-slate-900/60 flex flex-col justify-between hover:border-slate-800 transition-all duration-300">
+                  <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between hover:border-slate-200 transition-all duration-300">
                     <div>
                       <span className="text-[8px] bg-amber-500/10 text-amber-400 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/20 uppercase tracking-wider">Alta Prioridad</span>
                       <h4 className="text-xs font-bold text-slate-100 mt-2">{rec.title}</h4>
-                      <p className="text-[10px] text-slate-400 leading-relaxed mt-2">{rec.text}</p>
+                      <p className="text-[10px] text-slate-600 leading-relaxed mt-2">{rec.text}</p>
                     </div>
                     <button className="mt-4 flex items-center justify-center gap-1 text-[10px] bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 py-1.5 px-3 rounded-lg font-bold group transition-all duration-300 border border-indigo-500/10 w-full">
                       <span>{rec.action}</span>
@@ -945,22 +945,22 @@ ${cuboContext}`;
       {activeTab === 'chat' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Columna Izquierda: Ventana de Chat */}
-          <div className="lg:col-span-2 flex flex-col h-[600px] rounded-3xl bg-slate-950/70 border border-slate-900 overflow-hidden shadow-xl">
+          <div className="lg:col-span-2 flex flex-col h-[600px] rounded-3xl bg-white border border-slate-200 overflow-hidden shadow-xl">
             {/* Cabecera del Chat */}
-            <div className="p-4 border-b border-slate-900 bg-slate-950/90 flex items-center justify-between gap-3">
+            <div className="p-4 border-b border-slate-200 bg-white/90 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="relative p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
                   <Brain className="h-5 w-5" />
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Consultor de Negocios IA</h3>
-                  <p className="text-[10px] text-slate-400">Analista local Zentra Alpina · Activo</p>
+                  <h3 className="text-sm font-bold text-slate-900">Consultor de Negocios IA</h3>
+                  <p className="text-[10px] text-slate-600">Analista local Zentra Alpina · Activo</p>
                 </div>
               </div>
               <button
                 onClick={() => setChatMessages([])}
-                className="text-[10px] text-slate-500 hover:text-slate-300 border border-slate-800 hover:border-slate-700 px-2.5 py-1 rounded-lg transition-all"
+                className="text-[10px] text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-2.5 py-1 rounded-lg transition-all"
                 title="Limpiar historial del chat"
               >
                 Limpiar chat
@@ -973,18 +973,18 @@ ${cuboContext}`;
                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl p-3.5 space-y-1 ${
                     msg.sender === 'user'
-                      ? 'bg-purple-600 text-white rounded-tr-none shadow-lg'
-                      : 'bg-slate-900/80 border border-slate-800 text-slate-100 rounded-tl-none relative shadow-md'
+                      ? 'bg-purple-600 text-slate-900 rounded-tr-none shadow-lg'
+                      : 'bg-slate-100/80 border border-slate-200 text-slate-100 rounded-tl-none relative shadow-md'
                   }`}>
                     <p className="text-xs whitespace-pre-line leading-relaxed font-medium">{renderMessageText(msg.text, msg.sender === 'user')}</p>
-                    <span className="block text-[9px] text-slate-400 text-right mt-1">{msg.time}</span>
+                    <span className="block text-[9px] text-slate-600 text-right mt-1">{msg.time}</span>
                   </div>
                 </div>
               ))}
               
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl rounded-tl-none p-3.5 flex items-center gap-1">
+                  <div className="bg-slate-100/80 border border-slate-200 rounded-2xl rounded-tl-none p-3.5 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
                     <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
                     <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
@@ -994,8 +994,8 @@ ${cuboContext}`;
             </div>
 
             {/* Sugerencias de Preguntas */}
-            <div className="p-3 bg-slate-950/80 border-t border-slate-900 space-y-2">
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-1">Preguntas Recomendadas</p>
+            <div className="p-3 bg-white/80 border-t border-slate-200 space-y-2">
+              <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest px-1">Preguntas Recomendadas</p>
               <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-1">
                 {[
                   { text: '¿Quiénes son los ejecutivos con mayor tasa de devolución este periodo?', short: 'Ejecutivos en Riesgo' },
@@ -1008,7 +1008,7 @@ ${cuboContext}`;
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(q.text)}
-                    className="text-[10px] bg-slate-900 hover:bg-purple-950/30 text-slate-300 hover:text-purple-300 border border-slate-800 hover:border-purple-500/20 px-3 py-1.5 rounded-xl transition-all font-medium text-left cursor-pointer"
+                    className="text-[10px] bg-slate-100 hover:bg-purple-950/30 text-slate-700 hover:text-purple-300 border border-slate-200 hover:border-purple-500/20 px-3 py-1.5 rounded-xl transition-all font-medium text-left cursor-pointer"
                   >
                     {q.short}
                   </button>
@@ -1017,18 +1017,18 @@ ${cuboContext}`;
             </div>
 
             {/* Input del Chat */}
-            <div className="p-3 border-t border-slate-900 bg-slate-950/95 flex gap-2">
+            <div className="p-3 border-t border-slate-200 bg-white/95 flex gap-2">
               <input
                 type="text"
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Escribe tu pregunta sobre ventas, devoluciones, marcas..."
-                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
               />
               <button
                 onClick={() => handleSendMessage()}
-                className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/10 hover:scale-[1.02] cursor-pointer"
+                className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-slate-900 rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/10 hover:scale-[1.02] cursor-pointer"
               >
                 Preguntar
               </button>
@@ -1038,35 +1038,35 @@ ${cuboContext}`;
           {/* Columna Derecha: Panel de Estadísticas en Vivo */}
           <div className="space-y-6">
             <GlassCard hoverable={false} className="p-5 shadow-xl space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                 <Activity className="h-4.5 w-4.5 text-purple-400" />
                 Resumen de Datos Actuales
               </h3>
-              <p className="text-[11px] text-slate-400">Cifras del periodo en curso cargadas en el store de Zustand.</p>
+              <p className="text-[11px] text-slate-600">Cifras del periodo en curso cargadas en el store de Zustand.</p>
               
               <div className="space-y-3 pt-2">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 font-medium">Ventas Netas:</span>
-                  <span className="text-white font-extrabold">{formatCurrency(kpis.netSales)}</span>
+                  <span className="text-slate-600 font-medium">Ventas Netas:</span>
+                  <span className="text-slate-900 font-extrabold">{formatCurrency(kpis.netSales)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 font-medium">Cumplimiento Meta:</span>
+                  <span className="text-slate-600 font-medium">Cumplimiento Meta:</span>
                   <span className="text-blue-400 font-extrabold">{formatPercent(kpis.compliance)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 font-medium">Tasa de Devolución:</span>
+                  <span className="text-slate-600 font-medium">Tasa de Devolución:</span>
                   <span className="text-rose-400 font-extrabold">{formatPercent(kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 font-medium">Vendedor Líder:</span>
+                  <span className="text-slate-600 font-medium">Vendedor Líder:</span>
                   <span className="text-emerald-400 font-extrabold">{kpis.topSeller}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 font-medium">Zona Estrella:</span>
+                  <span className="text-slate-600 font-medium">Zona Estrella:</span>
                   <span className="text-indigo-400 font-extrabold">Zona {kpis.topZone}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-900">
-                  <span className="text-slate-400 font-medium">Día hábil:</span>
+                <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200">
+                  <span className="text-slate-600 font-medium">Día hábil:</span>
                   <span className="text-amber-400 font-extrabold">
                     {currentWorkDay > 0 ? `Día ${currentWorkDay} / 22` : 'Auto-detectado'}
                   </span>
@@ -1075,8 +1075,8 @@ ${cuboContext}`;
             </GlassCard>
 
             <GlassCard hoverable={false} className="p-5 shadow-xl space-y-3">
-              <h4 className="text-xs font-bold text-white">Notas de Funcionamiento</h4>
-              <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+              <h4 className="text-xs font-bold text-slate-900">Notas de Funcionamiento</h4>
+              <p className="text-[10px] text-slate-600 leading-relaxed font-medium">
                 Este asistente procesa el cubo de datos cargado localmente. No realiza llamadas a servidores externos, garantizando el 100% de confidencialidad de la información comercial de Alpina.
               </p>
             </GlassCard>
@@ -1091,17 +1091,17 @@ ${cuboContext}`;
             {/* Panel de Controles (Sliders) */}
             <GlassCard hoverable={false} className="p-5 shadow-xl space-y-6">
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                   <Zap className="h-4.5 w-4.5 text-blue-400" />
                   Palancas de Simulación
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-1">Ajusta los sliders para evaluar impactos potenciales.</p>
+                <p className="text-[11px] text-slate-600 mt-1">Ajusta los sliders para evaluar impactos potenciales.</p>
               </div>
 
               {/* Slider 1: Reducción Devoluciones */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-300 font-medium">Mitigación de Devoluciones</span>
+                  <span className="text-slate-700 font-medium">Mitigación de Devoluciones</span>
                   <span className="text-blue-400 font-bold">{sliderDevRate}% menos</span>
                 </div>
                 <input
@@ -1110,9 +1110,9 @@ ${cuboContext}`;
                   max="100"
                   value={sliderDevRate}
                   onChange={e => setSliderDevRate(Number(e.target.value))}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
-                <p className="text-[10px] text-slate-500 leading-relaxed">
+                <p className="text-[10px] text-slate-600 leading-relaxed">
                   Reduce el volumen total de retornos de mercancía mediante mejoras en la calidad logística.
                 </p>
               </div>
@@ -1120,7 +1120,7 @@ ${cuboContext}`;
               {/* Slider 2: Incremento Ticket Promedio */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-300 font-medium">Aumento en Ticket Promedio</span>
+                  <span className="text-slate-700 font-medium">Aumento en Ticket Promedio</span>
                   <span className="text-emerald-400 font-bold">+{sliderTicket}%</span>
                 </div>
                 <input
@@ -1129,9 +1129,9 @@ ${cuboContext}`;
                   max="30"
                   value={sliderTicket}
                   onChange={e => setSliderTicket(Number(e.target.value))}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
-                <p className="text-[10px] text-slate-500 leading-relaxed">
+                <p className="text-[10px] text-slate-600 leading-relaxed">
                   Incrementa el valor neto medio por factura incrementando la venta cruzada.
                 </p>
               </div>
@@ -1139,7 +1139,7 @@ ${cuboContext}`;
               {/* Slider 3: Crecimiento General en Ventas */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-300 font-medium">Crecimiento de Volumen Bruto</span>
+                  <span className="text-slate-700 font-medium">Crecimiento de Volumen Bruto</span>
                   <span className="text-indigo-400 font-bold">+{sliderVol}%</span>
                 </div>
                 <input
@@ -1148,9 +1148,9 @@ ${cuboContext}`;
                   max="25"
                   value={sliderVol}
                   onChange={e => setSliderVol(Number(e.target.value))}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                 />
-                <p className="text-[10px] text-slate-500 leading-relaxed">
+                <p className="text-[10px] text-slate-600 leading-relaxed">
                   Aumenta el volumen total de cajas vendidas atrayendo nuevos clientes o ampliando rutas.
                 </p>
               </div>
@@ -1158,7 +1158,7 @@ ${cuboContext}`;
               {/* Botón de reinicio */}
               <button
                 onClick={() => { setSliderDevRate(0); setSliderTicket(0); setSliderVol(0); }}
-                className="w-full py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs text-slate-300 font-bold transition-all cursor-pointer"
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-xs text-slate-700 font-bold transition-all cursor-pointer"
               >
                 Resetear Parámetros
               </button>
@@ -1171,11 +1171,11 @@ ${cuboContext}`;
               <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
                 
                 {/* Ventas Brutas */}
-                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-slate-900 bg-slate-950/40 relative overflow-hidden">
+                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-slate-200 bg-white/40 relative overflow-hidden">
                   <div>
-                    <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Ventas Brutas Sim.</p>
-                    <p className="text-lg font-extrabold text-white mt-1.5">{formatCurrency(simSales)}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Base: {formatShortCurrency(kpis.totalSales)}</p>
+                    <p className="text-slate-600 text-[9px] uppercase font-bold tracking-wider">Ventas Brutas Sim.</p>
+                    <p className="text-lg font-extrabold text-slate-900 mt-1.5">{formatCurrency(simSales)}</p>
+                    <p className="text-[10px] text-slate-600 mt-1">Base: {formatShortCurrency(kpis.totalSales)}</p>
                   </div>
                   {simSales > kpis.totalSales && (
                     <span className="absolute top-2 right-2 text-[9px] font-bold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">
@@ -1185,11 +1185,11 @@ ${cuboContext}`;
                 </GlassCard>
 
                 {/* Devoluciones */}
-                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-slate-900 bg-slate-950/40 relative overflow-hidden">
+                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-slate-200 bg-white/40 relative overflow-hidden">
                   <div>
-                    <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Devoluciones Sim.</p>
+                    <p className="text-slate-600 text-[9px] uppercase font-bold tracking-wider">Devoluciones Sim.</p>
                     <p className="text-lg font-extrabold text-rose-400 mt-1.5">{formatCurrency(simReturns)}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Base: {formatShortCurrency(kpis.totalReturns)}</p>
+                    <p className="text-[10px] text-slate-600 mt-1">Base: {formatShortCurrency(kpis.totalReturns)}</p>
                   </div>
                   {simReturns !== kpis.totalReturns && (
                     <span className={`absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded border ${
@@ -1203,11 +1203,11 @@ ${cuboContext}`;
                 </GlassCard>
 
                 {/* Ventas Netas */}
-                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-blue-500/20 bg-slate-950/40 relative overflow-hidden shadow-lg shadow-blue-500/[0.02]">
+                <GlassCard hoverable={false} className="p-4 flex flex-col justify-between border-blue-500/20 bg-white/40 relative overflow-hidden shadow-lg shadow-blue-500/[0.02]">
                   <div>
-                    <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Ventas Netas Sim.</p>
+                    <p className="text-slate-600 text-[9px] uppercase font-bold tracking-wider">Ventas Netas Sim.</p>
                     <p className="text-lg font-extrabold text-emerald-400 mt-1.5">{formatCurrency(simNetSales)}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Base: {formatShortCurrency(kpis.netSales)}</p>
+                    <p className="text-[10px] text-slate-600 mt-1">Base: {formatShortCurrency(kpis.netSales)}</p>
                   </div>
                   {simNetSales > kpis.netSales && (
                     <span className="absolute top-2 right-2 text-[9px] font-bold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">
@@ -1220,7 +1220,7 @@ ${cuboContext}`;
               {/* Gráfico Comparativo */}
               <GlassCard hoverable={false} className="p-5 shadow-xl">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-bold text-white">Impacto Financiero: Base vs Simulado</h3>
+                  <h3 className="text-sm font-bold text-slate-900">Impacto Financiero: Base vs Simulado</h3>
                   <span className="text-[10px] bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/20">
                     Proyección de Cumplimiento: {formatPercent(simCompliance)}
                   </span>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import useStore from '../store/useStore';
 import { getFilteredData, ZONA_CIUDAD_MAP } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
@@ -19,7 +19,7 @@ const CITY_META = {
   PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20' },
   MANIZALES: { label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20' },
   ARMENIA:   { label: 'Eje Quindío',  bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
-  OTRO:      { label: 'Otro',         bg: 'bg-slate-500/10',   text: 'text-slate-400',   border: 'border-slate-700' },
+  OTRO:      { label: 'Otro',         bg: 'bg-slate-500/10',   text: 'text-slate-600',   border: 'border-slate-300' },
 };
 
 // Colores semáforo según % de proyección
@@ -189,7 +189,7 @@ const ProvidersAnalysis = () => {
   const TH = ({ col, children, right }) => (
     <th
       onClick={() => toggleSort(col)}
-      className={`pb-3 px-2 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 select-none whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}
+      className={`pb-3 px-2 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-slate-600 cursor-pointer hover:text-slate-700 select-none whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}
     >
       {children}<SortIcon col={col} />
     </th>
@@ -205,13 +205,13 @@ const ProvidersAnalysis = () => {
       {/* Header */}
       <div className="space-y-4">
         <div className="flex flex-col gap-3">
-          <div className="inline-flex items-center gap-3 rounded-full bg-slate-950/70 border border-slate-800 px-4 py-2 shadow-lg w-fit">
+          <div className="inline-flex items-center gap-3 rounded-full bg-white border border-slate-200 px-4 py-2 shadow-lg w-fit">
             <img src={alpinaLogo} alt="Alpina" className="h-9 w-auto" loading="lazy" />
-            <span className="text-slate-300 text-xs md:text-sm uppercase tracking-[0.25em]">Análisis Proveedores</span>
+            <span className="text-slate-700 text-xs md:text-sm uppercase tracking-[0.25em]">Análisis Proveedores</span>
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Derivados vs Otros</h1>
-            <p className="text-slate-300 text-xs md:text-sm mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Derivados vs Otros</h1>
+            <p className="text-slate-700 text-xs md:text-sm mt-1">
               Presupuesto, venta real y proyección al cierre del mes por vendedor — Derivados y Otros separados.
             </p>
           </div>
@@ -220,35 +220,35 @@ const ProvidersAnalysis = () => {
 
       {/* KPIs top */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-sky-500/20 p-3 md:p-4">
-          <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider">Total Derivados</p>
+        <GlassCard hoverable={false} className="bg-white border border-sky-500/20 p-3 md:p-4">
+          <p className="text-[9px] md:text-[10px] text-slate-600 uppercase tracking-wider">Total Derivados</p>
           <p className="text-lg md:text-2xl font-bold text-sky-400 mt-1">{formatShortCurrency(totalDerivados)}</p>
-          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{totalVentas > 0 ? Math.round(totalDerivados / totalVentas * 100) : 0}% del total</p>
+          <p className="text-[9px] md:text-[10px] text-slate-600 mt-1">{totalVentas > 0 ? Math.round(totalDerivados / totalVentas * 100) : 0}% del total</p>
         </GlassCard>
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-violet-500/20 p-3 md:p-4">
-          <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider">Total Otros</p>
+        <GlassCard hoverable={false} className="bg-white border border-violet-500/20 p-3 md:p-4">
+          <p className="text-[9px] md:text-[10px] text-slate-600 uppercase tracking-wider">Total Otros</p>
           <p className="text-lg md:text-2xl font-bold text-violet-400 mt-1">{formatShortCurrency(totalOtros)}</p>
-          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{totalVentas > 0 ? Math.round(totalOtros / totalVentas * 100) : 0}% del total</p>
+          <p className="text-[9px] md:text-[10px] text-slate-600 mt-1">{totalVentas > 0 ? Math.round(totalOtros / totalVentas * 100) : 0}% del total</p>
         </GlassCard>
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-emerald-500/20 p-3 md:p-4">
-          <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider">Proy % Derivados</p>
+        <GlassCard hoverable={false} className="bg-white border border-emerald-500/20 p-3 md:p-4">
+          <p className="text-[9px] md:text-[10px] text-slate-600 uppercase tracking-wider">Proy % Derivados</p>
           <p className={`text-lg md:text-2xl font-bold mt-1 ${totalPctD >= 1 ? 'text-emerald-400' : totalPctD >= 0.85 ? 'text-amber-400' : 'text-rose-400'}`}>
             {Math.round(totalPctD * 100)}%
           </p>
-          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">vs presupuesto</p>
+          <p className="text-[9px] md:text-[10px] text-slate-600 mt-1">vs presupuesto</p>
         </GlassCard>
-        <GlassCard hoverable={false} className="bg-slate-950/85 border border-amber-500/20 p-3 md:p-4">
-          <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider">Proy % Otros</p>
+        <GlassCard hoverable={false} className="bg-white border border-amber-500/20 p-3 md:p-4">
+          <p className="text-[9px] md:text-[10px] text-slate-600 uppercase tracking-wider">Proy % Otros</p>
           <p className={`text-lg md:text-2xl font-bold mt-1 ${totalPctO >= 1 ? 'text-emerald-400' : totalPctO >= 0.85 ? 'text-amber-400' : 'text-rose-400'}`}>
             {Math.round(totalPctO * 100)}%
           </p>
-          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">vs presupuesto</p>
+          <p className="text-[9px] md:text-[10px] text-slate-600 mt-1">vs presupuesto</p>
         </GlassCard>
       </div>
 
       {/* Filtro ciudad */}
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-xs text-slate-400">Filtrar por sede:</span>
+        <span className="text-xs text-slate-600">Filtrar por sede:</span>
         {['ALL', 'PEREIRA', 'MANIZALES', 'ARMENIA'].map(c => (
           <button
             key={c}
@@ -256,7 +256,7 @@ const ProvidersAnalysis = () => {
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
               cityFilter === c
                 ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-600'
+                : 'bg-slate-100 text-slate-600 border-slate-200 hover:border-slate-600'
             }`}
           >
             {c === 'ALL' ? 'Todas' : c === 'PEREIRA' ? 'Eje Pereira' : c === 'MANIZALES' ? 'Eje Caldas' : 'Eje Quindío'}
@@ -270,18 +270,18 @@ const ProvidersAnalysis = () => {
       </div>
 
       {/* Tabla principal */}
-      <GlassCard hoverable={false} className="bg-slate-950/95 border border-slate-800/80 p-4 md:p-5 shadow-lg">
+      <GlassCard hoverable={false} className="bg-white/95 border border-slate-200 p-4 md:p-5 shadow-lg">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+            <h3 className="text-sm md:text-base font-bold text-slate-900 flex items-center gap-2">
               <Truck className="h-4 w-4 text-sky-400" />
               Presupuesto · Venta Real · Proyección al Cierre
             </h3>
-            <p className="text-[10px] md:text-xs text-slate-400 mt-1">
+            <p className="text-[10px] md:text-xs text-slate-600 mt-1">
               {sorted.length} vendedores · Haz clic en columna para ordenar
             </p>
           </div>
-          <div className="flex gap-4 text-[10px] text-slate-500">
+          <div className="flex gap-4 text-[10px] text-slate-600">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>≥100%</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block"/>85-99%</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"/>&lt;85%</span>
@@ -291,7 +291,7 @@ const ProvidersAnalysis = () => {
         <div className="overflow-x-auto -mx-4 md:-mx-5 px-4 md:px-5">
           <table className="w-full min-w-[900px] text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b-2 border-slate-700">
+              <tr className="border-b-2 border-slate-300">
                 {/* Header grupos */}
                 <th className="pb-1 px-2 text-left" rowSpan={2}></th>
                 <th className="pb-1 px-2 text-center text-[9px] font-bold uppercase tracking-widest text-sky-400 border-b border-sky-500/30" colSpan={4}>
@@ -301,7 +301,7 @@ const ProvidersAnalysis = () => {
                   OTROS (Leche, Quesito, Don Maíz, Anchetas)
                 </th>
               </tr>
-              <tr className="border-b border-slate-800">
+              <tr className="border-b border-slate-200">
                 <TH col="pptoD" right>Ppto Deriv</TH>
                 <TH col="ventaD" right>Venta Deriv</TH>
                 <TH col="pptoD" right>Proy $</TH>
@@ -312,8 +312,8 @@ const ProvidersAnalysis = () => {
                 <TH col="pctO" right>Proy %</TH>
               </tr>
               {/* Fila de totales arriba */}
-              <tr className="bg-slate-900/80 border-b-2 border-slate-700 text-[10px] font-bold">
-                <td className="py-2 px-2 text-white">Total general</td>
+              <tr className="bg-slate-100/80 border-b-2 border-slate-300 text-[10px] font-bold">
+                <td className="py-2 px-2 text-slate-900">Total general</td>
                 <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoDerivados)}</td>
                 <td className="py-2 px-2 text-right text-sky-300">{formatShortCurrency(totals.ventaDerivados)}</td>
                 <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyDerivados)}</td>
@@ -324,9 +324,9 @@ const ProvidersAnalysis = () => {
                 <td className="py-2 px-2 text-right"><PctBadge value={totalPctO} /></td>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-900/60">
+            <tbody className="divide-y divide-slate-200">
               {sorted.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
+                <tr key={idx} className="hover:bg-slate-200/30 transition-colors">
                   {/* Vendedor */}
                   <td className="py-2.5 px-2 text-slate-200 font-semibold text-[11px] md:text-xs whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -341,13 +341,13 @@ const ProvidersAnalysis = () => {
                   </td>
 
                   {/* Derivados */}
-                  <td className="py-2.5 px-2 text-right text-slate-400 tabular-nums">{formatShortCurrency(row.pptoDerivados)}</td>
+                  <td className="py-2.5 px-2 text-right text-slate-600 tabular-nums">{formatShortCurrency(row.pptoDerivados)}</td>
                   <td className="py-2.5 px-2 text-right text-sky-300 font-semibold tabular-nums">{formatShortCurrency(row.ventaDerivados)}</td>
                   <td className="py-2.5 px-2 text-right text-slate-200 tabular-nums">{formatShortCurrency(row.proyDerivados)}</td>
                   <td className="py-2.5 px-2 text-right"><PctBadge value={row.pctDerivados} /></td>
 
                   {/* Otros */}
-                  <td className="py-2.5 px-2 text-right text-slate-400 tabular-nums">{formatShortCurrency(row.pptoOtros)}</td>
+                  <td className="py-2.5 px-2 text-right text-slate-600 tabular-nums">{formatShortCurrency(row.pptoOtros)}</td>
                   <td className="py-2.5 px-2 text-right text-violet-300 font-semibold tabular-nums">{formatShortCurrency(row.ventaOtros)}</td>
                   <td className="py-2.5 px-2 text-right text-slate-200 tabular-nums">{formatShortCurrency(row.proyOtros)}</td>
                   <td className="py-2.5 px-2 text-right"><PctBadge value={row.pctOtros} /></td>
@@ -356,8 +356,8 @@ const ProvidersAnalysis = () => {
             </tbody>
             {/* Fila total al final también */}
             <tfoot>
-              <tr className="bg-slate-900/80 border-t-2 border-slate-700 text-[10px] font-bold">
-                <td className="py-2.5 px-2 text-white">Total general</td>
+              <tr className="bg-slate-100/80 border-t-2 border-slate-300 text-[10px] font-bold">
+                <td className="py-2.5 px-2 text-slate-900">Total general</td>
                 <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoDerivados)}</td>
                 <td className="py-2.5 px-2 text-right text-sky-300">{formatShortCurrency(totals.ventaDerivados)}</td>
                 <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyDerivados)}</td>
@@ -373,8 +373,8 @@ const ProvidersAnalysis = () => {
       </GlassCard>
 
       {/* Nota definitoria */}
-      <GlassCard hoverable={false} className="bg-slate-950/70 border border-slate-800 p-4">
-        <p className="text-[10px] md:text-xs text-slate-400 leading-relaxed">
+      <GlassCard hoverable={false} className="bg-white border border-slate-200 p-4">
+        <p className="text-[10px] md:text-xs text-slate-600 leading-relaxed">
           <span className="text-slate-200 font-semibold">Definición de categorías:</span>{' '}
           <span className="text-violet-300 font-semibold">Otros</span> incluye:{' '}
           {OTROS_MARCAS.join(', ')}.{' '}

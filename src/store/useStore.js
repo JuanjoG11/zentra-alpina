@@ -92,7 +92,7 @@ const useStore = create((set, get) => ({
   selectedSeller: 'Todas',
   // En móvil inicia cerrado, en desktop abierto
   sidebarOpen: typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
-  darkMode: true,
+  darkMode: false,
 
   // Datos de negocio — se usan datos persistidos si existen y tienen contenido, si no el archivo estático
   dbData: initialData || alpinaData,
