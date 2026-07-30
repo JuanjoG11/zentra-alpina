@@ -132,63 +132,189 @@ export const BILineChart = ({ data = [], metaDiaria = 0 }) => {
   return <Chart options={options} series={series} type="line" height={300} />;
 };
 
-// 2. AREA CHART - Accumulated sales vs goal + trend line
-// 2. VENTA ACUMULADA VS META — área real + línea de meta día a día
-export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23 }) => {
+// 2. AVANCE VS META — Gauge velocímetro + semáforo de proyección
+export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, workDay = 0, ventaNeta = 0 }) => {
   if (!data || data.length === 0) return (
-    <div className="h-[320px] flex items-center justify-center text-slate-500 text-sm">Sin datos de ventas diarias</div>
+    <div className="h-[280px] flex items-center justify-center text-slate-500 text-sm">Sin datos de ventas diarias</div>
   );
 
-  const metaDiaria = presupuesto > 0 && diasHabiles > 0 ? presupuesto / diasHabiles : 0;
+  const diasTranscurridos = workDay > 0 ? workDay : data.length;
 
-  let acc = 0;
-  const ventaAcum = data.map(d => { acc += (d.total || 0); return Math.round(acc); });
-  const metaAcum  = data.map((_, i) => metaDiaria > 0 ? Math.round(metaDiaria * (i + 1)) : null);
+  // Usar ventaNeta (ventas netas reales) si viene, si no acumular el bruto del salesDaily
+  const ventaAcumulada = ventaNeta > 0
+    ? ventaNeta
+    : data.reduce((s, d) => s + (d.total || 0), 0);
 
-  const ventaFinal = ventaAcum[ventaAcum.length - 1] || 0;
-  const metaFinal  = metaAcum[metaAcum.length - 1]   || 0;
-  const cumple     = metaFinal > 0 ? ventaFinal / metaFinal : 0;
-  const areaColor  = cumple >= 1 ? '#10b981' : cumple >= 0.85 ? '#f59e0b' : '#ef4444';
+  // Meta acumulada proporcional a días transcurridos
+  const metaDiaria   = presupuesto > 0 && diasHabiles > 0 ? presupuesto / diasHabiles : 0;
+  const metaAcumulada = metaDiaria * diasTranscurridos;
 
-  const series = [
-    { name: 'Venta Acumulada', type: 'area', data: ventaAcum },
-    ...(metaDiaria > 0 ? [{ name: 'Meta', type: 'line', data: metaAcum }] : [])
-  ];
+  // % ejecutado = venta neta / meta proporcional al día actual
+  const pctEjecutado  = metaAcumulada > 0 ? (ventaAcumulada / metaAcumulada) * 100 : 0;
 
-  const options = {
+  // Proyección cierre = ritmo neto actual × días hábiles totales
+  const proyeccionCierre = diasTranscurridos > 0 ? (ventaAcumulada / diasTranscurridos) * diasHabiles : 0;
+  const pctProyeccion    = presupuesto > 0 ? (proyeccionCierre / presupuesto) * 100 : 0;
+
+  const brecha    = ventaAcumulada - metaAcumulada;
+  const estaArriba = brecha >= 0;
+
+  const color     = pctEjecutado >= 100 ? '#10b981' : pctEjecutado >= 85 ? '#f59e0b' : '#ef4444';
+  const colorProy = pctProyeccion >= 100 ? '#10b981' : pctProyeccion >= 90 ? '#f59e0b' : '#ef4444';
+
+  const gaugeVal = Math.min(Math.round(pctEjecutado), 200);
+
+  const gaugeOptions = {
     ...baseApexOptions,
-    chart: { ...baseApexOptions.chart, type: 'line', animations: { enabled: false } },
-    colors: [areaColor, '#f59e0b'],
-    stroke: { curve: 'smooth', width: [3, 2], dashArray: [0, 6] },
-    fill: {
-      type: ['gradient', 'solid'],
-      gradient: {
-        shade: 'dark', type: 'vertical',
-        opacityFrom: 0.5, opacityTo: 0.03, stops: [0, 90, 100]
+    chart: { ...baseApexOptions.chart, type: 'radialBar', animations: { enabled: false } },
+    colors: [color],
+    plotOptions: {
+      radialBar: {
+        startAngle: -135,
+        endAngle: 135,
+        hollow: { size: '62%', background: 'transparent' },
+        track: { background: '#1e293b', strokeWidth: '100%' },
+        dataLabels: {
+          name: {
+            show: true, offsetY: 58, fontSize: '10px', fontWeight: 600, color: '#64748b',
+            formatter: () => 'vs Meta acumulada'
+          },
+          value: {
+            show: true, offsetY: 16, fontSize: '32px', fontWeight: 900, color,
+            formatter: () => `${pctEjecutado.toFixed(1)}%`
+          }
+        }
       }
     },
-    markers: { size: 0 },
-    dataLabels: { enabled: false },
-    xaxis: {
-      categories: data.map(d => d.fecha),
-      labels: { rotate: -45, style: { fontSize: '9px' }, hideOverlappingLabels: true }
+    stroke: { lineCap: 'round' },
+    fill: {
+      type: 'gradient',
+      gradient: {
+        shade: 'dark', type: 'horizontal',
+        gradientToColors: [color === '#10b981' ? '#34d399' : color === '#f59e0b' ? '#fcd34d' : '#f87171'],
+        stops: [0, 100]
+      }
     },
-    yaxis: { labels: { formatter: v => formatShortCurrency(v) } },
-    legend: {
-      show: true,
-      position: 'top',
-      horizontalAlign: 'left',
-      fontSize: '11px',
-      labels: { colors: '#94a3b8' },
-      markers: { width: 14, height: 3, radius: 0 }
-    },
-    tooltip: {
-      theme: 'dark', shared: true, intersect: false,
-      y: { formatter: v => formatCurrency(v) }
-    }
+    tooltip: { enabled: false }
   };
 
-  return <Chart options={options} series={series} type="line" height={320} />;
+  // % cumplimiento real = venta neta / presupuesto TOTAL del mes (sin proporcionar por días)
+  const pctCumplReal = presupuesto > 0 ? (ventaAcumulada / presupuesto) * 100 : 0;
+  const colorReal    = pctCumplReal >= 100 ? '#10b981' : pctCumplReal >= 85 ? '#f59e0b' : '#ef4444';
+
+  // Semáforo de proyección: ícono + estado + frase
+  const proyEstado = pctProyeccion >= 100
+    ? { icono: '🟢', titulo: 'Cierre en verde', frase: 'Al ritmo actual cierras sobre presupuesto', bg: '#10b98115', border: '#10b98140' }
+    : pctProyeccion >= 90
+    ? { icono: '🟡', titulo: 'Cierre ajustado', frase: 'Necesitas acelerar para llegar al 100%', bg: '#f59e0b15', border: '#f59e0b40' }
+    : pctProyeccion >= 75
+    ? { icono: '🔴', titulo: 'Cierre en riesgo', frase: 'El ritmo actual no alcanza el presupuesto', bg: '#ef444415', border: '#ef444440' }
+    : { icono: '🚨', titulo: 'Brecha crítica', frase: 'Requiere intervención comercial urgente', bg: '#ef444420', border: '#ef444460' };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* ── Fila de gauges ── */}
+      <div className="grid grid-cols-2 gap-2">
+
+        {/* Gauge 1 — avance vs meta acumulada proporcional */}
+        <div className="relative flex flex-col items-center">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full blur-3xl opacity-20 pointer-events-none"
+            style={{ background: color }} />
+          <Chart options={gaugeOptions} series={[gaugeVal]} type="radialBar" height={200} width="100%" />
+          <p className="text-[10px] font-bold -mt-4 text-center" style={{ color }}>
+            {estaArriba ? `▲ +${formatShortCurrency(brecha)}` : `▼ ${formatShortCurrency(Math.abs(brecha))}`}
+          </p>
+          <p className="text-[9px] text-slate-600 mt-0.5 text-center">vs meta día {diasTranscurridos}</p>
+        </div>
+
+        {/* Gauge 2 — cumplimiento real venta neta / presupuesto total */}
+        <div className="relative flex flex-col items-center">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full blur-3xl opacity-20 pointer-events-none"
+            style={{ background: colorReal }} />
+          <Chart
+            options={{
+              ...gaugeOptions,
+              colors: [colorReal],
+              plotOptions: {
+                radialBar: {
+                  ...gaugeOptions.plotOptions.radialBar,
+                  dataLabels: {
+                    name: {
+                      show: true, offsetY: 58, fontSize: '10px', fontWeight: 600, color: '#64748b',
+                      formatter: () => 'del presupuesto'
+                    },
+                    value: {
+                      show: true, offsetY: 16, fontSize: '32px', fontWeight: 900, color: colorReal,
+                      formatter: () => `${pctCumplReal.toFixed(1)}%`
+                    }
+                  }
+                }
+              },
+              fill: {
+                type: 'gradient',
+                gradient: {
+                  shade: 'dark', type: 'horizontal',
+                  gradientToColors: [colorReal === '#10b981' ? '#34d399' : colorReal === '#f59e0b' ? '#fcd34d' : '#f87171'],
+                  stops: [0, 100]
+                }
+              }
+            }}
+            series={[Math.min(Math.round(pctCumplReal), 200)]}
+            type="radialBar"
+            height={200}
+            width="100%"
+          />
+          <p className="text-[10px] font-bold -mt-4 text-center" style={{ color: colorReal }}>
+            {formatShortCurrency(ventaAcumulada)}
+          </p>
+          <p className="text-[9px] text-slate-600 mt-0.5 text-center">venta neta real</p>
+        </div>
+      </div>
+
+      {/* ── Fila inferior: semáforo + días ── */}
+      <div className="grid grid-cols-2 gap-3">
+
+        {/* Semáforo de proyección */}
+        <div className="rounded-2xl p-3 border relative overflow-hidden"
+          style={{ background: proyEstado.bg, borderColor: proyEstado.border }}>
+          <div className="flex items-start gap-2">
+            <span className="text-2xl leading-none mt-0.5">{proyEstado.icono}</span>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-white leading-tight">{proyEstado.titulo}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{proyEstado.frase}</p>
+              <div className="mt-2 w-full h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${Math.min(pctProyeccion, 100)}%`, background: colorProy }} />
+              </div>
+              <p className="text-[10px] font-bold mt-1" style={{ color: colorProy }}>
+                {pctProyeccion.toFixed(1)}% proy. cierre
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Segmentos de días hábiles */}
+        <div className="rounded-2xl p-3 border border-slate-800/60 bg-slate-900/40">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Días hábiles</p>
+            <span className="text-sm font-black text-white">{diasTranscurridos}
+              <span className="text-slate-500 font-normal text-[10px]"> / {diasHabiles}</span>
+            </span>
+          </div>
+          <div className="flex gap-0.5">
+            {Array.from({ length: diasHabiles }).map((_, i) => (
+              <div key={i} className="flex-1 h-2 rounded-sm"
+                style={{ background: i < diasTranscurridos ? '#38bdf8' : '#1e293b', opacity: i < diasTranscurridos ? 1 : 0.4 }} />
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1 text-right">
+            {Math.round((diasTranscurridos / diasHabiles) * 100)}% del mes
+          </p>
+        </div>
+
+      </div>
+    </div>
+  );
 };
 
 // 3. STACKED BAR CHART - Cash vs Credit Sales

@@ -450,6 +450,8 @@ const channelTicket = React.useMemo(() => {
             data={filteredData.salesDaily.filter(d => d.fecha !== 'general')}
             presupuesto={paretoTotals.totalPresupuesto}
             diasHabiles={TOTAL_BD}
+            workDay={workDay}
+            ventaNeta={totalNetSales}
           />
         </GlassCard>
 
