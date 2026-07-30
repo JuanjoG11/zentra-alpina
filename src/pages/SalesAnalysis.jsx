@@ -4,7 +4,7 @@ import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONE_TYPE_MAP, ZONE_DE
 import { formatCurrency, formatPercent, formatShortCurrency, formatCurrencyWithDecimals } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import { BIAreaChart, BIStackedBarChart, BILineChart } from '../components/charts/BICharts';
-import { TrendingUp, CreditCard, DollarSign, Layers, ArrowUpRight, MapPin } from 'lucide-react';
+import { TrendingUp, ArrowUpRight, MapPin } from 'lucide-react';
 
 const CITY_META = {
   PEREIRA:   { label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400'    },
@@ -365,81 +365,21 @@ const channelTicket = React.useMemo(() => {
         })}
       </div>
 
-      {/* Credit & Cash Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-        <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-          <div className="flex-1 min-w-0">
-            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas de Contado (Neta)</p>
-            <h3 className="text-xl md:text-2xl font-bold text-emerald-400 mt-1">{formatShortCurrency(cashTotal)}</h3>
-            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(1 - creditPercentage)} del total comercial neto</p>
-          </div>
-          <div className="p-2.5 md:p-3 bg-emerald-500/10 text-emerald-400 rounded-lg md:rounded-xl shrink-0">
-            <DollarSign className="h-5 w-5 md:h-6 md:w-6" />
-          </div>
-        </GlassCard>
-
-        <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-          <div className="flex-1 min-w-0">
-            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas a Crédito (Neta)</p>
-            <h3 className="text-xl md:text-2xl font-bold text-amber-400 mt-1">{formatShortCurrency(creditTotal)}</h3>
-            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(creditPercentage)} del total comercial neto</p>
-
-          </div>
-          <div className="p-2.5 md:p-3 bg-amber-500/10 text-amber-400 rounded-lg md:rounded-xl shrink-0">
-            <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
-          </div>
-        </GlassCard>
-
-        <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-          <div className="flex-1 min-w-0">
-            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas de Contado (Bruta)</p>
-            <h3 className="text-xl md:text-2xl font-bold text-emerald-400 mt-1">{formatShortCurrency(grossCash)}</h3>
-            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(1 - creditPercentage)} del total bruto</p>
-          </div>
-          <div className="p-2.5 md:p-3 bg-emerald-500/10 text-emerald-400 rounded-lg md:rounded-xl shrink-0">
-            <DollarSign className="h-5 w-5 md:h-6 md:w-6" />
-          </div>
-        </GlassCard>
-
-        <GlassCard hoverable={false} className="flex justify-between items-center bg-slate-900/20 border-slate-800">
-          <div className="flex-1 min-w-0">
-            <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ventas a Crédito (Bruta)</p>
-            <h3 className="text-xl md:text-2xl font-bold text-amber-400 mt-1">{formatShortCurrency(grossCredit)}</h3>
-            <p className="text-[9px] md:text-[10px] text-slate-500 mt-1">{formatPercent(creditPercentage)} del total bruto</p>
-          </div>
-          <div className="p-2.5 md:p-3 bg-amber-500/10 text-amber-400 rounded-lg md:rounded-xl shrink-0">
-            <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
-          </div>
-        </GlassCard>
-
-        <div className="md:col-span-2 lg:col-span-1 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
-          <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-900/20 border-slate-800">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ticket Super</p>
-                <h3 className="text-lg md:text-xl font-bold text-blue-400 mt-1">{formatCurrency(channelTicket.SUPERMERCADOS)}</h3>
-              </div>
-              <div className="p-2 md:p-2.5 bg-blue-500/10 text-blue-400 rounded-lg shrink-0">
-                <Layers className="h-4 w-4 md:h-5 md:w-5" />
-              </div>
-            </div>
-            <p className="text-[9px] md:text-[10px] text-slate-500">Venta por factura (Supermercados)</p>
+      {/* Métricas de facturación — fila compacta */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
+        {[
+          { label: 'Contado neto',   value: formatShortCurrency(cashTotal),    sub: formatPercent(1 - creditPercentage), color: 'text-emerald-400', border: 'border-emerald-500/20' },
+          { label: 'Crédito neto',   value: formatShortCurrency(creditTotal),  sub: formatPercent(creditPercentage),     color: 'text-amber-400',   border: 'border-amber-500/20'   },
+          { label: 'Venta bruta',    value: formatShortCurrency(grossCash + grossCredit), sub: 'antes de devoluciones',  color: 'text-sky-400',     border: 'border-sky-500/20'     },
+          { label: 'Ticket Super',   value: formatCurrency(channelTicket.SUPERMERCADOS),  sub: 'por factura',            color: 'text-blue-400',    border: 'border-blue-500/20'    },
+          { label: 'Ticket TAT',     value: formatCurrency(channelTicket.TAT),            sub: 'por factura',            color: 'text-violet-400',  border: 'border-violet-500/20'  },
+        ].map(({ label, value, sub, color, border }) => (
+          <GlassCard key={label} hoverable={false} className={`bg-slate-900/30 border ${border} p-3 md:p-4`}>
+            <p className="text-[9px] md:text-[10px] text-slate-500 uppercase tracking-wider font-semibold truncate">{label}</p>
+            <p className={`text-base md:text-lg font-black mt-1 ${color}`}>{value}</p>
+            <p className="text-[9px] text-slate-600 mt-0.5 truncate">{sub}</p>
           </GlassCard>
-          
-          <GlassCard hoverable={false} className="flex flex-col justify-between bg-slate-900/20 border-slate-800">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-500 text-[10px] md:text-xs font-semibold uppercase tracking-wider">Ticket TAT</p>
-                <h3 className="text-lg md:text-xl font-bold text-emerald-400 mt-1">{formatCurrency(channelTicket.TAT)}</h3>
-              </div>
-              <div className="p-2 md:p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0">
-                <Layers className="h-4 w-4 md:h-5 md:w-5" />
-              </div>
-            </div>
-            <p className="text-[9px] md:text-[10px] text-slate-500">Venta por factura (Tienda a Tienda)</p>
-          </GlassCard>
-
-        </div>
+        ))}
       </div>
 
       {/* Accumulated Sales and Stacked Composition */}
