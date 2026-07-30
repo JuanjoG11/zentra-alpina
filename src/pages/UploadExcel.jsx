@@ -377,12 +377,12 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const paymentKeys = ['nbFormaPago','forma_pago','formaPago','tipo_pago'];
   const clientKeys = ['nmRazonSocial','nombre1','nombre2','apellido1','apellido2','cliente','razon_social','nm_razon_social','Cliente','Razón Social','Nombre Cliente'];
   // Columnas de distribución numérica por producto
-  const nbProductoKeys   = ['nbProducto','nb_producto','codigo_producto','codproducto'];
-  const nmProductoKeys   = ['nmProducto','nm_producto','nombre_producto','nomproducto','producto'];
+  const nbProductoKeys   = ['nbProducto','nb_producto','codigo_producto','codproducto','Código Producto','CodigoProducto','cod_prod','CodProd','codigoproducto'];
+  const nmProductoKeys   = ['nmProducto','nm_producto','nombre_producto','nomproducto','producto','Descripción Producto','DescripcionProducto','descripcion_producto','NmProducto','Producto','PRODUCTO'];
   const tpProductoKeys   = ['tpProducto','tp_producto','tipo_producto','tipoproducto'];
-  const nmTpMarcaKeys    = ['nmTpMarca','nm_tp_marca','nmtpmarca','marca','brand'];
-  const nmTpFamiliaKeys  = ['nmTpFamilia','nm_tp_familia','nmtpfamilia','familia','family'];
-  const pesoTotalKeys    = ['pesoTotal','peso_total','pesototal','peso','pesototalgramos','peso_total_gramos','peso total'];
+  const nmTpMarcaKeys    = ['nmTpMarca','nm_tp_marca','nmtpmarca','marca','brand','Marca','MARCA','NmTpMarca','nm_marca'];
+  const nmTpFamiliaKeys  = ['nmTpFamilia','nm_tp_familia','nmtpfamilia','familia','family','Familia','FAMILIA','NmTpFamilia','nm_familia','Categoría','categoria'];
+  const pesoTotalKeys    = ['pesoTotal','peso_total','pesototal','peso','pesototalgramos','peso_total_gramos','peso total','PesoTotal'];
 
   let processedRowsCount = 0;
 
@@ -521,7 +521,11 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
               .replace(/\./g, '')
               .replace(/\s+/g, ' ')
               .trim();
-            if (!mNorm.includes('vencimiento')) {
+            const mEsVencimiento = 
+              mNorm.includes('vencimiento') ||
+              mNorm.includes('dev me por') ||
+              (mNorm.startsWith('dev') && mNorm.includes('me') && mNorm.includes('venc'));
+            if (!mEsVencimiento) {
               sellersAggr[activeSeller].rechazos += Math.abs(valTotal);
             }
           } else if (esVentaReal) {
@@ -543,7 +547,10 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
             .replace(/\s+/g, ' ') // Normalizar espacios múltiples a uno solo
             .trim();
           
-          const esVencimiento = motivoNormalizado.includes('vencimiento');
+          const esVencimiento = 
+            motivoNormalizado.includes('vencimiento') ||
+            motivoNormalizado.includes('dev me por') ||
+            (motivoNormalizado.startsWith('dev') && motivoNormalizado.includes('me') && motivoNormalizado.includes('venc'));
           
           // DEBUG: Log para verificar detección
           if (motivoStr && motivoNormalizado.includes('venc')) {
@@ -861,6 +868,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   console.log('Días con ventas             :', new Set(Object.values(salesDailyAggr).map(d => d.fecha)).size);
   console.log('Días con Rechazos           :', new Set(Object.values(returnsDailyAggr).map(d => d.fecha)).size);
   console.log('Días con Cambios            :', new Set(Object.values(expiryDailyAggr).map(d => d.fecha)).size);
+  console.log('Productos detectados        :', Object.keys(productDistribAggr).length);
+  console.log('Marcas en productos         :', [...new Set(Object.values(productDistribAggr).map(p => p.nmTpMarca))]);
+  console.log('⚠️ Si "Productos detectados" es 0, el cubo no tiene columnas nbProducto/nmProducto/nmTpMarca legibles');
   console.log('⚠️ Si "Rechazos" y "Cambios" son 0, el cubo no tiene columna "motivo" legible o todas las filas de devolución tienen vlrAntesIva=0');
   console.groupEnd();
   // ============================================================
@@ -1183,25 +1193,23 @@ const UploadExcel = () => {
 
           isDbUpload = true;
 
-          // Persistir también en localStorage como caché local
+          // Persistir en localStorage con TODOS los datos procesados como caché inmediata
           try {
             const existingRaw = localStorage.getItem('zentra_alpina_dbData');
             const existing = existingRaw ? JSON.parse(existingRaw) : {};
-            existing.expiryConcepts = processedData.expiryConcepts || [];
-            existing.expiryDaily = processedData.expiryDaily || [];
-            existing.expiryClientReturns = processedData.expiryClientReturns || [];
-            existing.returnsConcepts = processedData.returnsConcepts || [];
-            existing.clientReturns = processedData.clientReturns || [];
-            existing.productDistrib = processedData.productDistrib || [];
-            existing.cityClients = processedData.cityClients || {};
-            localStorage.setItem('zentra_alpina_dbData', JSON.stringify(existing));
+            // Mezclar con datos existentes, priorizando los nuevos
+            const merged = { ...existing, ...processedData };
+            localStorage.setItem('zentra_alpina_dbData', JSON.stringify(merged));
             localStorage.setItem('zentra_alpina_period', latestPeriod);
           } catch (e) { console.warn('Error al persistir caché local:', e); }
 
-          // Clear local cache to force fresh fetch
-          try { localStorage.removeItem('zentra_alpina_dbData'); localStorage.removeItem('zentra_alpina_period'); } catch(e) {}
-          // Sincronizar store local con los datos reales leídos de la DB
-          await fetchDataFromSupabase();
+          // Actualizar el store inmediatamente con los datos procesados
+          // Esto garantiza que FocosNumerica y otras páginas vean los datos sin esperar a Supabase
+          const { setDbData: setDbDataImmediate } = useStore.getState();
+          setDbDataImmediate(processedData, latestPeriod);
+
+          // Luego sincronizar desde Supabase en segundo plano para confirmar
+          fetchDataFromSupabase().catch(e => console.warn('Background Supabase sync error:', e));
         } catch (dbErr) {
           console.error('Database Sync Error:', dbErr);
           throw new Error('Error al sincronizar con la base de datos: ' + dbErr.message);
