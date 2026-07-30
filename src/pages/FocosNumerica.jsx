@@ -809,17 +809,17 @@ const FocosNumerica = () => {
                     <td className="py-2.5 pr-3 md:pr-4 text-slate-600">{formatNumber(city.universeClients)}</td>
                     <td className="py-2.5 pr-3 md:pr-4 text-slate-700">{formatNumber(city.metaClients)}</td>
                     <td className="py-2.5 pr-3 md:pr-4 text-slate-700">{formatNumber(city.impactedClients)}</td>
-                    <td className="py-2.5 pr-3 md:pr-4 font-bold text-slate-100">{formatPercent(city.numericalCoverage)}</td>
-                    <td className="py-2.5 pr-2 text-slate-100">{formatNumber(city.clientsMissing)}</td>
+                    <td className="py-2.5 pr-3 md:pr-4 font-bold text-sky-700">{formatPercent(city.numericalCoverage)}</td>
+                    <td className="py-2.5 pr-2 font-semibold text-rose-600">{formatNumber(city.clientsMissing)}</td>
                   </tr>
                 ))}
-                <tr className="bg-slate-50">
-                  <td className="py-3 pr-3 md:pr-4 text-slate-200 font-semibold text-xs md:text-sm">Total</td>
-                  <td className="py-3 pr-3 md:pr-4 text-slate-200">{formatNumber(goalTotals.universeClients)}</td>
-                  <td className="py-3 pr-3 md:pr-4 text-slate-200">{formatNumber(goalTotals.metaClients)}</td>
-                  <td className="py-3 pr-3 md:pr-4 text-slate-200">{formatNumber(goalTotals.impactedClients)}</td>
-                  <td className="py-3 pr-3 md:pr-4 text-slate-100 font-bold">{formatPercent(goalTotals.impactedClients / goalTotals.universeClients)}</td>
-                  <td className="py-3 pr-2 text-slate-100">{formatNumber(Math.max(0, goalTotals.metaClients - goalTotals.impactedClients))}</td>
+                <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                  <td className="py-3 pr-3 md:pr-4 text-slate-900 font-black text-xs md:text-sm">Total</td>
+                  <td className="py-3 pr-3 md:pr-4 text-slate-700">{formatNumber(goalTotals.universeClients)}</td>
+                  <td className="py-3 pr-3 md:pr-4 text-slate-700">{formatNumber(goalTotals.metaClients)}</td>
+                  <td className="py-3 pr-3 md:pr-4 text-slate-700">{formatNumber(goalTotals.impactedClients)}</td>
+                  <td className="py-3 pr-3 md:pr-4 text-sky-700 font-black">{formatPercent(goalTotals.impactedClients / goalTotals.universeClients)}</td>
+                  <td className="py-3 pr-2 text-rose-600 font-bold">{formatNumber(Math.max(0, goalTotals.metaClients - goalTotals.impactedClients))}</td>
                 </tr>
               </tbody>
             </table>
@@ -867,7 +867,7 @@ const FocosNumerica = () => {
               placeholder="Buscar marca, familia o producto..."
               value={productSearch}
               onChange={e => setProductSearch(e.target.value)}
-              className="w-full bg-slate-100 border border-slate-200 text-slate-200 text-xs rounded-lg pl-8 pr-10 py-2 outline-none focus:border-sky-500/50 transition-colors"
+              className="w-full bg-slate-100 border border-slate-200 text-slate-900 text-xs rounded-lg pl-8 pr-10 py-2 outline-none focus:border-sky-500/50 transition-colors"
             />
             {productSearch && (
               <button onClick={() => setProductSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-900">
@@ -896,7 +896,7 @@ const FocosNumerica = () => {
                 o aún no se ha subido el archivo del período activo.
               </p>
               <p className="text-slate-600 text-xs mt-1">
-                Sube el cubo de ventas completo desde <span className="text-sky-400 font-semibold">Cargar Datos</span> para ver este análisis.
+                Sube el cubo de ventas completo desde <span className="text-sky-600 font-semibold">Cargar Datos</span> para ver este análisis.
               </p>
             </div>
           )}
@@ -919,20 +919,20 @@ const FocosNumerica = () => {
                 />
                 <span className="flex-1 text-left text-xs md:text-sm font-bold text-slate-900 tracking-wide truncate">{brand.label}</span>
                 <div className="hidden md:flex items-center gap-4 text-xs">
-                  <span className="w-32 text-right text-slate-200 font-semibold">{formatCurrency(brand.ventas)}</span>
-                  <span className="w-16 text-right text-slate-700">{formatNumber(brand.facturas)}</span>
-                  <span className="w-20 text-right text-sky-300 font-bold">{formatNumber(brand.clientesCount)}</span>
+                  <span className="w-32 text-right text-slate-900 font-bold">{formatCurrency(brand.ventas)}</span>
+                  <span className="w-16 text-right text-slate-700 font-semibold">{formatNumber(brand.facturas)}</span>
+                  <span className="w-20 text-right text-sky-700 font-bold">{formatNumber(brand.clientesCount)}</span>
                   <div className="w-32 flex items-center justify-end gap-2">
-                    <span className="text-sky-400 font-bold">{formatPercent(brand.coverage)}</span>
-                    <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, brand.coverage * 100)}%`, background: brand.coverage >= 0.7 ? '#10b981' : brand.coverage >= 0.4 ? '#38bdf8' : '#f59e0b' }} />
+                    <span className="text-sky-700 font-bold">{formatPercent(brand.coverage)}</span>
+                    <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, brand.coverage * 100)}%`, background: brand.coverage >= 0.7 ? '#10b981' : brand.coverage >= 0.4 ? '#0284c7' : '#f59e0b' }} />
                     </div>
                   </div>
-                  <span className="w-24 text-right text-slate-200 font-semibold">{formatKg(brand.pesoTotalKg)}</span>
+                  <span className="w-24 text-right text-slate-700 font-semibold">{formatKg(brand.pesoTotalKg)}</span>
                 </div>
                 {/* Mobile summary */}
                 <div className="flex md:hidden items-center gap-2 text-[10px]">
-                  <span className="text-sky-400 font-bold">{formatPercent(brand.coverage)}</span>
+                  <span className="text-sky-700 font-bold">{formatPercent(brand.coverage)}</span>
                   <span className="text-slate-600">·</span>
                   <span className="text-slate-700">{formatShortCurrency(brand.ventas)}</span>
                 </div>
@@ -958,22 +958,22 @@ const FocosNumerica = () => {
                               boxShadow: expandedFamilies[fKey] ? `0 0 6px ${famColor}` : 'none'
                             }}
                           />
-                          <span className="flex-1 text-left text-[11px] md:text-xs font-semibold text-slate-100 truncate">{fam.label}</span>
+                          <span className="flex-1 text-left text-[11px] md:text-xs font-bold text-slate-900 truncate">{fam.label}</span>
                           <div className="hidden md:flex items-center gap-4 text-xs">
-                            <span className="w-32 text-right text-slate-200">{formatCurrency(fam.ventas)}</span>
-                            <span className="w-16 text-right text-slate-700">{formatNumber(fam.facturas)}</span>
-                            <span className="w-20 text-right text-violet-300 font-semibold">{formatNumber(fam.clientesCount)}</span>
+                            <span className="w-32 text-right text-slate-900 font-bold">{formatCurrency(fam.ventas)}</span>
+                            <span className="w-16 text-right text-slate-700 font-medium">{formatNumber(fam.facturas)}</span>
+                            <span className="w-20 text-right text-violet-700 font-semibold">{formatNumber(fam.clientesCount)}</span>
                             <div className="w-32 flex items-center justify-end gap-2">
-                              <span className="text-violet-400 font-semibold">{formatPercent(fam.coverage)}</span>
-                              <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-violet-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, fam.coverage * 100)}%` }} />
+                              <span className="text-violet-700 font-semibold">{formatPercent(fam.coverage)}</span>
+                              <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-violet-600 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, fam.coverage * 100)}%` }} />
                               </div>
                             </div>
-                            <span className="w-24 text-right text-slate-200 font-semibold">{formatKg(fam.pesoTotalKg)}</span>
+                            <span className="w-24 text-right text-slate-700 font-semibold">{formatKg(fam.pesoTotalKg)}</span>
                           </div>
                           {/* Mobile summary */}
                           <div className="flex md:hidden items-center gap-2 text-[10px]">
-                            <span className="text-violet-400 font-semibold">{formatPercent(fam.coverage)}</span>
+                            <span className="text-violet-700 font-semibold">{formatPercent(fam.coverage)}</span>
                             <span className="text-slate-600">·</span>
                             <span className="text-slate-700">{formatShortCurrency(fam.ventas)}</span>
                           </div>
@@ -989,18 +989,18 @@ const FocosNumerica = () => {
                                 className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 rounded-md hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-300/30 cursor-pointer group"
                               >
                                 <span className="text-[9px] md:text-[10px] font-mono text-slate-600 w-10 md:w-12 shrink-0">{p.nbProducto}</span>
-                                <span className="flex-1 text-[11px] md:text-xs text-slate-100 font-medium truncate max-w-[150px] md:max-w-[220px] group-hover:text-sky-400 transition-colors">{p.nmProducto}</span>
+                                <span className="flex-1 text-[11px] md:text-xs text-slate-900 font-semibold truncate max-w-[150px] md:max-w-[220px] group-hover:text-sky-600 transition-colors">{p.nmProducto}</span>
                                 <div className="hidden md:flex items-center gap-4 text-xs">
-                                  <span className="w-32 text-right text-slate-200">{formatCurrency(p.ventas)}</span>
+                                  <span className="w-32 text-right text-slate-900 font-bold">{formatCurrency(p.ventas)}</span>
                                   <span className="w-16 text-right text-slate-700">{formatNumber(p.facturas)}</span>
-                                  <span className="w-20 text-right text-slate-900 font-semibold">{formatNumber(p.clientesCount)}</span>
+                                  <span className="w-20 text-right text-slate-900 font-bold">{formatNumber(p.clientesCount)}</span>
                                   <div className="w-32 flex items-center justify-end gap-2">
-                                    <span className="text-teal-300 font-bold">{formatPercent(p.coverage)}</span>
-                                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                      <div className="h-full bg-teal-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, p.coverage * 100)}%` }} />
+                                    <span className="text-emerald-700 font-bold">{formatPercent(p.coverage)}</span>
+                                    <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                      <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, p.coverage * 100)}%` }} />
                                     </div>
                                   </div>
-                                  <span className="w-24 text-right text-slate-200">{formatKg(p.pesoTotalKg)}</span>
+                                  <span className="w-24 text-right text-slate-700 font-medium">{formatKg(p.pesoTotalKg)}</span>
                                 </div>
                                 {/* Mobile summary */}
                                 <div className="flex md:hidden items-center gap-1.5 text-[10px] shrink-0">
@@ -1135,9 +1135,9 @@ const FocosNumerica = () => {
                     <tbody className="divide-y divide-slate-200">
                       {productStats.sellerList.slice(0, 10).map((seller, idx) => (
                         <tr key={idx} className="hover:bg-slate-200/20 transition-colors">
-                          <td className="py-2 pr-3 md:pr-4 text-slate-200 truncate max-w-[150px]">{seller.seller}</td>
+                          <td className="py-2 pr-3 md:pr-4 text-slate-900 font-bold truncate max-w-[150px]">{seller.seller}</td>
                           <td className="py-2 pr-3 md:pr-4 text-right text-slate-900 font-semibold whitespace-nowrap">{formatShortCurrency(seller.sales)}</td>
-                          <td className="py-2 text-right text-sky-400 font-bold">{formatPercent(seller.sales / productStats.totalSales)}</td>
+                          <td className="py-2 text-right text-sky-700 font-bold">{formatPercent(seller.sales / productStats.totalSales)}</td>
                         </tr>
                       ))}
                     </tbody>

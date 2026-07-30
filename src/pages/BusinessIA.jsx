@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs } from '../utils/calculations';
@@ -750,12 +750,12 @@ ${cuboContext}`;
                           anom.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
                         }`}></div>
                       </div>
-                      <h4 className="text-xs font-bold text-slate-100">{anom.title}</h4>
+                      <h4 className="text-xs font-bold text-slate-900">{anom.title}</h4>
                       <p className="text-[10px] text-slate-700 leading-relaxed font-medium">{anom.description}</p>
 
                       <div className="pt-3 border-t border-slate-200 flex flex-col gap-1">
                         <span className="text-[8px] text-slate-600 font-bold uppercase tracking-wider">Impacto Comercial Esperado:</span>
-                        <span className="text-[10px] text-slate-200 font-semibold">{anom.impact}</span>
+                        <span className="text-[10px] text-slate-900 font-semibold">{anom.impact}</span>
                       </div>
                       {anom.route && (
                         <p className="text-[9px] text-blue-500/70 font-medium -mt-1">Toca para ver el detalle →</p>
@@ -862,8 +862,8 @@ ${cuboContext}`;
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-slate-600">
-                      <span>Inactivo: <strong className="text-slate-200">{c.daysInactive} días</strong></span>
-                      <span>Devolución: <strong className="text-rose-400">{formatCurrency(c.totalReturns)}</strong></span>
+                      <span>Inactivo: <strong className="text-slate-900">{c.daysInactive} días</strong></span>
+                      <span>Devolución: <strong className="text-rose-600">{formatCurrency(c.totalReturns)}</strong></span>
                     </div>
                     <div className="text-[9px] text-slate-600 leading-normal">
                       Causal: <strong className="text-slate-700">{c.concept}</strong>
@@ -885,7 +885,7 @@ ${cuboContext}`;
             {/* Insights Panel */}
             <GlassCard hoverable={false} className="border-indigo-950/30 bg-indigo-950/[0.01] p-5 shadow-xl">
               <div className="flex items-center gap-2.5 mb-4">
-                <Sparkles className="h-5 w-5 text-indigo-400" />
+                <Sparkles className="h-5 w-5 text-indigo-600" />
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Insights Automáticos</h3>
                   <p className="text-xs text-slate-600 mt-0.5">Hallazgos extraídos del modelo de datos.</p>
@@ -901,7 +901,7 @@ ${cuboContext}`;
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-slate-100">{ins.title}</h4>
+                        <h4 className="text-sm font-bold text-slate-900">{ins.title}</h4>
                         <p className="text-xs text-slate-600 leading-relaxed">{ins.text}</p>
                       </div>
                     </div>
@@ -914,7 +914,7 @@ ${cuboContext}`;
             <GlassCard hoverable={false} className="p-5 shadow-xl">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
-                  <Lightbulb className="h-5 w-5 text-amber-400" />
+                  <Lightbulb className="h-5 w-5 text-amber-500" />
                   <div>
                     <h3 className="text-base font-bold text-slate-900">Consejero de Negocios</h3>
                     <p className="text-xs text-slate-600 mt-0.5">Acciones generadas para mitigar riesgos.</p>
@@ -926,11 +926,11 @@ ${cuboContext}`;
                 {recommendations.slice(0, 2).map((rec, idx) => (
                   <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between hover:border-slate-200 transition-all duration-300">
                     <div>
-                      <span className="text-[8px] bg-amber-500/10 text-amber-400 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/20 uppercase tracking-wider">Alta Prioridad</span>
-                      <h4 className="text-xs font-bold text-slate-100 mt-2">{rec.title}</h4>
+                      <span className="text-[8px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-full border border-amber-300 uppercase tracking-wider">Alta Prioridad</span>
+                      <h4 className="text-xs font-bold text-slate-900 mt-2">{rec.title}</h4>
                       <p className="text-[10px] text-slate-600 leading-relaxed mt-2">{rec.text}</p>
                     </div>
-                    <button className="mt-4 flex items-center justify-center gap-1 text-[10px] bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 py-1.5 px-3 rounded-lg font-bold group transition-all duration-300 border border-indigo-500/10 w-full">
+                    <button className="mt-4 flex items-center justify-center gap-1 text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-1.5 px-3 rounded-lg font-bold group transition-all duration-300 border border-indigo-200 w-full">
                       <span>{rec.action}</span>
                       <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                     </button>
@@ -973,21 +973,21 @@ ${cuboContext}`;
                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl p-3.5 space-y-1 ${
                     msg.sender === 'user'
-                      ? 'bg-purple-600 text-slate-900 rounded-tr-none shadow-lg'
-                      : 'bg-slate-100/80 border border-slate-200 text-slate-100 rounded-tl-none relative shadow-md'
+                      ? 'bg-purple-600 text-white rounded-tr-none shadow-lg font-semibold'
+                      : 'bg-slate-100 border border-slate-200 text-slate-900 rounded-tl-none relative shadow-md'
                   }`}>
                     <p className="text-xs whitespace-pre-line leading-relaxed font-medium">{renderMessageText(msg.text, msg.sender === 'user')}</p>
-                    <span className="block text-[9px] text-slate-600 text-right mt-1">{msg.time}</span>
+                    <span className="block text-[9px] text-slate-500 text-right mt-1">{msg.time}</span>
                   </div>
                 </div>
               ))}
               
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="bg-slate-100/80 border border-slate-200 rounded-2xl rounded-tl-none p-3.5 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <div className="bg-slate-100 border border-slate-200 rounded-2xl rounded-tl-none p-3.5 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                   </div>
                 </div>
               )}
@@ -1008,7 +1008,7 @@ ${cuboContext}`;
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(q.text)}
-                    className="text-[10px] bg-slate-100 hover:bg-purple-950/30 text-slate-700 hover:text-purple-300 border border-slate-200 hover:border-purple-500/20 px-3 py-1.5 rounded-xl transition-all font-medium text-left cursor-pointer"
+                    className="text-[10px] bg-slate-100 hover:bg-purple-100 text-slate-800 hover:text-purple-900 border border-slate-200 hover:border-purple-300 px-3 py-1.5 rounded-xl transition-all font-medium text-left cursor-pointer"
                   >
                     {q.short}
                   </button>
@@ -1024,11 +1024,11 @@ ${cuboContext}`;
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Escribe tu pregunta sobre ventas, devoluciones, marcas..."
-                className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
               />
               <button
                 onClick={() => handleSendMessage()}
-                className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-slate-900 rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/10 hover:scale-[1.02] cursor-pointer"
+                className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/20 hover:scale-[1.02] cursor-pointer"
               >
                 Preguntar
               </button>

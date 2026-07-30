@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
@@ -496,10 +496,10 @@ const ReturnsAnalysis = () => {
                   <tbody className="divide-y divide-slate-200">
                     {criticalExpiryClients.length > 0 ? criticalExpiryClients.map((client, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3 font-semibold text-slate-200 truncate max-w-[160px]" title={client.cliente}>
+                        <td className="py-3 font-bold text-slate-900 truncate max-w-[160px]" title={client.cliente}>
                           {client.cliente}
                         </td>
-                        <td className="py-3 text-center text-slate-600 font-mono text-[10px] hidden sm:table-cell">{client.ejecutivo}</td>
+                        <td className="py-3 text-center text-slate-700 font-mono text-[10px] hidden sm:table-cell">{client.ejecutivo}</td>
                         <td className="py-3 text-center hidden md:table-cell"><CityBadge zona={client.ejecutivo} /></td>
                         <td className="py-3 text-right font-bold text-rose-600">{formatShortCurrency(client.totalReturn)}</td>
                         <td className="py-3 text-right text-slate-700 pr-4 hidden sm:table-cell">{client.count}</td>
@@ -523,11 +523,11 @@ const ReturnsAnalysis = () => {
                 {sortedExpiryConcepts.length > 0 ? sortedExpiryConcepts.map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200">
                     <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-slate-200 truncate">{item.concepto}</h4>
+                      <h4 className="text-xs font-bold text-slate-900 truncate">{item.concepto}</h4>
                       <p className="text-[10px] text-slate-600 mt-0.5">Tasa representativa</p>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs font-bold text-slate-100">{formatPercent(item.porcentaje)}</span>
+                      <span className="text-xs font-bold text-slate-900">{formatPercent(item.porcentaje)}</span>
                       <div className="w-24 bg-slate-200 h-1.5 rounded-full mt-1 overflow-hidden">
                         <div 
                           className="bg-rose-600 h-full rounded-full" 

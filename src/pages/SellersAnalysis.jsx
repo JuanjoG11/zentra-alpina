@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD } from '../utils/calculations';
@@ -14,10 +14,10 @@ import {
 const ciudadDeZona = (zona) => ZONA_CIUDAD_MAP[zona] || 'OTRO';
 
 const CITY_META = {
-  PEREIRA:   { label: 'Eje Pereira',   color: 'blue',    bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
-  MANIZALES: { label: 'Eje Caldas',    color: 'indigo',  bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
-  ARMENIA:   { label: 'Eje Quindío',   color: 'emerald', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
-  OTRO:      { label: 'Otro',          color: 'slate',   bg: 'bg-slate-500/10',   text: 'text-slate-600',   border: 'border-slate-300'      },
+  PEREIRA:   { label: 'Eje Pereira',   color: 'blue',    bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200'    },
+  MANIZALES: { label: 'Eje Caldas',    color: 'indigo',  bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200'  },
+  ARMENIA:   { label: 'Eje Quindío',   color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  OTRO:      { label: 'Otro',          color: 'slate',   bg: 'bg-slate-100',  text: 'text-slate-700',   border: 'border-slate-300'      },
 };
 
 const CityBadge = ({ zona }) => {
@@ -32,9 +32,9 @@ const CityBadge = ({ zona }) => {
 };
 
 const complianceMeta = (rate) => {
-  if (rate >= 1.0)  return { Icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
-  if (rate >= 0.80) return { Icon: AlertCircle,  color: 'text-amber-400',   bg: 'bg-amber-500/10'   };
-  return               { Icon: XCircle,       color: 'text-rose-400',    bg: 'bg-rose-500/10'    };
+  if (rate >= 1.0)  return { Icon: CheckCircle2, color: 'text-emerald-700', bg: 'bg-emerald-50' };
+  if (rate >= 0.80) return { Icon: AlertCircle,  color: 'text-amber-700',   bg: 'bg-amber-50'   };
+  return               { Icon: XCircle,       color: 'text-rose-700',    bg: 'bg-rose-50'    };
 };
 
 const SellersAnalysis = () => {
@@ -240,13 +240,13 @@ const SellersAnalysis = () => {
           </div>
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
             {criticalAlerts.map((item, i) => (
-              <div key={i} className="p-3 rounded-xl bg-slate-50 border border-rose-500/10 flex justify-between items-center gap-2">
+              <div key={i} className="p-3 rounded-xl bg-rose-50/70 border border-rose-200 flex justify-between items-center gap-2">
                 <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-slate-200 truncate">{item.nombre}</h4>
+                  <h4 className="text-xs font-bold text-slate-900 truncate">{item.nombre}</h4>
                   <CityBadge zona={item.ejecutivo} />
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-sm font-bold text-rose-400">{formatPercent(item.porcentajeDevolucion)}</span>
+                  <span className="text-sm font-bold text-rose-600">{formatPercent(item.porcentajeDevolucion)}</span>
                   <p className="text-[9px] text-slate-600 mt-0.5">{formatShortCurrency(item.devoluciones)}</p>
                 </div>
               </div>
@@ -280,21 +280,21 @@ const SellersAnalysis = () => {
                   const meta = CITY_META[z.ciudad] || CITY_META.OTRO;
                   return (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-2.5 pl-2 font-bold text-slate-200">{z.zona}</td>
+                      <td className="py-2.5 pl-2 font-bold text-slate-900">{z.zona}</td>
                       <td className="py-2.5">
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.text}`}>
                           {meta.label}
                         </span>
                       </td>
-                      <td className="py-2.5 text-slate-600 text-[11px] max-w-[140px] truncate hidden sm:table-cell">{z.vendedor}</td>
-                      <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(z.ventasNetas)}</td>
+                      <td className="py-2.5 text-slate-700 text-[11px] font-semibold max-w-[140px] truncate hidden sm:table-cell">{z.vendedor}</td>
+                      <td className="py-2.5 text-right font-bold text-slate-900">{formatShortCurrency(z.ventasNetas)}</td>
                       <td className="py-2.5 text-right">
                         <span className={`flex items-center justify-end gap-1 font-bold ${cm.color}`}>
                           <CmIcon className="h-3 w-3" />
                           {formatPercent(rate)}
                         </span>
                       </td>
-                      <td className="py-2.5 text-right pr-2 font-mono text-slate-600 hidden sm:table-cell">{z.facturas.toLocaleString('es-CO')}</td>
+                      <td className="py-2.5 text-right pr-2 font-mono text-slate-700 hidden sm:table-cell">{z.facturas.toLocaleString('es-CO')}</td>
                     </tr>
                   );
                 })}
@@ -329,14 +329,14 @@ const SellersAnalysis = () => {
                 return (
                   <tr 
                     key={i} 
-                    className={`hover:bg-slate-50 transition-colors cursor-pointer group ${isAlert ? 'bg-rose-950/10' : ''}`}
+                    className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${isAlert ? 'bg-rose-50/60' : ''}`}
                     onClick={() => navigate(`/ejecutivo?seller=${s.ejecutivo}`)}
                     title="Ver perfil detallado"
                   >
-                    <td className="py-2.5 pl-2 font-bold text-slate-200 max-w-[150px] truncate">
+                    <td className="py-2.5 pl-2 font-extrabold text-slate-900 max-w-[170px] truncate">
                       <div className="flex items-center gap-2">
                         {s.nombre}
-                        <ExternalLink className="h-3 w-3 text-slate-600 group-hover:text-blue-400 transition-colors" />
+                        <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-blue-600 transition-colors" />
                       </div>
                     </td>
                     <td className="py-2.5 hidden sm:table-cell">
@@ -344,10 +344,10 @@ const SellersAnalysis = () => {
                         {meta.label}
                       </span>
                     </td>
-                    <td className="py-2.5 text-right font-semibold text-slate-100">{formatShortCurrency(s.ventas)}</td>
-                    <td className="py-2.5 text-right text-rose-400 font-semibold hidden sm:table-cell">{formatShortCurrency(s.devoluciones)}</td>
+                    <td className="py-2.5 text-right font-extrabold text-slate-900">{formatShortCurrency(s.ventas)}</td>
+                    <td className="py-2.5 text-right text-rose-600 font-bold hidden sm:table-cell">{formatShortCurrency(s.devoluciones)}</td>
                     <td className="py-2.5 text-right">
-                      <span className={`font-bold ${isAlert ? 'text-rose-400' : s.porcentajeDevolucion <= 0.02 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      <span className={`font-bold ${isAlert ? 'text-rose-600' : s.porcentajeDevolucion <= 0.02 ? 'text-emerald-700' : 'text-amber-700'}`}>
                         {formatPercent(s.porcentajeDevolucion)}
                       </span>
                     </td>
@@ -357,7 +357,7 @@ const SellersAnalysis = () => {
                           <div className={`h-full rounded-full ${s.porcentajeDevolucion <= 0.02 ? 'bg-emerald-500' : s.porcentajeDevolucion <= 0.05 ? 'bg-amber-500' : 'bg-rose-500'}`}
                             style={{ width: `${Math.max(0, (1 - s.porcentajeDevolucion) * 100)}%` }} />
                         </div>
-                        <span className={`text-xs font-bold ${s.porcentajeDevolucion <= 0.02 ? 'text-emerald-400' : s.porcentajeDevolucion <= 0.05 ? 'text-amber-400' : 'text-rose-400'}`}>
+                        <span className={`text-xs font-bold ${s.porcentajeDevolucion <= 0.02 ? 'text-emerald-700' : s.porcentajeDevolucion <= 0.05 ? 'text-amber-700' : 'text-rose-600'}`}>
                           {formatPercent(1 - s.porcentajeDevolucion)}
                         </span>
                       </div>

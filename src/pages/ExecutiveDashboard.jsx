@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, calculateKPIs, countCalendarBusinessDays } from '../utils/calculations';
@@ -306,7 +306,7 @@ const ExecutiveDashboard = () => {
           {/* Botón Modo TV */}
           <button
             onClick={() => navigate('/tv')}
-            className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-slate-900 font-bold text-xs md:text-sm transition-all shadow-md hover:shadow-lg"
+            className="flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs md:text-sm transition-all shadow-md hover:shadow-lg"
             title="Activar modo presentación TV"
           >
             <Monitor className="h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -359,10 +359,10 @@ const ExecutiveDashboard = () => {
 
       {/* ── Alerta devoluciones si supera umbral ── */}
       {isDevAlert && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-rose-500/30 bg-rose-500/5 animate-pulse">
-          <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
-          <p className="text-sm text-rose-300 font-medium">
-            Alerta: la tasa de rechazo supera el umbral crítico del 3,5% — actualmente en <strong>{formatPercent(devRate)}</strong>.
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-rose-300 bg-rose-50 shadow-xs">
+          <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
+          <p className="text-sm text-rose-800 font-semibold">
+            ⚠️ Alerta: la tasa de rechazo supera el umbral crítico del 3,5% — actualmente en <strong>{formatPercent(devRate)}</strong>.
           </p>
         </div>
       )}

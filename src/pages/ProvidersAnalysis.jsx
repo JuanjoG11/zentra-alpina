@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import useStore from '../store/useStore';
 import { getFilteredData, ZONA_CIUDAD_MAP } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
@@ -24,9 +24,9 @@ const CITY_META = {
 
 // Colores semáforo según % de proyección
 const semaforo = (pct) => {
-  if (pct >= 1.0)  return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-  if (pct >= 0.85) return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-  return 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+  if (pct >= 1.0)  return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+  if (pct >= 0.85) return 'bg-amber-100 text-amber-800 border-amber-300';
+  return 'bg-rose-100 text-rose-800 border-rose-300';
 };
 
 const PctBadge = ({ value }) => (
@@ -255,33 +255,33 @@ const ProvidersAnalysis = () => {
             onClick={() => setCityFilter(c)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
               cityFilter === c
-                ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-                : 'bg-slate-100 text-slate-600 border-slate-200 hover:border-slate-600'
+                ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
             }`}
           >
             {c === 'ALL' ? 'Todas' : c === 'PEREIRA' ? 'Eje Pereira' : c === 'MANIZALES' ? 'Eje Caldas' : 'Eje Quindío'}
           </button>
         ))}
         {!hasProductData && (
-          <span className="text-[10px] text-amber-400 border border-amber-500/20 bg-amber-500/10 px-2 py-1 rounded-lg">
+          <span className="text-[10px] text-amber-800 border border-amber-300 bg-amber-50 px-2 py-1 rounded-lg">
             ⚠ Split estimado (88% Deriv / 12% Otros) — sube datos para precisión exacta
           </span>
         )}
       </div>
 
-      {/* Tabla principal */}
-      <GlassCard hoverable={false} className="bg-white/95 border border-slate-200 p-4 md:p-5 shadow-lg">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      {/* Tabla detallada por Vendedor */}
+      <GlassCard hoverable={false} className="!p-4 md:!p-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
           <div>
             <h3 className="text-sm md:text-base font-bold text-slate-900 flex items-center gap-2">
-              <Truck className="h-4 w-4 text-sky-400" />
+              <Truck className="h-4 w-4 text-sky-600" />
               Presupuesto · Venta Real · Proyección al Cierre
             </h3>
             <p className="text-[10px] md:text-xs text-slate-600 mt-1">
               {sorted.length} vendedores · Haz clic en columna para ordenar
             </p>
           </div>
-          <div className="flex gap-4 text-[10px] text-slate-600">
+          <div className="flex gap-4 text-[10px] text-slate-600 font-semibold">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>≥100%</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block"/>85-99%</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"/>&lt;85%</span>
@@ -294,10 +294,10 @@ const ProvidersAnalysis = () => {
               <tr className="border-b-2 border-slate-300">
                 {/* Header grupos */}
                 <th className="pb-1 px-2 text-left" rowSpan={2}></th>
-                <th className="pb-1 px-2 text-center text-[9px] font-bold uppercase tracking-widest text-sky-400 border-b border-sky-500/30" colSpan={4}>
+                <th className="pb-1 px-2 text-center text-[9px] font-extrabold uppercase tracking-widest text-sky-700 border-b border-sky-200 bg-sky-50/50" colSpan={4}>
                   DERIVADOS
                 </th>
-                <th className="pb-1 px-2 text-center text-[9px] font-bold uppercase tracking-widest text-violet-400 border-b border-violet-500/30" colSpan={4}>
+                <th className="pb-1 px-2 text-center text-[9px] font-extrabold uppercase tracking-widest text-violet-700 border-b border-violet-200 bg-violet-50/50" colSpan={4}>
                   OTROS (Leche, Quesito, Don Maíz, Anchetas)
                 </th>
               </tr>
@@ -312,28 +312,28 @@ const ProvidersAnalysis = () => {
                 <TH col="pctO" right>Proy %</TH>
               </tr>
               {/* Fila de totales arriba */}
-              <tr className="bg-slate-100/80 border-b-2 border-slate-300 text-[10px] font-bold">
-                <td className="py-2 px-2 text-slate-900">Total general</td>
-                <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoDerivados)}</td>
-                <td className="py-2 px-2 text-right text-sky-300">{formatShortCurrency(totals.ventaDerivados)}</td>
-                <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyDerivados)}</td>
-                <td className="py-2 px-2 text-right"><PctBadge value={totalPctD} /></td>
-                <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoOtros)}</td>
-                <td className="py-2 px-2 text-right text-violet-300">{formatShortCurrency(totals.ventaOtros)}</td>
-                <td className="py-2 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyOtros)}</td>
-                <td className="py-2 px-2 text-right"><PctBadge value={totalPctO} /></td>
+              <tr className="bg-slate-100 border-b-2 border-slate-300 text-[10px] font-bold">
+                <td className="py-2.5 px-2 text-slate-900 uppercase font-black">Total general</td>
+                <td className="py-2.5 px-2 text-right text-slate-700">{formatShortCurrency(totals.pptoDerivados)}</td>
+                <td className="py-2.5 px-2 text-right text-sky-700 font-extrabold">{formatShortCurrency(totals.ventaDerivados)}</td>
+                <td className="py-2.5 px-2 text-right text-slate-700">{formatShortCurrency(totals.proyDerivados)}</td>
+                <td className="py-2.5 px-2 text-right"><PctBadge value={totalPctD} /></td>
+                <td className="py-2.5 px-2 text-right text-slate-700">{formatShortCurrency(totals.pptoOtros)}</td>
+                <td className="py-2.5 px-2 text-right text-violet-700 font-extrabold">{formatShortCurrency(totals.ventaOtros)}</td>
+                <td className="py-2.5 px-2 text-right text-slate-700">{formatShortCurrency(totals.proyOtros)}</td>
+                <td className="py-2.5 px-2 text-right"><PctBadge value={totalPctO} /></td>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {sorted.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-200/30 transition-colors">
+                <tr key={idx} className="hover:bg-blue-50/40 transition-colors">
                   {/* Vendedor */}
-                  <td className="py-2.5 px-2 text-slate-200 font-semibold text-[11px] md:text-xs whitespace-nowrap">
+                  <td className="py-2.5 px-2 text-slate-900 font-bold text-[11px] md:text-xs whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                         ZONA_CIUDAD_MAP && (() => {
                           const city = row.city;
-                          return city === 'PEREIRA' ? 'bg-blue-400' : city === 'MANIZALES' ? 'bg-indigo-400' : city === 'ARMENIA' ? 'bg-emerald-400' : 'bg-slate-400';
+                          return city === 'PEREIRA' ? 'bg-blue-600' : city === 'MANIZALES' ? 'bg-indigo-600' : city === 'ARMENIA' ? 'bg-emerald-600' : 'bg-slate-400';
                         })()
                       }`} />
                       {row.vendedor}
@@ -341,30 +341,30 @@ const ProvidersAnalysis = () => {
                   </td>
 
                   {/* Derivados */}
-                  <td className="py-2.5 px-2 text-right text-slate-600 tabular-nums">{formatShortCurrency(row.pptoDerivados)}</td>
-                  <td className="py-2.5 px-2 text-right text-sky-300 font-semibold tabular-nums">{formatShortCurrency(row.ventaDerivados)}</td>
-                  <td className="py-2.5 px-2 text-right text-slate-200 tabular-nums">{formatShortCurrency(row.proyDerivados)}</td>
+                  <td className="py-2.5 px-2 text-right text-slate-700 font-medium tabular-nums">{formatShortCurrency(row.pptoDerivados)}</td>
+                  <td className="py-2.5 px-2 text-right text-sky-700 font-bold tabular-nums">{formatShortCurrency(row.ventaDerivados)}</td>
+                  <td className="py-2.5 px-2 text-right text-slate-700 font-medium tabular-nums">{formatShortCurrency(row.proyDerivados)}</td>
                   <td className="py-2.5 px-2 text-right"><PctBadge value={row.pctDerivados} /></td>
 
                   {/* Otros */}
-                  <td className="py-2.5 px-2 text-right text-slate-600 tabular-nums">{formatShortCurrency(row.pptoOtros)}</td>
-                  <td className="py-2.5 px-2 text-right text-violet-300 font-semibold tabular-nums">{formatShortCurrency(row.ventaOtros)}</td>
-                  <td className="py-2.5 px-2 text-right text-slate-200 tabular-nums">{formatShortCurrency(row.proyOtros)}</td>
+                  <td className="py-2.5 px-2 text-right text-slate-700 font-medium tabular-nums">{formatShortCurrency(row.pptoOtros)}</td>
+                  <td className="py-2.5 px-2 text-right text-violet-700 font-bold tabular-nums">{formatShortCurrency(row.ventaOtros)}</td>
+                  <td className="py-2.5 px-2 text-right text-slate-700 font-medium tabular-nums">{formatShortCurrency(row.proyOtros)}</td>
                   <td className="py-2.5 px-2 text-right"><PctBadge value={row.pctOtros} /></td>
                 </tr>
               ))}
             </tbody>
             {/* Fila total al final también */}
             <tfoot>
-              <tr className="bg-slate-100/80 border-t-2 border-slate-300 text-[10px] font-bold">
-                <td className="py-2.5 px-2 text-slate-900">Total general</td>
-                <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoDerivados)}</td>
-                <td className="py-2.5 px-2 text-right text-sky-300">{formatShortCurrency(totals.ventaDerivados)}</td>
-                <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyDerivados)}</td>
+              <tr className="bg-slate-100 border-t-2 border-slate-300 text-[10px] font-bold">
+                <td className="py-2.5 px-2 text-slate-900 uppercase font-black">Total general</td>
+                <td className="py-2.5 px-2 text-right text-slate-700">{formatShortCurrency(totals.pptoDerivados)}</td>
+                <td className="py-2.5 px-2 text-right text-sky-700 font-extrabold">{formatShortCurrency(totals.ventaDerivados)}</td>
+                <td className="py-2.5 px-2 text-right text-slate-700">{formatShortCurrency(totals.proyDerivados)}</td>
                 <td className="py-2.5 px-2 text-right"><PctBadge value={totalPctD} /></td>
-                <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.pptoOtros)}</td>
-                <td className="py-2.5 px-2 text-right text-violet-300">{formatShortCurrency(totals.ventaOtros)}</td>
-                <td className="py-2.5 px-2 text-right text-slate-200">{formatShortCurrency(totals.proyOtros)}</td>
+                <td className="py-2.5 px-2 text-right text-slate-700">{formatShortCurrency(totals.pptoOtros)}</td>
+                <td className="py-2.5 px-2 text-right text-violet-700 font-extrabold">{formatShortCurrency(totals.ventaOtros)}</td>
+                <td className="py-2.5 px-2 text-right text-slate-700">{formatShortCurrency(totals.proyOtros)}</td>
                 <td className="py-2.5 px-2 text-right"><PctBadge value={totalPctO} /></td>
               </tr>
             </tfoot>
@@ -375,14 +375,14 @@ const ProvidersAnalysis = () => {
       {/* Nota definitoria */}
       <GlassCard hoverable={false} className="bg-white border border-slate-200 p-4">
         <p className="text-[10px] md:text-xs text-slate-600 leading-relaxed">
-          <span className="text-slate-200 font-semibold">Definición de categorías:</span>{' '}
-          <span className="text-violet-300 font-semibold">Otros</span> incluye:{' '}
+          <span className="text-slate-900 font-bold">Definición de categorías:</span>{' '}
+          <span className="text-violet-700 font-bold">Otros</span> incluye:{' '}
           {OTROS_MARCAS.join(', ')}.{' '}
-          <span className="text-sky-300 font-semibold">Derivados</span> incluye todos los demás productos del portafolio Alpina.{' '}
+          <span className="text-sky-700 font-bold">Derivados</span> incluye todos los demás productos del portafolio Alpina.{' '}
           La proyección al cierre se calcula linealmente con base en los días hábiles transcurridos del mes.
           {!hasProductData && (
-            <span className="text-amber-400 ml-2">
-              ⚠ Se está usando una distribución estimada (88% Derivados / 12% Otros) por no haber datos de productos cargados.
+            <span className="text-amber-700 font-semibold ml-2">
+              (Distribución split estimada 88/12 — sube datos detallados para mayor precisión).
             </span>
           )}
         </p>

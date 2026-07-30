@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
 import { getFilteredData, ZONA_CIUDAD_MAP } from '../utils/calculations';
@@ -304,11 +304,11 @@ const ExecutiveProfile = () => {
             {topReturnClients.map((client, i) => (
               <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-bold text-slate-200 truncate">{client.cliente}</h4>
+                  <h4 className="text-xs font-bold text-slate-900 truncate">{client.cliente}</h4>
                   <p className="text-[10px] text-slate-600 mt-0.5">{client.concepto}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-sm font-bold text-rose-400">{formatShortCurrency(client.valor)}</span>
+                  <span className="text-sm font-bold text-rose-600">{formatShortCurrency(client.valor)}</span>
                 </div>
               </div>
             ))}
@@ -328,8 +328,8 @@ const ExecutiveProfile = () => {
             {topReturnConcepts.map((concept, i) => (
               <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex justify-between items-center gap-2 mb-2">
-                  <h4 className="text-xs font-bold text-slate-200 truncate flex-1">{concept.concepto}</h4>
-                  <span className="text-sm font-bold text-amber-400">{formatShortCurrency(concept.total)}</span>
+                  <h4 className="text-xs font-bold text-slate-900 truncate flex-1">{concept.concepto}</h4>
+                  <span className="text-sm font-bold text-amber-700">{formatShortCurrency(concept.total)}</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                   <div

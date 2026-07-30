@@ -611,74 +611,127 @@ export const BIGaugeChart = ({ val = 0 }) => {
 };
 
 // 8. WATERFALL CHART - Sales to Net Sales bridge (using ECharts)
-export const BIWaterfallChart = ({ sales = 5347429635, returns = 42536287 }) => {
+export const BIWaterfallChart = ({ sales = 0, returns = 0 }) => {
   const netSales = sales - returns;
+  const devRate  = sales > 0 ? ((returns / sales) * 100).toFixed(1) : '0.0';
+  const netRate  = sales > 0 ? ((netSales / sales) * 100).toFixed(1) : '0.0';
 
   const option = {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
+      backgroundColor: '#ffffff',
+      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      textStyle: { color: '#0f172a', fontSize: 12 },
       formatter: (params) => {
-        const tar = params[1] || params[0];
-        return `${tar.name}<br/>${formatCurrency(tar.value)}`;
+        const tar = params.find(p => p.seriesName === 'Valor') || params[0];
+        if (!tar) return '';
+        const icons = { 'Ventas Brutas': '📦', 'Devoluciones': '↩️', 'Ventas Netas': '✅' };
+        return `<div style="font-size:12px;line-height:2;padding:4px 8px">
+          <b>${icons[tar.name] || ''} ${tar.name}</b><br/>
+          <span style="font-size:14px;font-weight:800;color:${tar.color}">${formatCurrency(tar.value)}</span>
+        </div>`;
       }
     },
-    grid: { left: '15%', right: '5%', top: '10%', bottom: '15%' },
+    grid: { left: '12%', right: '4%', top: '14%', bottom: '18%' },
     xAxis: {
       type: 'category',
       splitLine: { show: false },
       data: ['Ventas Brutas', 'Devoluciones', 'Ventas Netas'],
-      axisLabel: { color: '#475569' }
+      axisLabel: { color: '#475569', fontSize: 11, fontWeight: 600 },
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: '#e2e8f0' } }
     },
     yAxis: {
       type: 'value',
       axisLabel: {
-        color: '#475569',
+        color: '#94a3b8',
+        fontSize: 10,
         formatter: (val) => formatShortCurrency(val)
       },
-      splitLine: { lineStyle: { color: '#e2e8f0' } }
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
     },
     series: [
       {
         name: 'Placeholder',
         type: 'bar',
         stack: 'Total',
-        itemStyle: {
-          borderColor: 'transparent',
-          color: 'transparent'
-        },
-        emphasis: {
-          itemStyle: {
-            borderColor: 'transparent',
-            color: 'transparent'
-          }
-        },
-        data: [0, netSales, 0] // bottom offsets
+        itemStyle: { borderColor: 'transparent', color: 'transparent' },
+        emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' } },
+        data: [0, netSales, 0]
       },
       {
         name: 'Valor',
         type: 'bar',
         stack: 'Total',
+        barMaxWidth: 72,
+        itemStyle: { borderRadius: [6, 6, 0, 0] },
         label: {
           show: true,
           position: 'inside',
+          fontSize: 12,
+          fontWeight: 700,
+          color: '#ffffff',
           formatter: (params) => formatShortCurrency(params.value)
         },
         data: [
           {
             value: sales,
-            itemStyle: { color: '#3b82f6' }
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#60a5fa' },
+                { offset: 1, color: '#2563eb' }
+              ]),
+              borderRadius: [8, 8, 0, 0]
+            }
           },
           {
             value: returns,
-            itemStyle: { color: '#ef4444' }
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#fca5a5' },
+                { offset: 1, color: '#dc2626' }
+              ]),
+              borderRadius: [8, 8, 0, 0]
+            }
           },
           {
             value: netSales,
-            itemStyle: { color: '#10b981' }
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#6ee7b7' },
+                { offset: 1, color: '#059669' }
+              ]),
+              borderRadius: [8, 8, 0, 0]
+            }
           }
         ]
+      }
+    ],
+    graphic: [
+      {
+        type: 'text',
+        left: '27%',
+        top: '4%',
+        style: {
+          text: `↩ ${devRate}% devuelto`,
+          fill: '#dc2626',
+          fontSize: 10,
+          fontWeight: 700
+        }
+      },
+      {
+        type: 'text',
+        right: '8%',
+        top: '4%',
+        style: {
+          text: `✓ ${netRate}% retenido`,
+          fill: '#059669',
+          fontSize: 10,
+          fontWeight: 700
+        }
       }
     ]
   };
@@ -882,63 +935,99 @@ export const BIZoneRankingChart = ({ zones = [] }) => {
   return <ReactECharts option={option} style={{ height: '320px', width: '100%' }} />;
 };
 
-// 12. DONUT CHART - Distribution pie/donut chart for returns and zones
+// 12. DONUT CHART - Distribution pie/donut chart for providers/returns/zones
 export const BIDonutChart = ({ data = [], height = 300 }) => {
   if (!data || data.length === 0) {
     return (
-      <div className="h-[300px] flex items-center justify-center text-slate-600 text-sm">
-        Sin datos
+      <div className="h-[300px] flex items-center justify-center text-slate-500 text-sm">
+        Sin datos disponibles
       </div>
     );
   }
 
-  const labels = data.map(item => item.name || item.label || item.concepto);
-  const series = data.map(item => Math.round(Number(item.value || item.devoluciones || item.ventas || 0)));
+  // Normalize: supports providers (proveedor/ventas2026), returns (concepto/porcentaje), or generic (name/value)
+  const normalized = data
+    .map(item => ({
+      label: item.proveedor || item.name || item.label || item.concepto || 'Sin nombre',
+      value: Math.round(Number(
+        item.ventas2026 ||
+        item.value ||
+        item.ventas ||
+        item.devoluciones ||
+        0
+      ))
+    }))
+    .filter(item => item.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
 
-  const options = {
-    ...baseApexOptions,
-    chart: {
-      ...baseApexOptions.chart,
-      type: 'donut'
-    },
-    labels,
-    colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'],
-    legend: {
-      position: 'bottom',
-      fontSize: '11px',
-      labels: { colors: '#94a3b8' }
-    },
-    dataLabels: {
-      enabled: true,
-      formatter: (val) => `${val.toFixed(1)}%`
-    },
+  const labels = normalized.map(item => item.label);
+  const series = normalized.map(item => item.value);
+
+  const PALETTE = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#ef4444'];
+
+  const option = {
+    backgroundColor: 'transparent',
+    color: PALETTE,
     tooltip: {
-      theme: 'dark',
-      y: {
-        formatter: (val) => formatShortCurrency(val)
+      trigger: 'item',
+      formatter: (params) => {
+        return `<div style="font-size:12px;line-height:1.8">
+          <b>${params.name}</b><br/>
+          ${formatShortCurrency(params.value)}<br/>
+          <span style="color:${params.color}">${params.percent.toFixed(1)}%</span>
+        </div>`;
       }
     },
-    plotOptions: {
-      pie: {
-        donut: {
-          size: '45%',
-          labels: {
-            show: true,
-            total: {
-              show: true,
-              label: 'Total',
-              color: '#94a3b8',
-              fontSize: '12px',
-              formatter: (w) => {
-                const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                return formatShortCurrency(total);
-              }
-            }
+    legend: {
+      type: 'scroll',
+      orient: 'vertical',
+      right: '2%',
+      top: 'middle',
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 8,
+      textStyle: { color: '#334155', fontSize: 11, fontWeight: 600 },
+      data: labels
+    },
+    series: [
+      {
+        name: 'Participación',
+        type: 'pie',
+        radius: ['42%', '72%'],
+        center: ['35%', '50%'],
+        avoidLabelOverlap: true,
+        itemStyle: {
+          borderRadius: 6,
+          borderColor: '#ffffff',
+          borderWidth: 3
+        },
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: (params) => `{pct|${params.percent.toFixed(0)}%}`,
+          rich: {
+            pct: { fontSize: 10, fontWeight: 700, color: '#475569' }
           }
-        }
+        },
+        labelLine: {
+          show: true,
+          length: 8,
+          length2: 10,
+          lineStyle: { color: '#cbd5e1', width: 1.5 }
+        },
+        emphasis: {
+          itemStyle: { shadowBlur: 12, shadowColor: 'rgba(0,0,0,0.15)' },
+          scaleSize: 6
+        },
+        data: normalized.map((item, i) => ({
+          name: item.label,
+          value: item.value,
+          itemStyle: { color: PALETTE[i % PALETTE.length] }
+        }))
       }
-    }
+    ]
   };
 
-  return <Chart options={options} series={series} type="donut" height={height} />;
+  return <ReactECharts option={option} style={{ height: `${height}px`, width: '100%' }} />;
 };
