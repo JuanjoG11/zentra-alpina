@@ -47,19 +47,20 @@ const ReturnsAnalysis = () => {
   const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
 
   // Total devolución y desglose de Rechazos vs Cambios (M.E.)
-  const totalAllReturns = kpis.totalReturns > 0 ? kpis.totalReturns : 132172835;
-  const rawClientSum = filteredData.clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
-  const rawExpirySum = filteredData.expiryClientReturns.reduce((sum, c) => sum + (c.valor || 0), 0);
+  const totalAllReturns = kpis.totalReturns && kpis.totalReturns > 0 ? kpis.totalReturns : 0;
+  const rawClientSum = (filteredData.clientReturns || []).reduce((sum, c) => sum + (c.valor || 0), 0);
+  const rawExpirySum = (filteredData.expiryClientReturns || []).reduce((sum, c) => sum + (c.valor || 0), 0);
 
-  let totalGeneralReturns; // Rechazos total
-  let totalExpiryReturns;  // Cambios total
+  let totalGeneralReturns = 0; // Rechazos total
+  let totalExpiryReturns = 0;  // Cambios total
 
-  if (rawClientSum > 0 && rawClientSum !== 42557488) {
+  if (rawClientSum > 0) {
     totalGeneralReturns = rawClientSum;
     totalExpiryReturns = rawExpirySum > 0 ? rawExpirySum : Math.max(0, totalAllReturns - totalGeneralReturns);
-  } else {
-    const rechazosRatio = 71693758 / 132172835;
-    totalGeneralReturns = Math.round(totalAllReturns * rechazosRatio);
+  } else if (totalAllReturns > 0) {
+    // Approximate ratio based on typical historical proportion (~54%)
+    const approxRatio = 0.54;
+    totalGeneralReturns = Math.round(totalAllReturns * approxRatio);
     totalExpiryReturns = totalAllReturns - totalGeneralReturns;
   }
 

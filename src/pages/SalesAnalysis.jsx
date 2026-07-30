@@ -445,23 +445,20 @@ const channelTicket = React.useMemo(() => {
       {/* Accumulated Sales and Stacked Composition */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GlassCard hoverable={false}>
-          <h3 className="text-base font-bold text-white mb-4">Crecimiento Acumulado de Ventas</h3>
-          <BIAreaChart data={filteredData.salesDaily.filter(d => d.fecha !== 'general')} />
+          <h3 className="text-base font-bold text-white mb-4">Avance vs Meta · {workDay} de {TOTAL_BD} días hábiles</h3>
+          <BIAreaChart
+            data={filteredData.salesDaily.filter(d => d.fecha !== 'general')}
+            presupuesto={paretoTotals.totalPresupuesto}
+            diasHabiles={TOTAL_BD}
+          />
         </GlassCard>
 
         <GlassCard hoverable={false}>
           <h3 className="text-base font-bold text-white mb-4">Tendencia y Pronóstico Comercial (Próximos 5 Días)</h3>
-          <BILineChart data={forecastData} />
-          <div className="flex justify-center gap-4 text-xs mt-3 text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-blue-500" />
-              <span>{forecastLabels.history}</span>
-            </div>
-            <div className="flex items-center gap-1.5 font-semibold text-blue-400">
-              <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
-              <span>{forecastLabels.forecast}</span>
-            </div>
-          </div>
+          <BILineChart
+            data={forecastData}
+            metaDiaria={paretoTotals.totalPresupuesto > 0 ? Math.round(paretoTotals.totalPresupuesto / TOTAL_BD) : 0}
+          />
         </GlassCard>
       </div>
 

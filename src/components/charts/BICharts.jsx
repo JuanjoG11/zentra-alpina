@@ -37,73 +37,158 @@ const baseApexOptions = {
   }
 };
 
-// 1. LINE CHART - Sales trend
-export const BILineChart = ({ data = [], title = 'Tendencia de Ventas' }) => {
+// 1. LINE CHART — Barras diarias (verde/rojo vs meta) + tendencia + pronóstico
+export const BILineChart = ({ data = [], metaDiaria = 0 }) => {
+  if (!data || data.length === 0) return (
+    <div className="h-[300px] flex items-center justify-center text-slate-500 text-sm">Sin datos de ventas diarias</div>
+  );
+
+  const historial  = data.filter(d => d.type !== 'pronostico');
+  const pronostico = data.filter(d => d.type === 'pronostico');
+  const n = historial.length;
+
+  // Promedio móvil 3 días sobre historial
+  const tendencia = historial.map((_, i) => {
+    const slice = historial.slice(Math.max(0, i - 2), i + 1);
+    return Math.round(slice.reduce((s, d) => s + (d.total || 0), 0) / slice.length);
+  });
+
+  const categories = data.map(d => d.fecha);
+
+  // Serie 1: barras historial — null en días de pronóstico
+  const barData = [
+    ...historial.map(d => Math.round(d.total || 0)),
+    ...pronostico.map(() => null)
+  ];
+
+  // Serie 2: tendencia — null en días de pronóstico
+  const tendenciaData = [
+    ...tendencia,
+    ...pronostico.map(() => null)
+  ];
+
+  // Serie 3: pronóstico — null en historial excepto el último punto de conexión
+  const pronosticoData = [
+    ...historial.map((d, i) => i === n - 1 ? Math.round(d.total || 0) : null),
+    ...pronostico.map(d => Math.round(d.total || 0))
+  ];
+
+  const series = [
+    { name: 'Venta del día', type: 'bar',  data: barData        },
+    { name: 'Tendencia',     type: 'line', data: tendenciaData  },
+    { name: 'Pronóstico',    type: 'line', data: pronosticoData }
+  ];
+
+  const yAnnotations = metaDiaria > 0 ? [{
+    y: Math.round(metaDiaria),
+    borderColor: '#f59e0b',
+    strokeDashArray: 5,
+    borderWidth: 1.5,
+    label: {
+      text: `Meta/día ${formatShortCurrency(metaDiaria)}`,
+      style: { color: '#f59e0b', background: '#0f172a', fontSize: '9px', fontWeight: 600 },
+      position: 'right', offsetX: -8, offsetY: -4
+    }
+  }] : [];
+
+  const xAnnotations = pronostico.length > 0 && n > 0 ? [{
+    x: historial[n - 1]?.fecha,
+    borderColor: '#334155',
+    strokeDashArray: 4,
+    label: {
+      text: 'Hoy',
+      style: { color: '#64748b', background: '#0f172a', fontSize: '9px' },
+      orientation: 'horizontal', offsetY: -6
+    }
+  }] : [];
+
+  const options = {
+    ...baseApexOptions,
+    chart: { ...baseApexOptions.chart, type: 'line', animations: { enabled: false } },
+    colors: ['#38bdf8', '#818cf8', '#f59e0b'],
+    plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
+    stroke: { curve: 'smooth', width: [0, 2.5, 2], dashArray: [0, 0, 6] },
+    fill: { type: ['solid', 'solid', 'solid'] },
+    markers: { size: [0, 0, 4], colors: ['#38bdf8', '#818cf8', '#f59e0b'], strokeColors: '#0f172a', strokeWidth: 2 },
+    dataLabels: { enabled: false },
+    xaxis: {
+      categories,
+      labels: { rotate: -45, style: { fontSize: '9px', colors: '#475569' }, hideOverlappingLabels: true },
+      axisBorder: { show: false }, axisTicks: { show: false }
+    },
+    yaxis: { labels: { formatter: v => formatShortCurrency(v), style: { colors: '#475569' } } },
+    legend: {
+      show: true, position: 'top', horizontalAlign: 'left', fontSize: '11px',
+      labels: { colors: '#94a3b8' },
+      markers: { width: 10, height: 10, radius: 2 }
+    },
+    annotations: { xaxis: xAnnotations, yaxis: yAnnotations },
+    tooltip: {
+      theme: 'dark', shared: true, intersect: false,
+      y: { formatter: v => v != null ? formatCurrency(v) : '—' }
+    }
+  };
+
+  return <Chart options={options} series={series} type="line" height={300} />;
+};
+
+// 2. AREA CHART - Accumulated sales vs goal + trend line
+// 2. VENTA ACUMULADA VS META — área real + línea de meta día a día
+export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23 }) => {
   if (!data || data.length === 0) return (
     <div className="h-[320px] flex items-center justify-center text-slate-500 text-sm">Sin datos de ventas diarias</div>
   );
-  const series = [{
-    name: 'Ventas Totales',
-    data: data.map(item => Math.round(item.total || 0))
-  }];
-  
+
+  const metaDiaria = presupuesto > 0 && diasHabiles > 0 ? presupuesto / diasHabiles : 0;
+
+  let acc = 0;
+  const ventaAcum = data.map(d => { acc += (d.total || 0); return Math.round(acc); });
+  const metaAcum  = data.map((_, i) => metaDiaria > 0 ? Math.round(metaDiaria * (i + 1)) : null);
+
+  const ventaFinal = ventaAcum[ventaAcum.length - 1] || 0;
+  const metaFinal  = metaAcum[metaAcum.length - 1]   || 0;
+  const cumple     = metaFinal > 0 ? ventaFinal / metaFinal : 0;
+  const areaColor  = cumple >= 1 ? '#10b981' : cumple >= 0.85 ? '#f59e0b' : '#ef4444';
+
+  const series = [
+    { name: 'Venta Acumulada', type: 'area', data: ventaAcum },
+    ...(metaDiaria > 0 ? [{ name: 'Meta', type: 'line', data: metaAcum }] : [])
+  ];
+
   const options = {
     ...baseApexOptions,
-    stroke: { curve: 'smooth', width: 3 },
-    colors: ['#3b82f6'], // blue-500
-    xaxis: {
-      categories: data.map(item => item.fecha),
-      labels: { rotate: -45, style: { fontSize: '10px' } }
-    },
-    yaxis: {
-      labels: {
-        formatter: (val) => formatShortCurrency(val)
-      }
-    },
+    chart: { ...baseApexOptions.chart, type: 'line', animations: { enabled: false } },
+    colors: [areaColor, '#f59e0b'],
+    stroke: { curve: 'smooth', width: [3, 2], dashArray: [0, 6] },
     fill: {
-      type: 'gradient',
+      type: ['gradient', 'solid'],
       gradient: {
-        shadeIntensity: 1,
-        opacityFrom: 0.7,
-        opacityTo: 0.9,
-        stops: [0, 90, 100]
+        shade: 'dark', type: 'vertical',
+        opacityFrom: 0.5, opacityTo: 0.03, stops: [0, 90, 100]
       }
+    },
+    markers: { size: 0 },
+    dataLabels: { enabled: false },
+    xaxis: {
+      categories: data.map(d => d.fecha),
+      labels: { rotate: -45, style: { fontSize: '9px' }, hideOverlappingLabels: true }
+    },
+    yaxis: { labels: { formatter: v => formatShortCurrency(v) } },
+    legend: {
+      show: true,
+      position: 'top',
+      horizontalAlign: 'left',
+      fontSize: '11px',
+      labels: { colors: '#94a3b8' },
+      markers: { width: 14, height: 3, radius: 0 }
+    },
+    tooltip: {
+      theme: 'dark', shared: true, intersect: false,
+      y: { formatter: v => formatCurrency(v) }
     }
   };
 
   return <Chart options={options} series={series} type="line" height={320} />;
-};
-
-// 2. AREA CHART - Accumulated sales
-export const BIAreaChart = ({ data = [], title = 'Ventas Acumuladas' }) => {
-  let accumulated = 0;
-  const accumData = data.map(item => {
-    accumulated += item.total;
-    return accumulated;
-  });
-
-  const series = [{
-    name: 'Ventas Acumuladas',
-    data: accumData
-  }];
-
-  const options = {
-    ...baseApexOptions,
-    stroke: { curve: 'straight', width: 2 },
-    colors: ['#6366f1'], // indigo-500
-    xaxis: {
-      categories: data.map(item => item.fecha),
-      labels: { rotate: -45, style: { fontSize: '10px' } }
-    },
-    yaxis: {
-      labels: {
-        formatter: (val) => formatShortCurrency(val)
-      }
-    },
-    dataLabels: { enabled: false }
-  };
-
-  return <Chart options={options} series={series} type="area" height={320} />;
 };
 
 // 3. STACKED BAR CHART - Cash vs Credit Sales

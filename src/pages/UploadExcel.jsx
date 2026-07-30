@@ -371,9 +371,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const cityKeys = ['txCiudad','nbCiudad','txBarrio','nbDepartamento','txDepartamento'];
   const proveedorKeys = ['nmProveedor','idProveedor','proveedor'];
   const brandKeys = ['nmTpMarca','npmtpmarca','marca'];
-  const valKeys = ['vlrAntesIva','vlrAntesIVA','vlr_antes_iva'];  // solo vlrAntesIva
+  const valKeys = ['vlrAntesIva','vlrAntesIVA','vlr_antes_iva','VlrAntesIva','vlrantesiva','valor','vlrTotal','vlrtotal','vlrTotalconIva','VlrTotalconIva'];
   const facturaKeys = ['nbFactura','documento_id','idfactura','factura'];
-  const motivoKeys = ['motivo','idmotivo','concepto'];
+  const motivoKeys = ['motivo','idmotivo','nmMotivo','nm_motivo','concepto','motivorechazo','motivo_rechazo','Motivo','MOTIVO'];
   const paymentKeys = ['nbFormaPago','forma_pago','formaPago','tipo_pago'];
   const clientKeys = ['nmRazonSocial','nombre1','nombre2','apellido1','apellido2','cliente','razon_social','nm_razon_social','Cliente','Razón Social','Nombre Cliente'];
   // Columnas de distribución numérica por producto
@@ -422,8 +422,10 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
         const rawVal = parseSpanishFloat(getRowValue(row, valKeys));
         const valTotal = rawVal;
 
-        // Devolución = motivo NO vacío Y vlrAntesIva negativo
-        const esDevolucion = (motivoStr !== '' && valTotal < 0);
+        // Devolución = motivo NO vacío (sin importar el signo del valor).
+        // El cubo de SAP puede exportar devoluciones con vlrAntesIva positivo O negativo según la versión.
+        // Usamos Math.abs() para acumular el monto correcto en ambos casos.
+        const esDevolucion = (motivoStr !== '' && valTotal !== 0);
 
         const factura = getRowValue(row, facturaKeys);
         const facturaStr = factura ? String(factura).trim() : '';
@@ -850,7 +852,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   console.log('Filas procesadas            :', processedRowsCount);
   console.log('Ventas brutas (vlrAntesIva) :', totalVentasBrutas.toLocaleString('es-CO'));
   console.log('Rechazos                    :', totalDevoluciones.toLocaleString('es-CO'));
-  console.log('Cambios                     :', totalDevVencimiento.toLocaleString('es-CO'));
+  console.log('Cambios (vencimiento)       :', totalDevVencimiento.toLocaleString('es-CO'));
   console.log('Total devoluciones          :', (totalDevoluciones + totalDevVencimiento).toLocaleString('es-CO'));
   console.log('Ventas netas esperadas      :', (totalVentasBrutas - totalDevoluciones - totalDevVencimiento).toLocaleString('es-CO'));
   console.log('Suma proveedores            :', totalProveedores.toLocaleString('es-CO'));
@@ -859,6 +861,7 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   console.log('Días con ventas             :', new Set(Object.values(salesDailyAggr).map(d => d.fecha)).size);
   console.log('Días con Rechazos           :', new Set(Object.values(returnsDailyAggr).map(d => d.fecha)).size);
   console.log('Días con Cambios            :', new Set(Object.values(expiryDailyAggr).map(d => d.fecha)).size);
+  console.log('⚠️ Si "Rechazos" y "Cambios" son 0, el cubo no tiene columna "motivo" legible o todas las filas de devolución tienen vlrAntesIva=0');
   console.groupEnd();
   // ============================================================
 
@@ -1195,6 +1198,8 @@ const UploadExcel = () => {
             localStorage.setItem('zentra_alpina_period', latestPeriod);
           } catch (e) { console.warn('Error al persistir caché local:', e); }
 
+          // Clear local cache to force fresh fetch
+          try { localStorage.removeItem('zentra_alpina_dbData'); localStorage.removeItem('zentra_alpina_period'); } catch(e) {}
           // Sincronizar store local con los datos reales leídos de la DB
           await fetchDataFromSupabase();
         } catch (dbErr) {
