@@ -327,16 +327,16 @@ const channelTicket = React.useMemo(() => {
   const forecastLabels = getForecastLabels();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Análisis de Ventas</h1>
-        <p className="text-slate-400 text-xs md:text-sm mt-1">
-          Profundice en el comportamiento de facturación comercial, métodos de pago, forecast y rankings de zona.
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">Análisis de Ventas</h1>
+        <p className="text-slate-400 text-xs mt-0.5">
+          Comportamiento de facturación comercial, métodos de pago, forecast y rankings de zona.
         </p>
       </div>
 
       {/* ── Resumen por eje comercial ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-3 gap-2">
         {[
           { city: 'PEREIRA',   label: 'Eje Pereira',  bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20'    },
           { city: 'MANIZALES', label: 'Eje Caldas',   bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20'  },
@@ -345,20 +345,20 @@ const channelTicket = React.useMemo(() => {
           const v = ejeTotals[city] || 0;
           const share = v / totalEjes;
           return (
-            <GlassCard key={city} hoverable={false} className={`border ${border} relative overflow-hidden`}>
+            <GlassCard key={city} hoverable={false} className={`border ${border} relative overflow-hidden !p-3`}>
               <div className={`absolute inset-0 ${bg} opacity-25 pointer-events-none rounded-2xl`} />
-              <div className="relative flex items-center justify-between">
+              <div className="relative flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest ${text}`}>{label}</p>
-                  <p className="text-lg md:text-xl font-extrabold text-white mt-1">{formatShortCurrency(v)}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-16 md:w-20 h-1 bg-slate-800 rounded-full overflow-hidden">
+                  <p className={`text-[9px] font-bold uppercase tracking-widest ${text}`}>{label}</p>
+                  <p className="text-base font-extrabold text-white mt-0.5">{formatShortCurrency(v)}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-14 h-1 bg-slate-800 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${text.replace('text-', 'bg-')}`} style={{ width: `${share * 100}%` }} />
                     </div>
-                    <span className={`text-[10px] font-bold ${text}`}>{formatPercent(share)}</span>
+                    <span className={`text-[9px] font-bold ${text}`}>{formatPercent(share)}</span>
                   </div>
                 </div>
-                <MapPin className={`h-6 w-6 md:h-8 md:w-8 opacity-10 ${text} shrink-0 ml-2`} />
+                <MapPin className={`h-5 w-5 opacity-10 ${text} shrink-0`} />
               </div>
             </GlassCard>
           );
@@ -366,26 +366,26 @@ const channelTicket = React.useMemo(() => {
       </div>
 
       {/* Métricas de facturación — fila compacta */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
+      <div className="grid grid-cols-5 gap-2">
         {[
-          { label: 'Contado neto',   value: formatShortCurrency(cashTotal),    sub: formatPercent(1 - creditPercentage), color: 'text-emerald-400', border: 'border-emerald-500/20' },
-          { label: 'Crédito neto',   value: formatShortCurrency(creditTotal),  sub: formatPercent(creditPercentage),     color: 'text-amber-400',   border: 'border-amber-500/20'   },
-          { label: 'Venta bruta',    value: formatShortCurrency(grossCash + grossCredit), sub: 'antes de devoluciones',  color: 'text-sky-400',     border: 'border-sky-500/20'     },
-          { label: 'Ticket Super',   value: formatCurrency(channelTicket.SUPERMERCADOS),  sub: 'por factura',            color: 'text-blue-400',    border: 'border-blue-500/20'    },
-          { label: 'Ticket TAT',     value: formatCurrency(channelTicket.TAT),            sub: 'por factura',            color: 'text-violet-400',  border: 'border-violet-500/20'  },
+          { label: 'Contado neto',   value: formatShortCurrency(cashTotal),              sub: formatPercent(1 - creditPercentage), color: 'text-emerald-400', border: 'border-emerald-500/20' },
+          { label: 'Crédito neto',   value: formatShortCurrency(creditTotal),            sub: formatPercent(creditPercentage),     color: 'text-amber-400',   border: 'border-amber-500/20'   },
+          { label: 'Venta bruta',    value: formatShortCurrency(grossCash + grossCredit), sub: 'antes de devoluciones',            color: 'text-sky-400',     border: 'border-sky-500/20'     },
+          { label: 'Ticket Super',   value: formatCurrency(channelTicket.SUPERMERCADOS),  sub: 'por factura',                      color: 'text-blue-400',    border: 'border-blue-500/20'    },
+          { label: 'Ticket TAT',     value: formatCurrency(channelTicket.TAT),            sub: 'por factura',                      color: 'text-violet-400',  border: 'border-violet-500/20'  },
         ].map(({ label, value, sub, color, border }) => (
-          <GlassCard key={label} hoverable={false} className={`bg-slate-900/30 border ${border} p-3 md:p-4`}>
-            <p className="text-[9px] md:text-[10px] text-slate-500 uppercase tracking-wider font-semibold truncate">{label}</p>
-            <p className={`text-base md:text-lg font-black mt-1 ${color}`}>{value}</p>
+          <GlassCard key={label} hoverable={false} className={`bg-slate-900/30 border ${border} !p-2.5`}>
+            <p className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold truncate">{label}</p>
+            <p className={`text-sm font-black mt-0.5 ${color}`}>{value}</p>
             <p className="text-[9px] text-slate-600 mt-0.5 truncate">{sub}</p>
           </GlassCard>
         ))}
       </div>
 
-      {/* Accumulated Sales and Stacked Composition */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GlassCard hoverable={false}>
-          <h3 className="text-base font-bold text-white mb-4">Avance vs Meta · {workDay} de {TOTAL_BD} días hábiles</h3>
+      {/* Gráficas principales */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <GlassCard hoverable={false} className="!p-3 md:!p-4">
+          <h3 className="text-sm font-bold text-white mb-3">Avance vs Meta · {workDay} de {TOTAL_BD} días hábiles</h3>
           <BIAreaChart
             data={filteredData.salesDaily.filter(d => d.fecha !== 'general')}
             presupuesto={paretoTotals.totalPresupuesto}
@@ -395,8 +395,8 @@ const channelTicket = React.useMemo(() => {
           />
         </GlassCard>
 
-        <GlassCard hoverable={false}>
-          <h3 className="text-base font-bold text-white mb-4">Tendencia y Pronóstico Comercial (Próximos 5 Días)</h3>
+        <GlassCard hoverable={false} className="!p-3 md:!p-4">
+          <h3 className="text-sm font-bold text-white mb-3">Tendencia y Pronóstico Comercial (Próximos 5 Días)</h3>
           <BILineChart
             data={forecastData}
             metaDiaria={paretoTotals.totalPresupuesto > 0 ? Math.round(paretoTotals.totalPresupuesto / TOTAL_BD) : 0}
@@ -404,17 +404,17 @@ const channelTicket = React.useMemo(() => {
         </GlassCard>
       </div>
 
-      {/* Pareto 80/20 Section removed */}
-      <GlassCard hoverable={false}>
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
+      {/* Pareto 80/20 */}
+      <GlassCard hoverable={false} className="!p-3 md:!p-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
           <div>
-            <h3 className="text-base font-bold text-white">Análisis de Pareto 80/20 por Zonas</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h3 className="text-sm font-bold text-white">Análisis de Pareto 80/20 por Zonas</h3>
+            <p className="text-[10px] text-slate-400 mt-0.5">
               Clasificación de zonas según su contribución al volumen total de ventas netas.
             </p>
           </div>
           <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1 text-[10px] text-amber-400 font-semibold uppercase tracking-wider shrink-0 w-fit">
-            <ArrowUpRight className="h-4 w-4 shrink-0" />
+            <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
             <span>Zonas Core (80% Facturación)</span>
           </div>
         </div>

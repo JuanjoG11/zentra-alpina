@@ -176,11 +176,11 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
         track: { background: '#1e293b', strokeWidth: '100%' },
         dataLabels: {
           name: {
-            show: true, offsetY: 58, fontSize: '10px', fontWeight: 600, color: '#64748b',
+            show: true, offsetY: 52, fontSize: '9px', fontWeight: 600, color: '#64748b',
             formatter: () => 'vs Meta acumulada'
           },
           value: {
-            show: true, offsetY: 16, fontSize: '32px', fontWeight: 900, color,
+            show: true, offsetY: 12, fontSize: '28px', fontWeight: 900, color,
             formatter: () => `${pctEjecutado.toFixed(1)}%`
           }
         }
@@ -218,9 +218,9 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
 
         {/* Gauge 1 — avance vs meta acumulada proporcional */}
         <div className="relative flex flex-col items-center">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full blur-3xl opacity-20 pointer-events-none"
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none"
             style={{ background: color }} />
-          <Chart options={gaugeOptions} series={[gaugeVal]} type="radialBar" height={200} width="100%" />
+          <Chart options={gaugeOptions} series={[gaugeVal]} type="radialBar" height={170} width="100%" />
           <p className="text-[10px] font-bold -mt-4 text-center" style={{ color }}>
             {estaArriba ? `▲ +${formatShortCurrency(brecha)}` : `▼ ${formatShortCurrency(Math.abs(brecha))}`}
           </p>
@@ -229,7 +229,7 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
 
         {/* Gauge 2 — cumplimiento real venta neta / presupuesto total */}
         <div className="relative flex flex-col items-center">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full blur-3xl opacity-20 pointer-events-none"
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none"
             style={{ background: colorReal }} />
           <Chart
             options={{
@@ -240,11 +240,11 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
                   ...gaugeOptions.plotOptions.radialBar,
                   dataLabels: {
                     name: {
-                      show: true, offsetY: 58, fontSize: '10px', fontWeight: 600, color: '#64748b',
+                      show: true, offsetY: 52, fontSize: '9px', fontWeight: 600, color: '#64748b',
                       formatter: () => 'del presupuesto'
                     },
                     value: {
-                      show: true, offsetY: 16, fontSize: '32px', fontWeight: 900, color: colorReal,
+                      show: true, offsetY: 12, fontSize: '28px', fontWeight: 900, color: colorReal,
                       formatter: () => `${pctCumplReal.toFixed(1)}%`
                     }
                   }
@@ -261,7 +261,7 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
             }}
             series={[Math.min(Math.round(pctCumplReal), 200)]}
             type="radialBar"
-            height={200}
+            height={170}
             width="100%"
           />
           <p className="text-[10px] font-bold -mt-4 text-center" style={{ color: colorReal }}>
@@ -272,21 +272,21 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
       </div>
 
       {/* ── Fila inferior: semáforo + días ── */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
 
         {/* Semáforo de proyección */}
-        <div className="rounded-2xl p-3 border relative overflow-hidden"
+        <div className="rounded-xl p-2.5 border relative overflow-hidden"
           style={{ background: proyEstado.bg, borderColor: proyEstado.border }}>
           <div className="flex items-start gap-2">
-            <span className="text-2xl leading-none mt-0.5">{proyEstado.icono}</span>
+            <span className="text-xl leading-none mt-0.5">{proyEstado.icono}</span>
             <div className="min-w-0">
-              <p className="text-xs font-black text-white leading-tight">{proyEstado.titulo}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{proyEstado.frase}</p>
-              <div className="mt-2 w-full h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+              <p className="text-[11px] font-black text-white leading-tight">{proyEstado.titulo}</p>
+              <p className="text-[9px] text-slate-400 mt-0.5 leading-snug">{proyEstado.frase}</p>
+              <div className="mt-1.5 w-full h-1 bg-slate-800/60 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-700"
                   style={{ width: `${Math.min(pctProyeccion, 100)}%`, background: colorProy }} />
               </div>
-              <p className="text-[10px] font-bold mt-1" style={{ color: colorProy }}>
+              <p className="text-[9px] font-bold mt-0.5" style={{ color: colorProy }}>
                 {pctProyeccion.toFixed(1)}% proy. cierre
               </p>
             </div>
@@ -294,20 +294,20 @@ export const BIAreaChart = ({ data = [], presupuesto = 0, diasHabiles = 23, work
         </div>
 
         {/* Segmentos de días hábiles */}
-        <div className="rounded-2xl p-3 border border-slate-800/60 bg-slate-900/40">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Días hábiles</p>
+        <div className="rounded-xl p-2.5 border border-slate-800/60 bg-slate-900/40">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[9px] uppercase tracking-widest text-slate-500 font-semibold">Días hábiles</p>
             <span className="text-sm font-black text-white">{diasTranscurridos}
-              <span className="text-slate-500 font-normal text-[10px]"> / {diasHabiles}</span>
+              <span className="text-slate-500 font-normal text-[9px]"> / {diasHabiles}</span>
             </span>
           </div>
           <div className="flex gap-0.5">
             {Array.from({ length: diasHabiles }).map((_, i) => (
-              <div key={i} className="flex-1 h-2 rounded-sm"
+              <div key={i} className="flex-1 h-1.5 rounded-sm"
                 style={{ background: i < diasTranscurridos ? '#38bdf8' : '#1e293b', opacity: i < diasTranscurridos ? 1 : 0.4 }} />
             ))}
           </div>
-          <p className="text-[10px] text-slate-500 mt-1 text-right">
+          <p className="text-[9px] text-slate-500 mt-1 text-right">
             {Math.round((diasTranscurridos / diasHabiles) * 100)}% del mes
           </p>
         </div>

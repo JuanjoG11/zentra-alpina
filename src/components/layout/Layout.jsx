@@ -104,12 +104,12 @@ const Layout = () => {
           - lg con sidebar abierto: pl-64 (16rem = w-64)
         */}
         <main className={`
-          flex-1 pt-24 px-4 pb-6
+          flex-1 pt-[4.5rem] px-3 pb-4
           transition-all duration-300 ease-in-out
-          lg:px-6
+          lg:px-5
           ${sidebarOpen ? 'lg:pl-[17rem]' : 'lg:pl-[6rem]'}
         `}>
-          <div className="max-w-7xl mx-auto space-y-6">
+          <div className="max-w-7xl mx-auto space-y-4">
             <Outlet />
           </div>
         </main>
