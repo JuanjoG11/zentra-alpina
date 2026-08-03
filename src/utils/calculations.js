@@ -1,6 +1,39 @@
 import { alpinaData } from '../data/alpina-data';
 import useStore from '../store/useStore';
 
+// ─── Días hábiles oficiales por período — FUENTE ÚNICA ────────────────────
+// Actualizar este mapa cada mes nuevo. Todos los archivos importan de aquí.
+// Si un período no está en el mapa, el fallback es 23.
+export const DIAS_HABILES_POR_PERIODO = {
+  '2026-01': 21,
+  '2026-02': 20,
+  '2026-03': 22,
+  '2026-04': 21,
+  '2026-05': 21,
+  '2026-06': 23,
+  '2026-07': 23,
+  '2026-08': 21,
+  '2026-09': 22,
+  '2026-10': 22,
+  '2026-11': 21,
+  '2026-12': 20,
+};
+
+/** Devuelve los días hábiles del período dado. Si no está en el mapa, cuenta días hábiles del mes. */
+export const getDiasHabiles = (periodo) => {
+  if (DIAS_HABILES_POR_PERIODO[periodo]) return DIAS_HABILES_POR_PERIODO[periodo];
+  // Fallback: contar lunes-viernes del mes calendario
+  if (!periodo || !/^\d{4}-\d{2}$/.test(periodo)) return 23;
+  const [y, m] = periodo.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dow = new Date(y, m - 1, d).getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+};
+
 // ─── Mapa oficial de zonas por ciudad (fuente: CUBO_DE_VENTAS) ─────────────
 // MACRO_1 = Eje Armenia  |  MACRO_2 = Eje Manizales  |  MACRO_3 = Eje Pereira
 export const ZONA_CIUDAD_MAP = {

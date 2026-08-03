@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD } from '../utils/calculations';
+import { getFilteredData, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD, ZONE_TYPE_MAP, getDiasHabiles } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency, formatNumber, formatKg } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
@@ -131,12 +131,10 @@ const FocosNumerica = () => {
 
   const selectedPeriod = useStore(state => state.selectedPeriod);
 
-  // ── Constantes del mes — conectadas al store ────────────────────────
-  // Presupuesto y días hábiles según el período activo
+  // Presupuesto y días hábiles según el período activo — días desde fuente única
   const PRESUPUESTO_POR_PERIODO = { '2026-06': 4210000000, '2026-07': 4210000000 };
-  const DIAS_HABILES_POR_PERIODO = { '2026-06': 23, '2026-07': 23 };
   const PRESUPUESTO_MES = PRESUPUESTO_POR_PERIODO[selectedPeriod] || 4210000000;
-  const DIAS_HABILES    = DIAS_HABILES_POR_PERIODO[selectedPeriod] || 23;
+  const DIAS_HABILES    = getDiasHabiles(selectedPeriod);
 
   // Nombre del mes en español para el banner
   const NOMBRE_MES = useMemo(() => {
@@ -163,6 +161,7 @@ const FocosNumerica = () => {
   const setSelectedCity = (val) => setCity(val === 'ALL' ? 'Todas' : val);
 
   const [productSearch, setProductSearch] = useState('');
+  const [selectedChannel, setSelectedChannel] = useState('ALL');
   const [productSortBy, setProductSortBy] = useState('ventas');
   const [productSortDir, setProductSortDir] = useState('desc');
   const [expandedBrands, setExpandedBrands] = useState({});
@@ -176,6 +175,7 @@ const FocosNumerica = () => {
   const numericFocus = filteredData.zones.map((z) => ({
     ...z,
     city: zoneCity(z.zona),
+    canal: ZONE_TYPE_MAP[z.zona] || 'TAT',
     universeClients: ZONE_UNIVERSE[z.zona] || 0,
     coverage: z.presupuesto > 0 ? z.ventasNetas / z.presupuesto : 0,
     efficiency: z.facturas > 0 ? z.ventasNetas / z.facturas : 0,
@@ -183,9 +183,11 @@ const FocosNumerica = () => {
   }));
 
   const filteredByCity = useMemo(() => {
-    if (selectedCity === 'ALL') return numericFocus;
-    return numericFocus.filter((z) => z.city === selectedCity);
-  }, [numericFocus, selectedCity]);
+    let base = selectedCity === 'ALL' ? numericFocus : numericFocus.filter((z) => z.city === selectedCity);
+    if (selectedChannel === 'TAT') return base.filter((z) => z.canal === 'TAT');
+    if (selectedChannel === 'SUPER') return base.filter((z) => z.canal === 'SUPERMERCADOS');
+    return base;
+  }, [numericFocus, selectedCity, selectedChannel]);
 
   // Solo zonas tradicionales (excluye supermercados) para métricas de cobertura numérica
   const traditionalZones = numericFocus.filter((z) => !SUPERMARKET_ZONES.has(z.zona));
@@ -194,6 +196,25 @@ const FocosNumerica = () => {
   const totalFocusFacturas = filteredByCity.reduce((sum, z) => sum + z.facturas, 0);
   const totalNetSales = filteredByCity.reduce((sum, z) => sum + z.ventasNetas, 0);
   const totalBudget = filteredByCity.reduce((sum, z) => sum + z.presupuesto, 0);
+
+  // Totales separados por canal TAT y SUPER (siempre sobre todos los datos de ciudad, sin filtro de canal)
+  const baseByCity = useMemo(() => selectedCity === 'ALL' ? numericFocus : numericFocus.filter((z) => z.city === selectedCity), [numericFocus, selectedCity]);
+  const kpiTAT = useMemo(() => {
+    const tat = baseByCity.filter((z) => z.canal === 'TAT');
+    return {
+      ventasNetas: tat.reduce((s, z) => s + z.ventasNetas, 0),
+      presupuesto: tat.reduce((s, z) => s + z.presupuesto, 0),
+      facturas: tat.reduce((s, z) => s + z.facturas, 0),
+    };
+  }, [baseByCity]);
+  const kpiSUPER = useMemo(() => {
+    const sup = baseByCity.filter((z) => z.canal === 'SUPERMERCADOS');
+    return {
+      ventasNetas: sup.reduce((s, z) => s + z.ventasNetas, 0),
+      presupuesto: sup.reduce((s, z) => s + z.presupuesto, 0),
+      facturas: sup.reduce((s, z) => s + z.facturas, 0),
+    };
+  }, [baseByCity]);
   // Ventas brutas: suma de salesDaily (lo facturado antes de devoluciones)
   const totalGrossSales = (filteredData.salesDaily || []).reduce((sum, d) => sum + (d.total || 0), 0)
     || filteredData.providers.reduce((sum, p) => sum + p.ventas2026, 0);
@@ -560,9 +581,15 @@ const FocosNumerica = () => {
     });
   }, [productImpactData, productSearch, productSortBy, productSortDir]);
 
+  // Zonas para la gráfica de cobertura: cuando el canal es SUPER mostramos esas zonas;
+  // cuando es TAT o ALL mostramos solo las tradicionales (sin supermercados)
+  const coverageZones = selectedChannel === 'SUPER'
+    ? filteredByCity.filter((z) => z.canal === 'SUPERMERCADOS')
+    : traditionalByCity;
+
   const coverageSeries = [{
     name: 'Cobertura %',
-    data: traditionalByCity.map((z) => Math.round(z.coverage * 100))
+    data: coverageZones.map((z) => Math.round(z.coverage * 100))
   }];
 
   const coverageOptions = {
@@ -573,10 +600,10 @@ const FocosNumerica = () => {
       animations: { enabled: false },
       fontFamily: 'Inter, sans-serif'
     },
-    colors: ['#38bdf8'],
+    colors: [selectedChannel === 'SUPER' ? '#a78bfa' : '#38bdf8'],
     plotOptions: { bar: { borderRadius: 10, columnWidth: '55%' } },
     dataLabels: { enabled: false },
-    xaxis: { categories: traditionalByCity.map((z) => z.zona), labels: { rotate: -30, style: { fontSize: '10px' }, hideOverlappingLabels: true } },
+    xaxis: { categories: coverageZones.map((z) => z.zona), labels: { rotate: -30, style: { fontSize: '10px' }, hideOverlappingLabels: true } },
     yaxis: { labels: { formatter: (val) => `${Math.round(val)}%` }, min: 0, max: 140 },
     tooltip: { theme: 'dark', y: { formatter: (val) => `${Math.round(val)}%` } },
     grid: { borderColor: '#1e293b' }
@@ -633,6 +660,30 @@ const FocosNumerica = () => {
                   <option value="PEREIRA">PEREIRA</option>
                   <option value="OTRO">OTRO</option>
                 </select>
+                <label className="text-xs text-slate-600 ml-2">Canal:</label>
+                <div className="flex items-center gap-1">
+                  {[
+                    { value: 'ALL', label: 'Todos' },
+                    { value: 'TAT', label: 'TAT' },
+                    { value: 'SUPER', label: 'Super' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSelectedChannel(opt.value)}
+                      className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition-all ${
+                        selectedChannel === opt.value
+                          ? opt.value === 'TAT'
+                            ? 'bg-sky-500 text-white border-sky-500 shadow-sm shadow-sky-400/30'
+                            : opt.value === 'SUPER'
+                            ? 'bg-violet-500 text-white border-violet-500 shadow-sm shadow-violet-400/30'
+                            : 'bg-slate-700 text-white border-slate-600'
+                          : 'bg-slate-100 text-slate-700 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -681,6 +732,56 @@ const FocosNumerica = () => {
               <div>
                 <p className="text-slate-600 text-[10px] uppercase tracking-wider">Facturas de foco</p>
                 <p className="text-xl md:text-2xl font-bold text-slate-900 mt-1">{formatNumber(totalFocusFacturas)}</p>
+              </div>
+            </div>
+
+            {/* ── Separación de canales TAT vs SUPER ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+              {/* TAT */}
+              <div className="rounded-xl bg-sky-50 border border-sky-200 p-3 md:p-4 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-sky-600 bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-full">TAT</span>
+                  <span className="text-[10px] text-slate-600">Tiendas a tienda</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Ventas</p>
+                    <p className="text-sm font-bold text-slate-900 mt-0.5">{formatShortCurrency(kpiTAT.ventasNetas)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Facturas</p>
+                    <p className="text-sm font-bold text-slate-900 mt-0.5">{formatNumber(kpiTAT.facturas)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Cob. Presp.</p>
+                    <p className={`text-sm font-bold mt-0.5 ${kpiTAT.presupuesto > 0 && kpiTAT.ventasNetas / kpiTAT.presupuesto >= 0.75 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {kpiTAT.presupuesto > 0 ? formatPercent(kpiTAT.ventasNetas / kpiTAT.presupuesto) : '—'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {/* SUPER */}
+              <div className="rounded-xl bg-violet-50 border border-violet-200 p-3 md:p-4 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-violet-600 bg-violet-100 border border-violet-300 px-2 py-0.5 rounded-full">Super</span>
+                  <span className="text-[10px] text-slate-600">Supermercados</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Ventas</p>
+                    <p className="text-sm font-bold text-slate-900 mt-0.5">{formatShortCurrency(kpiSUPER.ventasNetas)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Facturas</p>
+                    <p className="text-sm font-bold text-slate-900 mt-0.5">{formatNumber(kpiSUPER.facturas)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Cob. Presp.</p>
+                    <p className={`text-sm font-bold mt-0.5 ${kpiSUPER.presupuesto > 0 && kpiSUPER.ventasNetas / kpiSUPER.presupuesto >= 0.75 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {kpiSUPER.presupuesto > 0 ? formatPercent(kpiSUPER.ventasNetas / kpiSUPER.presupuesto) : '—'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -831,7 +932,13 @@ const FocosNumerica = () => {
         <GlassCard hoverable={false} className="bg-white border border-slate-200 p-5 shadow-lg shadow-slate-200/50">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Cobertura por zona</h3>
+              <h3 className="text-base font-bold text-slate-900">Cobertura por zona
+                {selectedChannel !== 'ALL' && (
+                  <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full border ${selectedChannel === 'TAT' ? 'bg-sky-50 text-sky-600 border-sky-200' : 'bg-violet-50 text-violet-600 border-violet-200'}`}>
+                    {selectedChannel}
+                  </span>
+                )}
+              </h3>
               <p className="text-xs text-slate-600 mt-1">Análisis de riesgo presupuestal por zona.</p>
             </div>
             <BarChart3 className="h-5 w-5 text-sky-400" />

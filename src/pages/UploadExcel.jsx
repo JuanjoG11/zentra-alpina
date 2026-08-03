@@ -2,7 +2,7 @@
 import { useDropzone } from 'react-dropzone';
 import useStore from '../store/useStore';
 import GlassCard from '../components/ui/GlassCard';
-import { DEFAULT_ZONE_SELLERS } from '../utils/calculations';
+import { DEFAULT_ZONE_SELLERS, getDiasHabiles } from '../utils/calculations';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { supabase } from '../services/supabaseClient';
@@ -694,12 +694,11 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
 
   // Proyección: días hábiles según el período detectado
   // Si el usuario configuró un día hábil manualmente, usarlo. Si no, contar días del cubo.
-  const DIAS_HABILES_POR_PERIODO = { '2026-06': 23, '2026-07': 23 };
   // Detectar el período del cubo desde las fechas de ventas
   const _allSaleDates = Object.values(salesDailyAggr).map(d => new Date(d.fecha)).filter(d => !isNaN(d));
   const _latestSaleDate = _allSaleDates.length ? _allSaleDates.reduce((a, b) => b > a ? b : a) : new Date();
   const _cuboPeriodo = `${_latestSaleDate.getFullYear()}-${String(_latestSaleDate.getMonth() + 1).padStart(2, '0')}`;
-  const TOTAL_BUSINESS_DAYS = DIAS_HABILES_POR_PERIODO[_cuboPeriodo] || 22;
+  const TOTAL_BUSINESS_DAYS = getDiasHabiles(_cuboPeriodo); // fuente única en calculations.js
   const uniqueSalesDates = new Set(Object.values(salesDailyAggr).map(d => d.fecha));
   const detectedDays = uniqueSalesDates.size || 1;
   const elapsedDays = (configuredWorkDay > 0 && configuredWorkDay <= TOTAL_BUSINESS_DAYS)
@@ -929,6 +928,11 @@ const UploadExcel = () => {
 
   const hasSupabase = !!supabase;
 
+  // Período destino del upload — por defecto el período activo en la app,
+  // pero el usuario puede cambiarlo para cargar datos de un mes anterior sin cambiar la vista.
+  const [uploadPeriodOverride, setUploadPeriodOverride] = useState('');
+  const effectiveUploadPeriod = uploadPeriodOverride || selectedPeriod;
+
   const steps = [
     { label: 'Analizando archivo y estructura de datos...', icon: FileText },
     { label: 'Limpiando registros vacíos y formateando monedas...', icon: Sparkles },
@@ -967,11 +971,10 @@ const UploadExcel = () => {
         throw new Error('No se detectaron datos válidos en las hojas seleccionadas.');
       }
 
-      // El período lo define el selector activo en la app cuando se sube el cubo.
-      // Si estás parado en Julio 2026 y subís → todo es julio, sin importar fechas de facturas.
-      // Si estás parado en Junio 2026 y subís → todo es junio.
-      const latestPeriod = useStore.getState().selectedPeriod;
-      console.log(`📅 Período del cubo: ${latestPeriod} (período seleccionado en la app)`);
+      // El período lo define el selector de destino del upload.
+      // El usuario puede elegir un período distinto al activo para cargar días que faltan.
+      const latestPeriod = uploadPeriodOverride || useStore.getState().selectedPeriod;
+      console.log(`📅 Período del cubo: ${latestPeriod}`);
 
       // Step 3: Insertando datos en Supabase PostgreSQL (fallbacks to local store update)
       setUploadStep(4);
@@ -1481,6 +1484,33 @@ const UploadExcel = () => {
         {/* Upload Panel */}
         <div className="lg:col-span-2 space-y-6">
           <GlassCard hoverable={false} className="p-6">
+
+            {/* Selector de período destino */}
+            <div className="mb-5 flex flex-wrap items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">Período de destino</p>
+                <p className="text-[11px] text-amber-700 mt-0.5">
+                  Los datos se guardarán en este período en Supabase. Cámbialo si necesitas completar días de un mes anterior.
+                </p>
+              </div>
+              <select
+                value={effectiveUploadPeriod}
+                onChange={(e) => setUploadPeriodOverride(e.target.value === selectedPeriod ? '' : e.target.value)}
+                className="bg-white text-slate-800 text-xs font-bold rounded-lg px-3 py-2 border border-amber-300 focus:outline-none focus:border-amber-500 shadow-sm"
+              >
+                {/* Generar los últimos 6 meses + el mes actual */}
+                {Array.from({ length: 7 }, (_, i) => {
+                  const d = new Date();
+                  d.setDate(1);
+                  d.setMonth(d.getMonth() - i);
+                  const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                  const label = `${meses[d.getMonth()]} ${d.getFullYear()}${val === selectedPeriod ? ' (activo)' : ''}`;
+                  return <option key={val} value={val}>{label}</option>;
+                })}
+              </select>
+            </div>
+
             {!uploading && !success && (
               <div 
                 {...getRootProps()} 
@@ -1676,15 +1706,18 @@ const UploadExcel = () => {
               />
               <div className="flex-1">
                 <p className="text-xs text-slate-700 font-semibold">
-                  {currentWorkDay === 0
-                    ? 'Auto-detectando desde fechas del cubo'
-                    : `Día hábil ${currentWorkDay} de 22 del mes`}
+                  {(() => {
+                    const _totalDias = getDiasHabiles(effectiveUploadPeriod);
+                    return currentWorkDay === 0
+                      ? 'Auto-detectando desde fechas del cubo'
+                      : `Día hábil ${currentWorkDay} de ${_totalDias} del mes`;
+                  })()}
                 </p>
                 {currentWorkDay > 0 && (
                   <div className="mt-1.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min((currentWorkDay / 22) * 100, 100)}%` }}
+                      style={{ width: `${Math.min((currentWorkDay / getDiasHabiles(effectiveUploadPeriod)) * 100, 100)}%` }}
                     />
                   </div>
                 )}

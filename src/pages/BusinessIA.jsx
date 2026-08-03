@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, getDiasHabiles } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import alpinaLogo from '../assets/alpina-logo.svg';
@@ -130,7 +130,9 @@ const BusinessIA = () => {
     const devRate = kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0;
     const workDay = currentWorkDay > 0 ? currentWorkDay
       : (filteredData.salesDaily || []).filter(d => d.total > 0).length || 1;
-    const proyVentas = kpis.totalSales * (22 / workDay);
+    const selectedPeriod = useStore.getState().selectedPeriod;
+    const totalBD = getDiasHabiles(selectedPeriod);
+    const proyVentas = kpis.totalSales * (totalBD / workDay);
     const proyComp   = kpis.totalBudget > 0 ? proyVentas / kpis.totalBudget : 0;
 
     const topSellers = [...filteredData.returnsSellers]
@@ -155,7 +157,7 @@ const BusinessIA = () => {
     const M = v => `$${(v/1e6).toFixed(1)}M`;
     const P = v => `${(v*100).toFixed(1)}%`;
 
-    const cuboContext = `CANAL ALPINA EJE CAFETERO ${activePeriodLabel} DIA_HABIL=${workDay}/22
+    const cuboContext = `CANAL ALPINA EJE CAFETERO ${activePeriodLabel} DIA_HABIL=${workDay}/${totalBD}
 VENTAS=${M(kpis.totalSales)} DEV=${M(kpis.totalReturns)}(${P(devRate)}) NETAS=${M(kpis.netSales)} PRESUP=${M(kpis.totalBudget)} CUMPL=${P(kpis.compliance)} YOY=+${P(kpis.growth)} TICKET=$${Math.round(kpis.averageTicket/1000)}K FACT=${kpis.totalFacturas} PROYECC=${M(proyVentas)}/${P(proyComp)}
 EXEC_DEV: ${topSellers.map(s=>`${s.nombre}=${P(s.porcentajeDevolucion)}`).join(',')}
 ZONAS_TOP: ${topZones.map(z=>`${z.zona}/${z.vendedor}=${P(z.ventasNetas/z.presupuesto)}`).join(',')}
@@ -1068,7 +1070,7 @@ ${cuboContext}`;
                 <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200">
                   <span className="text-slate-600 font-medium">Día hábil:</span>
                   <span className="text-amber-400 font-extrabold">
-                    {currentWorkDay > 0 ? `Día ${currentWorkDay} / 22` : 'Auto-detectado'}
+                    {currentWorkDay > 0 ? `Día ${currentWorkDay} / ${getDiasHabiles(useStore.getState().selectedPeriod)}` : 'Auto-detectado'}
                   </span>
                 </div>
               </div>

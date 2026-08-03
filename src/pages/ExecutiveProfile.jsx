@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
-import { getFilteredData, ZONA_CIUDAD_MAP } from '../utils/calculations';
+import { getFilteredData, ZONA_CIUDAD_MAP, getDiasHabiles } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
@@ -355,7 +355,7 @@ const ExecutiveProfile = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div>
             <p className="text-[10px] text-slate-600 uppercase">Día Hábil Actual</p>
-            <p className="text-lg font-bold text-blue-400 mt-1">{currentWorkDay > 0 ? currentWorkDay : 'Auto'} / 22</p>
+            <p className="text-lg font-bold text-blue-400 mt-1">{currentWorkDay > 0 ? currentWorkDay : 'Auto'} / {getDiasHabiles(useStore.getState().selectedPeriod)}</p>
           </div>
           <div>
             <p className="text-[10px] text-slate-600 uppercase">Ticket Promedio</p>

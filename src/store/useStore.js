@@ -234,9 +234,9 @@ const useStore = create((set, get) => ({
 
       // Map back to alpinaData schema
       // Aplicar projectionFactor basado en el día hábil configurado manualmente (o auto-detectado)
-      // Días hábiles por período (julio 2026 = 23, junio 2026 = 22, resto default 22)
-      const DIAS_HABILES_POR_PERIODO = { '2026-06': 22, '2026-07': 23 };
-      const TOTAL_BD = DIAS_HABILES_POR_PERIODO[currentPeriod] || 22;
+      // Días hábiles por período — misma fuente que calculations.js/DIAS_HABILES_POR_PERIODO
+      const _DHPP = { '2026-01':21,'2026-02':20,'2026-03':22,'2026-04':21,'2026-05':21,'2026-06':23,'2026-07':23,'2026-08':21,'2026-09':22,'2026-10':22,'2026-11':21,'2026-12':20 };
+      const TOTAL_BD = _DHPP[currentPeriod] || (() => { const [y,m]=currentPeriod.split('-').map(Number); let c=0; for(let d=1;d<=new Date(y,m,0).getDate();d++){const w=new Date(y,m-1,d).getDay();if(w&&w!==6)c++;} return c||23; })();
       const configuredWD = activeWorkDay;
       const elapsedDays = (configuredWD > 0 && configuredWD <= TOTAL_BD) ? configuredWD : 18;
       const projFactor = (elapsedDays >= 3 && elapsedDays < TOTAL_BD) ? TOTAL_BD / elapsedDays : 1;

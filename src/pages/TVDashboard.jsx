@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, countCalendarBusinessDays } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, ZONA_CIUDAD_MAP, countCalendarBusinessDays, getDiasHabiles } from '../utils/calculations';
 
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import alpinaLogo from '../assets/alpina-logo.svg';
@@ -171,8 +171,9 @@ const TVDashboard = () => {
 
   // Días hábil para proyección
   const workDay = currentWorkDay > 0 ? currentWorkDay : countCalendarBusinessDays(filteredData.salesDaily);
+  const totalBD_tv = getDiasHabiles(useStore.getState().selectedPeriod);
 
-  const proyectedEOM = kpis.totalSales > 0 ? Math.round(kpis.totalSales / workDay * 22) : 0;
+  const proyectedEOM = kpis.totalSales > 0 ? Math.round(kpis.totalSales / workDay * totalBD_tv) : 0;
   const proyEOMCompliance = totalBudget > 0 ? proyectedEOM / totalBudget : 0;
 
   return (
@@ -191,7 +192,7 @@ const TVDashboard = () => {
             <img src={alpinaLogo} alt="Alpina" className="h-14 w-auto" />
             <div>
               <h1 className="text-3xl font-black text-white tracking-tight">Alpina · Eje Cafetero</h1>
-              <p className="text-slate-400 text-base mt-0.5">{activePeriodLabel} · Día hábil <strong className="text-white">{workDay}</strong> / 22</p>
+              <p className="text-slate-400 text-base mt-0.5">{activePeriodLabel} · Día hábil <strong className="text-white">{workDay}</strong> / {totalBD_tv}</p>
             </div>
           </div>
 
