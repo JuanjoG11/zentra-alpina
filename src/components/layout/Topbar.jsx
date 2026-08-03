@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { ZONAS_POR_CIUDAD, getFilteredData, calculateKPIs } from '../../utils/calculations';
@@ -283,6 +283,22 @@ const Topbar = () => {
     const list = new Map(); // key → label
     const m = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+    // Períodos base que siempre deben estar disponibles en los filtros
+    const basePeriods = ['2026-08', '2026-07', '2026-06'];
+    basePeriods.forEach(pKey => {
+      const [y, mo] = pKey.split('-').map(Number);
+      list.set(pKey, `${m[mo - 1]} ${y}`);
+    });
+
+    if (selectedPeriod && !list.has(selectedPeriod)) {
+      const parts = selectedPeriod.split('-');
+      if (parts.length === 2) {
+        const y = Number(parts[0]);
+        const mo = Number(parts[1]);
+        if (y && mo && m[mo - 1]) list.set(selectedPeriod, `${m[mo - 1]} ${y}`);
+      }
+    }
+
     // Agregar períodos que tienen datos en salesDaily
     (dbData.salesDaily || []).filter(d => d.fecha && d.fecha !== 'general').forEach(d => {
       const dt = new Date(d.fecha);
@@ -292,23 +308,6 @@ const Topbar = () => {
         list.set(`${y}-${mo}`, `${m[dt.getMonth()]} ${y}`);
       }
     });
-
-    // Siempre incluir el mes actual del calendario (aunque esté vacío = julio)
-    const now = new Date();
-    const curY = now.getFullYear();
-    const curMo = String(now.getMonth() + 1).padStart(2, '0');
-    const curKey = `${curY}-${curMo}`;
-    if (!list.has(curKey)) {
-      list.set(curKey, `${m[now.getMonth()]} ${curY}`);
-    }
-
-    // Si solo hay el mes actual y ningún histórico, agregar el mes anterior como disponible
-    if (list.size === 1) {
-      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const pY = prevDate.getFullYear();
-      const pMo = String(prevDate.getMonth() + 1).padStart(2, '0');
-      list.set(`${pY}-${pMo}`, `${m[prevDate.getMonth()]} ${pY}`);
-    }
 
     return Array.from(list.entries())
       .map(([key, label]) => ({ key, label }))
