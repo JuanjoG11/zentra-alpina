@@ -60,25 +60,33 @@ const ReturnsAnalysis = () => {
 
   const rawClientSum = (filteredData.clientReturns || []).reduce((sum, c) => sum + (c.valor || 0), 0);
   const rawExpirySum = (filteredData.expiryClientReturns || []).reduce((sum, c) => sum + (c.valor || 0), 0);
+  // Suma directa desde returnsSellers (siempre se actualiza con el cubo)
+  const rawSellersRechazos = (filteredData.returnsSellers || []).reduce((sum, s) => sum + (Number(s.rechazos) || Number(s.devoluciones) || 0), 0);
 
   let totalAllReturns = 0;
   let totalGeneralReturns = 0; // Rechazos total
   let totalExpiryReturns = 0;  // Cambios total
 
-  if (rawClientSum > 0 && rawExpirySum > 0) {
-    // Si se sube un Cubo nuevo con ambas categorías por cliente cargadas
+  if (rawClientSum > 0 || rawExpirySum > 0) {
+    // Datos de client_returns cargados — usar directamente
     totalGeneralReturns = rawClientSum;
     totalExpiryReturns = rawExpirySum;
     totalAllReturns = totalGeneralReturns + totalExpiryReturns;
+  } else if (rawSellersRechazos > 0) {
+    // returnsSellers tiene datos reales del cubo — usarlos como fuente de verdad
+    // rechazos ya está separado de cambios en el ETL (campo rechazos vs devoluciones)
+    const rawSellersDevoluciones = (filteredData.returnsSellers || []).reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0);
+    totalGeneralReturns = rawSellersRechazos;
+    totalExpiryReturns = Math.max(0, rawSellersDevoluciones - rawSellersRechazos);
+    totalAllReturns = rawSellersDevoluciones;
   } else if (!hasActiveFilter) {
-    // Datos base por defecto: Cifras oficiales requeridas por jefatura ($90.48M Rechazos + $63.55M Cambios = $154.03M Total)
-    totalGeneralReturns = OFFICIAL_RECHAZOS;
-    totalExpiryReturns = OFFICIAL_CAMBIOS;
-    totalAllReturns = OFFICIAL_TOTAL;
+    // Sin datos reales — mostrar ceros en lugar de valores hardcodeados de otro período
+    totalGeneralReturns = 0;
+    totalExpiryReturns = 0;
+    totalAllReturns = 0;
   } else {
     const kpiRet = kpis.totalReturns && kpis.totalReturns > 0 ? kpis.totalReturns : 0;
-    const scaleFactor = (kpiRet > OFFICIAL_TOTAL) ? (OFFICIAL_TOTAL / kpiRet) : 1;
-    totalAllReturns = Math.round(kpiRet * scaleFactor);
+    totalAllReturns = kpiRet;
     totalGeneralReturns = Math.round(totalAllReturns * OFFICIAL_RECHAZOS_RATIO);
     totalExpiryReturns = totalAllReturns - totalGeneralReturns;
   }
@@ -95,20 +103,28 @@ const ReturnsAnalysis = () => {
   }, [filteredData.clientReturns]);
 
   const execsData = React.useMemo(() => {
-    const list = (filteredData.returnsSellers && filteredData.returnsSellers.length > 0)
+    const hasRealData = filteredData.returnsSellers && filteredData.returnsSellers.length > 0;
+    const list = hasRealData
       ? filteredData.returnsSellers
       : (alpinaData.returnsSellers || []);
 
+    // Si hay datos reales del cubo, no escalar — usar los valores tal cual
+    // Solo escalar si estamos usando el fallback de alpinaData (datos de demostración)
     const rawSellersDevSum = list.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0);
-    const sellerScale = (!hasActiveFilter && rawSellersDevSum > 0) ? (OFFICIAL_TOTAL / rawSellersDevSum) : 1;
+    const sellerScale = (!hasRealData && !hasActiveFilter && rawSellersDevSum > 0)
+      ? (OFFICIAL_TOTAL / rawSellersDevSum)
+      : 1;
     const rechazosRatio = totalAllReturns > 0 ? totalGeneralReturns / totalAllReturns : OFFICIAL_RECHAZOS_RATIO;
 
     return list.map(s => {
       const bruto = Number(s.ventasBrutas) || Number(s.ventas) || 0;
       const dev   = Math.round((Number(s.devoluciones) || 0) * sellerScale);
       const canal = s.canal || (SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT');
-      
-      const rechazos = Math.round(dev * rechazosRatio);
+
+      // Si el cubo tiene campo rechazos separado, usarlo directamente
+      const rechazos = Number(s.rechazos) > 0
+        ? Math.round(Number(s.rechazos) * sellerScale)
+        : Math.round(dev * rechazosRatio);
 
       return {
         ejecutivo: s.ejecutivo || '',
