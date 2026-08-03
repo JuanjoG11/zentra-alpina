@@ -367,7 +367,7 @@ export const calculateKPIs = (filteredData) => {
   const PRESUPUESTO_REAL_MES = 4001885288; // Junio 2026 — 22 días hábiles
   const totalBudget = zones.length > 0
     ? zones.reduce((sum, z) => sum + z.presupuesto, 0)
-    : PRESUPUESTO_REAL_MES;
+    : (totalSales > 0 ? PRESUPUESTO_REAL_MES : 0);
 
   // 3. Devoluciones totales = Rechazos + Cambios (vencimientos)
   const clientReturnsSum  = Array.isArray(clientReturns)       ? clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0) : 0;
@@ -398,22 +398,22 @@ export const calculateKPIs = (filteredData) => {
   } else if (sellersReturnsSum > 0) {
     totalReturns = sellersReturnsSum;
   } else {
-    totalReturns = totalSales * 0.044;
+    totalReturns = totalSales > 0 ? totalSales * 0.044 : 0;
   }
 
   // 4. Ventas Netas = suma directa de zonas (siempre correcto desde Supabase)
-  const netSales = zonesNetSum > 0 ? zonesNetSum : totalSales - totalReturns;
+  const netSales = zonesNetSum > 0 ? zonesNetSum : Math.max(0, totalSales - totalReturns);
 
   // 5. Cumplimiento %: sales / budget
-  const compliance = totalBudget > 0 ? totalSales / totalBudget : 0.973;
+  const compliance = totalBudget > 0 ? totalSales / totalBudget : 0;
 
   // 6. Crecimiento (Growth) vs 2025
   const sales2025 = providers.reduce((sum, p) => sum + p.ventas2025, 0);
-  const growth = sales2025 > 0 ? (totalSales - sales2025) / sales2025 : 0.2179;
+  const growth = sales2025 > 0 ? (totalSales - sales2025) / sales2025 : 0;
 
   // 7. Ticket Promedio
   const totalFacturas = zones.reduce((sum, z) => sum + z.facturas, 0);
-  const averageTicket = totalFacturas > 0 ? totalSales / totalFacturas : 375600;
+  const averageTicket = totalFacturas > 0 ? totalSales / totalFacturas : 0;
 
   // 8. Mejor Vendedor
   let topSellerName = 'N/A';

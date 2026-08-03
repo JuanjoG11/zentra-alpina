@@ -274,9 +274,10 @@ const useStore = create((set, get) => ({
       const returnsSellers = dbSellers.map(s => {
         const bruto = Number(s.ventas) || 0;       // DB 'ventas' stores ventaBruta since last upload fix
         const dev   = Number(s.devoluciones) || 0;
-        // rechazos: no dedicated DB column, so use devoluciones as best available
-        // (when a new cube is uploaded the local processing separates them correctly in UI)
-        const rechazos = dev;
+        // rechazos: from dedicated DB column if available, else fallback to devoluciones
+        const dbRechazos = Number(s.rechazos) || 0;
+        const rechazos = dbRechazos > 0 ? dbRechazos : dev;
+        const cambios = dbRechazos > 0 ? Math.max(0, dev - dbRechazos) : 0;
         const canal = SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT';
         return {
           ejecutivo: s.ejecutivo,
@@ -286,6 +287,7 @@ const useStore = create((set, get) => ({
           ventasBrutas: bruto,
           devoluciones: dev,
           rechazos,
+          cambios,
           porcentajeDevolucion: bruto > 0 ? dev / bruto : 0.0,
           porcentajeRechazo: bruto > 0 ? rechazos / bruto : 0.0
         };
@@ -343,30 +345,30 @@ const useStore = create((set, get) => ({
       const localData = loadPersistedData();
       const isSamePeriodLocal = localData?.periodo === currentPeriod;
 
-      // Returns Concepts: Supabase → localStorage (mismo período) → alpinaData
+      // Returns Concepts: Supabase → localStorage (mismo período) → []
       const returnsConcepts = dbReturnsConcepts.length > 0
         ? dbReturnsConcepts.map(c => ({ concepto: c.concepto, porcentaje: Number(c.porcentaje) || 0 }))
-        : (isSamePeriodLocal && localData?.returnsConcepts?.length > 0 ? localData.returnsConcepts : (alpinaData.returnsConcepts || []));
+        : (isSamePeriodLocal && localData?.returnsConcepts?.length > 0 ? localData.returnsConcepts : []);
 
-      // Client Returns: Supabase → localStorage (mismo período) → alpinaData
+      // Client Returns: Supabase → localStorage (mismo período) → []
       const clientReturns = dbClientReturns.length > 0
         ? dbClientReturns.map(c => ({ ejecutivo: c.ejecutivo, cliente: c.cliente, concepto: c.concepto, valor: Number(c.valor) || 0 }))
-        : (isSamePeriodLocal && localData?.clientReturns?.length > 0 ? localData.clientReturns : (alpinaData.clientReturns || []));
+        : (isSamePeriodLocal && localData?.clientReturns?.length > 0 ? localData.clientReturns : []);
 
-      // Expiry Concepts: Supabase → localStorage (mismo período) → alpinaData
+      // Expiry Concepts: Supabase → localStorage (mismo período) → []
       const expiryConcepts = dbExpiryConcepts.length > 0
         ? dbExpiryConcepts.map(c => ({ concepto: c.concepto, porcentaje: Number(c.porcentaje) || 0 }))
-        : (isSamePeriodLocal && localData?.expiryConcepts?.length > 0 ? localData.expiryConcepts : (alpinaData.expiryConcepts || []));
+        : (isSamePeriodLocal && localData?.expiryConcepts?.length > 0 ? localData.expiryConcepts : []);
 
-      // Expiry Client Returns: Supabase → localStorage (mismo período) → alpinaData
+      // Expiry Client Returns: Supabase → localStorage (mismo período) → []
       const expiryClientReturns = dbExpiryClientReturns.length > 0
         ? dbExpiryClientReturns.map(c => ({ ejecutivo: c.ejecutivo, cliente: c.cliente, concepto: c.concepto, valor: Number(c.valor) || 0 }))
-        : (isSamePeriodLocal && localData?.expiryClientReturns?.length > 0 ? localData.expiryClientReturns : (alpinaData.expiryClientReturns || []));
+        : (isSamePeriodLocal && localData?.expiryClientReturns?.length > 0 ? localData.expiryClientReturns : []);
 
       // Expiry Daily: solo desde localStorage (no tiene tabla propia, returns_daily ya suma todo)
       const expiryDaily = localData?.expiryDaily?.length > 0 ? localData.expiryDaily : [];
 
-      // Product Distrib: Supabase → localStorage → alpinaData
+      // Product Distrib: Supabase → localStorage → []
       const productDistrib = dbProductDistrib.length > 0
         ? dbProductDistrib.map(p => ({
             nbProducto: p.nb_producto, nmProducto: p.nm_producto, tpProducto: p.tp_producto,
@@ -376,7 +378,7 @@ const useStore = create((set, get) => ({
             unidades: Number(p.unidades) || 0, clientesCount: Number(p.clientes_count) || 0,
             participacion: Number(p.participacion) || 0, pesoTotal: Number(p.peso_total) || 0
           }))
-        : (localData?.productDistrib?.length > 0 ? localData.productDistrib : (alpinaData.productDistrib || []));
+        : (localData?.productDistrib?.length > 0 ? localData.productDistrib : []);
 
       // returnsDaily: Supabase es la fuente de verdad (ya incluye rechazos + cambios desde el upload).
       // Solo usar localStorage como fallback si Supabase no tiene datos.

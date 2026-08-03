@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import useStore from '../store/useStore';
 import GlassCard from '../components/ui/GlassCard';
@@ -1029,6 +1029,7 @@ const UploadExcel = () => {
             ejecutivo: s.ejecutivo,
             ventas: s.ventasBrutas || s.ventas,  // guardar venta bruta en columna ventas
             devoluciones: s.devoluciones,
+            rechazos: s.rechazos || 0,
             periodo: uploadPeriod
           }));
           await supabase.from('returns_sellers').delete().eq('periodo', uploadPeriod);

@@ -47,11 +47,10 @@ const ReturnsAnalysis = () => {
   const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
 
   // Total devolución y desglose de Rechazos vs Cambios (M.E.)
-  // Valores oficiales requeridos por Jefatura/Cubo SAP: Rechazos $90.481.617 (58.74%) vs Cambios $63.548.095 (41.26%)
   const OFFICIAL_RECHAZOS = 90481617;
   const OFFICIAL_CAMBIOS  = 63548095;
-  const OFFICIAL_TOTAL    = OFFICIAL_RECHAZOS + OFFICIAL_CAMBIOS; // 154.029.712
-  const OFFICIAL_RECHAZOS_RATIO = OFFICIAL_RECHAZOS / OFFICIAL_TOTAL; // ~0.5874298
+  const OFFICIAL_TOTAL    = OFFICIAL_RECHAZOS + OFFICIAL_CAMBIOS;
+  const OFFICIAL_RECHAZOS_RATIO = OFFICIAL_RECHAZOS / OFFICIAL_TOTAL;
 
   const hasActiveFilter = (filters.selectedCity && filters.selectedCity !== 'Todas') ||
                          (filters.selectedZone && filters.selectedZone !== 'Todas') ||
@@ -60,35 +59,51 @@ const ReturnsAnalysis = () => {
 
   const rawClientSum = (filteredData.clientReturns || []).reduce((sum, c) => sum + (c.valor || 0), 0);
   const rawExpirySum = (filteredData.expiryClientReturns || []).reduce((sum, c) => sum + (c.valor || 0), 0);
-  // Suma directa desde returnsSellers (siempre se actualiza con el cubo)
-  const rawSellersRechazos = (filteredData.returnsSellers || []).reduce((sum, s) => sum + (Number(s.rechazos) || Number(s.devoluciones) || 0), 0);
+
+  // Misma fuente que execsData: datos reales del cubo
+  const _sellersSource = filteredData.returnsSellers || [];
+  const rawSellersRechazos = _sellersSource.reduce((sum, s) => sum + (Number(s.rechazos) || 0), 0);
+  const rawSellersCambios  = _sellersSource.reduce((sum, s) => sum + (Number(s.cambios) || 0), 0);
+  const rawSellersDev      = _sellersSource.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0);
+
+  // Ventas brutas para calcular las tasas — misma fuente que la tabla
+  const totalSalesForRate = _sellersSource.reduce((sum, s) => sum + (Number(s.ventasBrutas) || Number(s.ventas) || 0), 0)
+    || kpis.totalSales
+    || 0;
 
   let totalAllReturns = 0;
-  let totalGeneralReturns = 0; // Rechazos total
-  let totalExpiryReturns = 0;  // Cambios total
+  let totalGeneralReturns = 0;  // rechazos (sin M.E.)
+  let totalExpiryReturns = 0;   // cambios (M.E. vencimientos)
 
-  if (rawClientSum > 0 || rawExpirySum > 0) {
-    // Datos de client_returns cargados — usar directamente
+  // Fuente principal: returnsSellers con rechazos y cambios separados
+  if (rawSellersDev > 0) {
+    totalAllReturns = rawSellersDev;
+    if (rawSellersCambios > 0 || (rawSellersRechazos > 0 && rawSellersRechazos < rawSellersDev)) {
+      // Tenemos datos reales separados de rechazos vs cambios
+      totalGeneralReturns = rawSellersRechazos;
+      totalExpiryReturns = rawSellersCambios > 0 ? rawSellersCambios : Math.max(0, rawSellersDev - rawSellersRechazos);
+    } else {
+      // No hay separación en sellers (datos viejos sin columna rechazos)
+      // Usar clientReturns/expiryClientReturns si AMBOS están disponibles
+      if (rawClientSum > 0 && rawExpirySum > 0) {
+        const partialTotal = rawClientSum + rawExpirySum;
+        const rechazosRatio = rawClientSum / partialTotal;
+        totalGeneralReturns = Math.round(rawSellersDev * rechazosRatio);
+        totalExpiryReturns = rawSellersDev - totalGeneralReturns;
+      } else {
+        // Fallback: usar ratio oficial (58.74% Rechazos, 41.26% Cambios)
+        totalGeneralReturns = Math.round(rawSellersDev * OFFICIAL_RECHAZOS_RATIO);
+        totalExpiryReturns = rawSellersDev - totalGeneralReturns;
+      }
+    }
+  } else if (rawClientSum > 0 || rawExpirySum > 0) {
     totalGeneralReturns = rawClientSum;
     totalExpiryReturns = rawExpirySum;
     totalAllReturns = totalGeneralReturns + totalExpiryReturns;
-  } else if (rawSellersRechazos > 0) {
-    // returnsSellers tiene datos reales del cubo — usarlos como fuente de verdad
-    // rechazos ya está separado de cambios en el ETL (campo rechazos vs devoluciones)
-    const rawSellersDevoluciones = (filteredData.returnsSellers || []).reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0);
-    totalGeneralReturns = rawSellersRechazos;
-    totalExpiryReturns = Math.max(0, rawSellersDevoluciones - rawSellersRechazos);
-    totalAllReturns = rawSellersDevoluciones;
-  } else if (!hasActiveFilter) {
-    // Sin datos reales — mostrar ceros en lugar de valores hardcodeados de otro período
+  } else {
     totalGeneralReturns = 0;
     totalExpiryReturns = 0;
     totalAllReturns = 0;
-  } else {
-    const kpiRet = kpis.totalReturns && kpis.totalReturns > 0 ? kpis.totalReturns : 0;
-    totalAllReturns = kpiRet;
-    totalGeneralReturns = Math.round(totalAllReturns * OFFICIAL_RECHAZOS_RATIO);
-    totalExpiryReturns = totalAllReturns - totalGeneralReturns;
   }
 
   // Rechazos por ejecutivo provenientes de clientReturns si están disponibles
@@ -103,27 +118,25 @@ const ReturnsAnalysis = () => {
   }, [filteredData.clientReturns]);
 
   const execsData = React.useMemo(() => {
-    const hasRealData = filteredData.returnsSellers && filteredData.returnsSellers.length > 0;
-    const list = hasRealData
-      ? filteredData.returnsSellers
-      : (alpinaData.returnsSellers || []);
-
-    // Si hay datos reales del cubo, no escalar — usar los valores tal cual
-    // Solo escalar si estamos usando el fallback de alpinaData (datos de demostración)
+    const list = filteredData.returnsSellers || [];
+    const hasRealData = list.length > 0;
     const rawSellersDevSum = list.reduce((sum, s) => sum + (Number(s.devoluciones) || 0), 0);
-    const sellerScale = (!hasRealData && !hasActiveFilter && rawSellersDevSum > 0)
-      ? (OFFICIAL_TOTAL / rawSellersDevSum)
-      : 1;
+    const sellerScale = 1;
+    // Detectar si los sellers ya tienen rechazos separados (columna DB o campo calculado)
+    const sellersHaveRechazos = list.some(s => {
+      const r = Number(s.rechazos) || 0;
+      const d = Number(s.devoluciones) || 0;
+      return r > 0 && r < d;  // rechazos existe y es menor que devoluciones totales
+    });
     const rechazosRatio = totalAllReturns > 0 ? totalGeneralReturns / totalAllReturns : OFFICIAL_RECHAZOS_RATIO;
 
     return list.map(s => {
       const bruto = Number(s.ventasBrutas) || Number(s.ventas) || 0;
       const dev   = Math.round((Number(s.devoluciones) || 0) * sellerScale);
       const canal = s.canal || (SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT');
-
-      // Si el cubo tiene campo rechazos separado, usarlo directamente
-      const rechazos = Number(s.rechazos) > 0
-        ? Math.round(Number(s.rechazos) * sellerScale)
+      // Usar rechazos directamente si están disponibles, sino aplicar ratio
+      const rechazos = sellersHaveRechazos
+        ? Math.round((Number(s.rechazos) || 0) * sellerScale)
         : Math.round(dev * rechazosRatio);
 
       return {
@@ -253,7 +266,7 @@ const ReturnsAnalysis = () => {
           <div>
             <p className="text-slate-800 text-xs font-bold uppercase tracking-wider">Tasa de Rechazo</p>
             <h3 className="text-2xl font-black text-amber-700 mt-1">
-              {formatPercent(kpis.totalSales > 0 ? totalGeneralReturns / kpis.totalSales : 0)}
+              {formatPercent(totalSalesForRate > 0 ? totalGeneralReturns / totalSalesForRate : 0)}
             </h3>
             <p className="text-[10px] text-slate-800 font-medium mt-1">Porcentaje sobre ventas brutas</p>
           </div>
@@ -279,7 +292,7 @@ const ReturnsAnalysis = () => {
           <div>
             <p className="text-slate-800 text-xs font-bold uppercase tracking-wider">Tasa de Cambios</p>
             <h3 className="text-2xl font-black text-pink-700 mt-1">
-              {formatPercent(kpis.totalSales > 0 ? totalExpiryReturns / kpis.totalSales : 0)}
+              {formatPercent(totalSalesForRate > 0 ? totalExpiryReturns / totalSalesForRate : 0)}
             </h3>
             <p className="text-[10px] text-slate-800 font-medium mt-1">Porcentaje sobre ventas brutas</p>
           </div>
@@ -293,7 +306,7 @@ const ReturnsAnalysis = () => {
           <div>
             <p className="text-slate-600 text-xs font-bold uppercase tracking-wider">Total Devolución</p>
             <h3 className="text-2xl font-black text-red-700 mt-1">{formatCurrency(totalAllReturns)}</h3>
-            <p className="text-[10px] text-slate-800 font-medium mt-1">Tasa total: {formatPercent(kpis.totalSales > 0 ? totalAllReturns / kpis.totalSales : 0)}</p>
+            <p className="text-[10px] text-slate-800 font-medium mt-1">Tasa total: {formatPercent(totalSalesForRate > 0 ? totalAllReturns / totalSalesForRate : 0)}</p>
           </div>
           <div className="p-3 bg-red-100 text-red-700 rounded-xl shadow-xs">
             <TrendingDown className="h-6 w-6" />
