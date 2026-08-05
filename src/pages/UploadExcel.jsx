@@ -1033,7 +1033,13 @@ const UploadExcel = () => {
             periodo: uploadPeriod
           }));
           await supabase.from('returns_sellers').delete().eq('periodo', uploadPeriod);
-          const { error: errSellers } = await supabase.from('returns_sellers').insert(returnsSellersDb);
+          let { error: errSellers } = await supabase.from('returns_sellers').insert(returnsSellersDb);
+          if (errSellers && (errSellers.message?.includes('rechazos') || errSellers.code === '42703')) {
+            console.warn('La columna rechazos no existe en la tabla returns_sellers de Supabase. Reintentando sin la columna rechazos...');
+            const fallbackDb = returnsSellersDb.map(({ rechazos, ...rest }) => rest);
+            const resFallback = await supabase.from('returns_sellers').insert(fallbackDb);
+            errSellers = resFallback.error;
+          }
           if (errSellers) throw new Error('Error al cargar vendedores: ' + errSellers.message);
 
           // 4. Sales Daily — borrar solo el período actual e insertar deduplicado

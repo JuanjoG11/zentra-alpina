@@ -239,6 +239,29 @@ const ExecutiveDashboard = () => {
     ..._basePeriodoConfig,
     presupuesto: _basePeriodoConfig.presupuesto > 0 ? _basePeriodoConfig.presupuesto : (kpis.totalBudget || 0),
   };
+  // Daily net sales for the current work day (only for July)
+  const dailyNetSales = useMemo(() => {
+    const { salesDaily, returnsDaily, clientReturns, expiryClientReturns } = filteredData;
+    const period = selectedPeriod;
+    const [year, month] = period.split('-');
+    const day = workDay;
+    const dateStr = `${day}/${parseInt(month)}/${year}`;
+    let gross = 0;
+    let returns = 0;
+    (salesDaily || []).forEach(d => {
+      if (d.fecha === dateStr) gross += d.total || 0;
+    });
+    (returnsDaily || []).forEach(d => {
+      if (d.fecha === dateStr) returns += d.devoluciones || 0;
+    });
+    (clientReturns || []).forEach(c => {
+      if (c.fecha === dateStr) returns += c.valor || 0;
+    });
+    (expiryClientReturns || []).forEach(c => {
+      if (c.fecha === dateStr) returns += c.valor || 0;
+    });
+    return gross - returns;
+  }, [filteredData, workDay, selectedPeriod]);
 
   const kpiCards = [
     {
@@ -288,7 +311,7 @@ const ExecutiveDashboard = () => {
   ];
 
   const devRate = kpis.totalSales > 0 ? kpis.totalReturns / kpis.totalSales : 0;
-  const isDevAlert = devRate > 0.035;
+  const isDevAlert = false; // Desactivado temporalmente por solicitud
 
   return (
     <div className="space-y-6">
