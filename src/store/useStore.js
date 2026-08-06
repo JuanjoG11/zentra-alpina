@@ -74,10 +74,11 @@ if (_stored && _migratedStored !== _stored) {
   try { localStorage.setItem(PERIOD_KEY, _migratedStored); } catch(e) {}
 }
 const persistedPeriod = _migratedStored || _currentCalendarPeriod;
-// El período activo siempre es el mes actual del calendario.
-// Lo guardado en localStorage solo sirve para la migración de formato,
-// no para fijar el período por defecto.
-const activePeriod = _currentCalendarPeriod;
+// El período activo: usar el mes actual del calendario.
+// Si localStorage tiene un período más reciente (mismo mes o futuro), respetarlo.
+// Si tiene un período del pasado, avanzar automáticamente al mes actual
+// para que la app siempre muestre datos frescos al inicio de cada nuevo mes.
+const activePeriod = (persistedPeriod >= _currentCalendarPeriod) ? persistedPeriod : _currentCalendarPeriod;
 const persistedChat   = loadPersistedChat();
 const persistedWorkDay = parseInt(localStorage.getItem(WORKDAY_KEY) || '0', 10) || 0;
 
@@ -330,17 +331,6 @@ const useStore = create((set, get) => ({
         };
       }).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-      // Determine the most recent period from salesDaily — formato YYYY-MM (ej: '2026-07')
-      const latestDate = dbSales.reduce((max, row) => {
-        const date = new Date(row.fecha && !row.fecha.includes('T') ? row.fecha + 'T00:00:00' : row.fecha);
-        return date > max ? date : max;
-      }, new Date(0));
-      
-      // Format latestPeriod as "YYYY-MM" — mismo formato usado en la DB (default '2026-06')
-      const lyear = latestDate.getFullYear();
-      const lmonth = String(latestDate.getMonth() + 1).padStart(2, '0');
-      const latestPeriod = `${lyear}-${lmonth}`;
-
       // Datos complementarios: Supabase es la fuente primaria, localStorage solo si coincide con el período activo
       const localData = loadPersistedData();
       const isSamePeriodLocal = localData?.periodo === currentPeriod;
@@ -417,9 +407,10 @@ const useStore = create((set, get) => ({
         productDistrib,
         cityClients
       };
-      // Usar el período que se estaba consultando (no recalcular desde fechas para evitar desincronías)
-      const resolvedPeriod = (dbSales.length > 0 && latestDate.getFullYear() > 2000) ? latestPeriod : currentPeriod;
-      saveToStorage(newDbData, resolvedPeriod);
+      // Usar siempre el período que se estaba consultando — no recalcular desde fechas de ventas.
+      // Recalcular causaba que al subir datos de agosto con fechas de julio los períodos se mezclaran.
+      const resolvedPeriod = currentPeriod;
+      saveToStorage(resolvedPeriod);
       set({
         dbData: newDbData,
         selectedPeriod: resolvedPeriod,

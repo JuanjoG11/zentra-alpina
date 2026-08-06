@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import useStore from '../store/useStore';
 import GlassCard from '../components/ui/GlassCard';
-import { DEFAULT_ZONE_SELLERS, getDiasHabiles } from '../utils/calculations';
+import { DEFAULT_ZONE_SELLERS, getDiasHabiles, BUDGET_MAP_ZONAS, getBudgetZona } from '../utils/calculations';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { supabase } from '../services/supabaseClient';
@@ -195,51 +195,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     'OTRO': new Set()
   };
 
-  const budgetMap = {
-    // --- JUAN JOSE GUZMAN (Armenia/Pereira) ---
-    'M9601': 108000000,  // Marcela
-    'M9602': 115000000,  // Daniel
-    'M9603': 112000000,  // Andrea
-    'M9604': 107000000,  // Olga
-    'M9605': 115000000,  // Anderson
-    'M9606': 89000000,   // Alejandra
-    'M9600': 60000000,   // Angela
-    'P7008': 79000000,   // Sandra
-    'P7009': 72000000,   // Yerina
-    'P7010': 65470534,   // Angela G
-    // --- BIBIANA MONTOYA (Manizales/Pereira) ---
-    'M9552': 104000000,  // Viviana
-    'M9553': 105000000,  // Sindy
-    'M9554': 119000000,  // Santiago
-    'M9555': 113000000,  // Janneth
-    'M9556': 112000000,  // Diana
-    'M9557': 201000000,  // Sandra
-    'M9558': 126000000,  // Beatriz
-    'M9559': 144000000,  // Alejandro
-    'M9550': 69000000,   // Lina
-    'M9560': 84000000,   // Eliana/Angie
-    'P7000': 59000000,   // Karen
-    'P7001': 72000000,   // Yenni
-    'P7002': 106000000,  // Bladimir
-    'E7000': 10454052,   // Bibiana
-    // --- DIEGO GONZALEZ (Manizales/Pereira/Armenia) ---
-    'M9453': 114000000,  // Marcela
-    'M9454': 129000000,  // Julian
-    'M9455': 120000000,  // Genni
-    'M9456': 104000000,  // Eliana
-    'M9457': 119000000,  // German
-    'M9458': 108000000,  // Natalia
-    'M9459': 134000000,  // Yudi
-    'M9460': 152000000,  // Alex
-    'M9461': 128000000,  // Yesica
-    'P7004': 142000000,  // Valentina
-    'P7005': 122000000,  // Jhonier A
-    'P7006': 153000000,  // Cristian
-    'P7007': 175000000,  // Oscar D
-    'M9450': 84000000,   // Estefania
-    'M9451': 70000000,   // Nini
-    'E7001': 9075414,    // (sin vendedor)
-  };
+  // Presupuesto por zona — importado desde calculations.js (fuente única)
+  const budgetMap = BUDGET_MAP_ZONAS;
 
   const parseSpanishFloat = (str) => {
     if (str === null || str === undefined) return 0;
@@ -508,12 +465,13 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
               canal: sellerCanal,
               ventas: 0,
               devoluciones: 0,
-              rechazos: 0
+              rechazos: 0,
+              cambios: 0
             };
           }
           if (esDevolucion) {
             sellersAggr[activeSeller].devoluciones += Math.abs(valTotal);
-            // esVencimiento is defined in scope block 5 below, so derive here too
+            // Separar rechazos (motivos normales) de cambios M.E. (vencimiento)
             const mNorm = motivoStr
               .toLowerCase()
               .normalize('NFD')
@@ -525,7 +483,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
               mNorm.includes('vencimiento') ||
               mNorm.includes('dev me por') ||
               (mNorm.startsWith('dev') && mNorm.includes('me') && mNorm.includes('venc'));
-            if (!mEsVencimiento) {
+            if (mEsVencimiento) {
+              sellersAggr[activeSeller].cambios += Math.abs(valTotal);
+            } else {
               sellersAggr[activeSeller].rechazos += Math.abs(valTotal);
             }
           } else if (esVentaReal) {
@@ -764,7 +724,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     const bruto = Math.round(s.ventas);
     const d     = Math.round(s.devoluciones);
     const r     = Math.round(s.rechazos || 0);
-    // Venta neta = bruto − rechazos − cambios
+    const c     = Math.round(s.cambios  || 0);
+    // Venta neta = bruto − devoluciones totales (rechazos + cambios)
     const v     = Math.max(0, bruto - d);
     return {
       ejecutivo: s.ejecutivo,
@@ -774,9 +735,11 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
       ventasBrutas: bruto,
       devoluciones: d,
       rechazos: r,
+      cambios: c,
       // % sobre ventas brutas para no perder la proporción real de devolución
       porcentajeDevolucion: bruto > 0 ? Number((d / bruto).toFixed(4)) : 0.0,
-      porcentajeRechazo: bruto > 0 ? Number((r / bruto).toFixed(4)) : 0.0
+      porcentajeRechazo:    bruto > 0 ? Number((r / bruto).toFixed(4)) : 0.0,
+      porcentajeCambios:    bruto > 0 ? Number((c / bruto).toFixed(4)) : 0.0
     };
   }).sort((a, b) => b.ventas - a.ventas);
 
@@ -911,7 +874,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
     expiryClientReturns,
     cityClients,
     productDistrib,
-    salesDailyDb
+    salesDailyDb,
+    _cuboPeriodo   // período detectado desde las fechas del cubo
   };
 };
 
@@ -972,8 +936,9 @@ const UploadExcel = () => {
       }
 
       // El período lo define el selector de destino del upload.
-      // El usuario puede elegir un período distinto al activo para cargar días que faltan.
-      const latestPeriod = uploadPeriodOverride || useStore.getState().selectedPeriod;
+      // Si no hay override manual, se detecta automáticamente desde las fechas del cubo
+      // para evitar que datos de agosto se guarden bajo el período de julio.
+      const latestPeriod = uploadPeriodOverride || processedData._cuboPeriodo || useStore.getState().selectedPeriod;
       console.log(`📅 Período del cubo: ${latestPeriod}`);
 
       // Step 3: Insertando datos en Supabase PostgreSQL (fallbacks to local store update)
@@ -1030,13 +995,15 @@ const UploadExcel = () => {
             ventas: s.ventasBrutas || s.ventas,  // guardar venta bruta en columna ventas
             devoluciones: s.devoluciones,
             rechazos: s.rechazos || 0,
+            cambios: s.cambios || 0,
             periodo: uploadPeriod
           }));
           await supabase.from('returns_sellers').delete().eq('periodo', uploadPeriod);
           let { error: errSellers } = await supabase.from('returns_sellers').insert(returnsSellersDb);
-          if (errSellers && (errSellers.message?.includes('rechazos') || errSellers.code === '42703')) {
-            console.warn('La columna rechazos no existe en la tabla returns_sellers de Supabase. Reintentando sin la columna rechazos...');
-            const fallbackDb = returnsSellersDb.map(({ rechazos, ...rest }) => rest);
+          // Si falta alguna columna nueva, reintentar solo con las columnas base
+          if (errSellers && (errSellers.code === '42703' || errSellers.message?.includes('column'))) {
+            console.warn('Columna faltante en returns_sellers. Reintentando sin rechazos/cambios:', errSellers.message);
+            const fallbackDb = returnsSellersDb.map(({ rechazos, cambios, ...rest }) => rest);
             const resFallback = await supabase.from('returns_sellers').insert(fallbackDb);
             errSellers = resFallback.error;
           }

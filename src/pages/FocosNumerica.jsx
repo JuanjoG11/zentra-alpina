@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import useStore from '../store/useStore';
-import { getFilteredData, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD, ZONE_TYPE_MAP, getDiasHabiles } from '../utils/calculations';
+import { getFilteredData, ZONA_CIUDAD_MAP, ZONAS_POR_CIUDAD, ZONE_TYPE_MAP, getDiasHabiles, getPresupuestoCanalMes } from '../utils/calculations';
 import { formatCurrency, formatPercent, formatShortCurrency, formatNumber, formatKg } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
 import Chart from 'react-apexcharts';
@@ -131,9 +131,8 @@ const FocosNumerica = () => {
 
   const selectedPeriod = useStore(state => state.selectedPeriod);
 
-  // Presupuesto y días hábiles según el período activo — días desde fuente única
-  const PRESUPUESTO_POR_PERIODO = { '2026-06': 4210000000, '2026-07': 4210000000 };
-  const PRESUPUESTO_MES = PRESUPUESTO_POR_PERIODO[selectedPeriod] || 4210000000;
+  // Presupuesto y días hábiles según el período activo — fuente única en calculations.js
+  const PRESUPUESTO_MES = getPresupuestoCanalMes(selectedPeriod);
   const DIAS_HABILES    = getDiasHabiles(selectedPeriod);
 
   // Nombre del mes en español para el banner
@@ -145,10 +144,14 @@ const FocosNumerica = () => {
   }, [selectedPeriod]);
 
   // Día actual: usa el configurado manualmente; si es 0, detecta desde datos
+  // Contar fechas ÚNICAS en salesDaily (no filas, que son fecha×zona)
   const detectedDay = useMemo(() => {
-    const days = (dbData.salesDaily || [])
-      .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime()));
-    return days.length > 0 ? days.length : 1;
+    const uniqueDates = new Set(
+      (dbData.salesDaily || [])
+        .filter(d => d.fecha && d.fecha !== 'general' && !isNaN(new Date(d.fecha).getTime()))
+        .map(d => d.fecha)
+    );
+    return uniqueDates.size > 0 ? uniqueDates.size : 1;
   }, [dbData.salesDaily]);
 
   const DIA_ACTUAL  = currentWorkDay > 0 ? currentWorkDay : detectedDay;

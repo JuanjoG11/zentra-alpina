@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../store/useStore';
-import { getFilteredData, calculateKPIs, countCalendarBusinessDays } from '../utils/calculations';
+import { getFilteredData, calculateKPIs, countCalendarBusinessDays, getDiasHabiles, getPresupuestoCanalMes } from '../utils/calculations';
 
 import { formatCurrency, formatPercent, formatShortCurrency } from '../utils/formatters';
 import GlassCard from '../components/ui/GlassCard';
@@ -42,17 +42,13 @@ const trafficLight = (pct) => {
   return             { color: 'text-rose-700',    bg: 'bg-rose-50/90',    border: 'border-rose-200',    Icon: XCircle,        label: 'Crítico'   };
 };
 
-// ─── Daily Sales Table ────────────────────────────────────────────────
-// Configuración por período: días hábiles y presupuesto total del canal
-const PERIODO_CONFIG = {
-  '2026-06': { diasHabiles: 23, presupuesto: 4210000000 },
-  '2026-07': { diasHabiles: 23, presupuesto: 0 }, // se actualiza al cargar el cubo de julio
-};
-const DEFAULT_PERIODO_CONFIG = { diasHabiles: 22, presupuesto: 0 };
-
-const DailySalesTable = ({ salesDaily, workDay, periodoConfig }) => {
+// ─── Configuración por período — presupuesto desde fuente única en calculations.js
+const DailySalesTable = ({ salesDaily, workDay, periodoConfig, periodo }) => {
   const [showAll, setShowAll] = useState(false);
-  const { diasHabiles, presupuesto } = periodoConfig || DEFAULT_PERIODO_CONFIG;
+  // Presupuesto: usar el que viene de las zonas (kpis.totalBudget), o la fuente única si no hay zonas
+  const presupuesto = periodoConfig?.presupuesto || getPresupuestoCanalMes(periodo);
+  // Días hábiles siempre desde la fuente única
+  const diasHabiles = getDiasHabiles(periodo);
 
   const META_DIARIA    = diasHabiles > 0 && presupuesto > 0 ? presupuesto / diasHabiles : 0;
   const META_ACUMULADA = META_DIARIA * workDay;
@@ -232,12 +228,9 @@ const ExecutiveDashboard = () => {
   }, [currentWorkDay, filteredData.salesDaily]);
 
 
-  // Configuración del período (días hábiles, presupuesto total)
-  // Si el presupuesto hardcodeado es 0, usa el que viene de las zonas (kpis.totalBudget)
-  const _basePeriodoConfig = PERIODO_CONFIG[selectedPeriod] || DEFAULT_PERIODO_CONFIG;
+  // Configuración del período — presupuesto desde zonas (kpis.totalBudget) o fuente única
   const periodoConfig = {
-    ..._basePeriodoConfig,
-    presupuesto: _basePeriodoConfig.presupuesto > 0 ? _basePeriodoConfig.presupuesto : (kpis.totalBudget || 0),
+    presupuesto: kpis.totalBudget > 0 ? kpis.totalBudget : getPresupuestoCanalMes(selectedPeriod),
   };
   // Daily net sales for the current work day (only for July)
   const dailyNetSales = useMemo(() => {
@@ -267,7 +260,7 @@ const ExecutiveDashboard = () => {
     {
       title: 'Ventas Brutas',
       value: formatCurrency(kpis.totalSales),
-      subtitle: `Cierre de ${activePeriodLabel}`,
+      subtitle: `Día hábil ${workDay} de ${getDiasHabiles(selectedPeriod)} · ${activePeriodLabel}`,
       icon: DollarSign,
       color: 'from-blue-500/20 to-cyan-500/20',
       iconColor: 'text-blue-400',
@@ -488,7 +481,7 @@ const ExecutiveDashboard = () => {
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-600 inline-block"/>Crítico</span>
             </div>
           </div>
-          <DailySalesTable salesDaily={filteredData.salesDaily} workDay={workDay} periodoConfig={periodoConfig} />
+          <DailySalesTable salesDaily={filteredData.salesDaily} workDay={workDay} periodoConfig={periodoConfig} periodo={selectedPeriod} />
         </GlassCard>
 
         {/* Ranking zonas */}

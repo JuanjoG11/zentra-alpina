@@ -21,10 +21,15 @@ export const DIAS_HABILES_POR_PERIODO = {
 
 /** Devuelve los días hábiles del período dado. Si no está en el mapa, cuenta días hábiles del mes. */
 export const getDiasHabiles = (periodo) => {
-  if (DIAS_HABILES_POR_PERIODO[periodo]) return DIAS_HABILES_POR_PERIODO[periodo];
+  // Usar hasOwnProperty para evitar falsos negativos cuando el valor es 0
+  // y trim() para tolerar espacios accidentales en el string del período
+  const key = periodo ? String(periodo).trim() : '';
+  if (Object.prototype.hasOwnProperty.call(DIAS_HABILES_POR_PERIODO, key)) {
+    return DIAS_HABILES_POR_PERIODO[key];
+  }
   // Fallback: contar lunes-viernes del mes calendario
-  if (!periodo || !/^\d{4}-\d{2}$/.test(periodo)) return 23;
-  const [y, m] = periodo.split('-').map(Number);
+  if (!key || !/^\d{4}-\d{2}$/.test(key)) return 23;
+  const [y, m] = key.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
   let count = 0;
   for (let d = 1; d <= daysInMonth; d++) {
@@ -32,6 +37,84 @@ export const getDiasHabiles = (periodo) => {
     if (dow !== 0 && dow !== 6) count++;
   }
   return count;
+};
+
+// ─── Presupuesto total del canal por período — FUENTE ÚNICA ──────────────────
+// Actualizar al inicio de cada mes. Todos los componentes importan de aquí.
+// El valor es el presupuesto mensual total del canal Alpina Eje Cafetero.
+export const PRESUPUESTO_CANAL_POR_PERIODO = {
+  '2026-06': 4210000000,
+  '2026-07': 4210000000,
+  '2026-08': 4210000000,
+  '2026-09': 4210000000,
+  '2026-10': 4210000000,
+  '2026-11': 4210000000,
+  '2026-12': 4210000000,
+};
+
+/** Devuelve el presupuesto total del canal para el período dado. */
+export const getPresupuestoCanalMes = (periodo) => {
+  const key = periodo ? String(periodo).trim() : '';
+  return PRESUPUESTO_CANAL_POR_PERIODO[key] ?? 4210000000;
+};
+
+// ─── Presupuesto por zona — FUENTE ÚNICA ─────────────────────────────────────
+// Los valores son el presupuesto mensual asignado a cada zona.
+// Si el presupuesto cambia por mes, agregar una clave por período aquí.
+// Por ahora el presupuesto es el mismo todos los meses.
+export const BUDGET_MAP_ZONAS = {
+  // --- JUAN JOSE GUZMAN (Armenia/Pereira) ---
+  'M9601': 108000000,
+  'M9602': 115000000,
+  'M9603': 112000000,
+  'M9604': 107000000,
+  'M9605': 115000000,
+  'M9606':  89000000,
+  'M9600':  60000000,
+  'P7008':  79000000,
+  'P7009':  72000000,
+  'P7010':  65470534,
+  // --- BIBIANA MONTOYA (Manizales/Pereira) ---
+  'M9552': 104000000,
+  'M9553': 105000000,
+  'M9554': 119000000,
+  'M9555': 113000000,
+  'M9556': 112000000,
+  'M9557': 201000000,
+  'M9558': 126000000,
+  'M9559': 144000000,
+  'M9550':  69000000,
+  'M9560':  84000000,
+  'P7000':  59000000,
+  'P7001':  72000000,
+  'P7002': 106000000,
+  'E7000':  10454052,
+  // --- DIEGO GONZALEZ (Manizales/Pereira/Armenia) ---
+  'M9453': 114000000,
+  'M9454': 129000000,
+  'M9455': 120000000,
+  'M9456': 104000000,
+  'M9457': 119000000,
+  'M9458': 108000000,
+  'M9459': 134000000,
+  'M9460': 152000000,
+  'M9461': 128000000,
+  'P7004': 142000000,
+  'P7005': 122000000,
+  'P7006': 153000000,
+  'P7007': 175000000,
+  'M9450':  84000000,
+  'M9451':  70000000,
+  'E7001':   9075414,
+};
+
+/** Devuelve el presupuesto de una zona. Si no existe, estima desde ventas. */
+export const getBudgetZona = (zona, ventasNetasFallback = 0) => {
+  const key = zona ? String(zona).trim() : '';
+  if (Object.prototype.hasOwnProperty.call(BUDGET_MAP_ZONAS, key)) {
+    return BUDGET_MAP_ZONAS[key];
+  }
+  return ventasNetasFallback > 0 ? Math.round(ventasNetasFallback / 0.95) : 0;
 };
 
 // ─── Mapa oficial de zonas por ciudad (fuente: CUBO_DE_VENTAS) ─────────────
@@ -354,8 +437,10 @@ export const getFilteredData = (arg1, arg2) => {
   };
 };
 
-export const calculateKPIs = (filteredData) => {
+export const calculateKPIs = (filteredData, period) => {
   const { providers, salesDaily, zones, returnsSellers, returnsDaily, clientReturns, expiryClientReturns, expiryDaily } = filteredData;
+  // Si no se pasa period, intentar inferirlo del store
+  const activePeriod = period || (typeof useStore !== 'undefined' ? useStore.getState().selectedPeriod : null);
 
   // 1. Ventas Totales: si hay datos diarios (salesDaily) usamos la suma de "total", sino usamos los proveedores
   const hasDailySales = Array.isArray(salesDaily) && salesDaily.length > 0 && salesDaily.some(d => d.total && d.total > 0);
@@ -363,11 +448,10 @@ export const calculateKPIs = (filteredData) => {
     ? salesDaily.reduce((sum, d) => sum + (d.total || 0), 0)
     : providers.reduce((sum, p) => sum + p.ventas2026, 0);
 
-  // 2. Presupuesto: suma de zonas, o el presupuesto real del mes si no hay zonas
-  const PRESUPUESTO_REAL_MES = 4001885288; // Junio 2026 — 22 días hábiles
+  // 2. Presupuesto: suma de zonas (fuente real), o el presupuesto del canal por período como fallback
   const totalBudget = zones.length > 0
     ? zones.reduce((sum, z) => sum + z.presupuesto, 0)
-    : (totalSales > 0 ? PRESUPUESTO_REAL_MES : 0);
+    : (totalSales > 0 ? getPresupuestoCanalMes(activePeriod) : 0);
 
   // 3. Devoluciones totales = Rechazos + Cambios (vencimientos)
   const clientReturnsSum  = Array.isArray(clientReturns)       ? clientReturns.reduce((sum, c) => sum + (c.valor || 0), 0) : 0;
@@ -375,13 +459,34 @@ export const calculateKPIs = (filteredData) => {
   const dailyReturnsSum   = Array.isArray(returnsDaily)        ? returnsDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
   const expiryDailySum    = Array.isArray(expiryDaily)         ? expiryDaily.reduce((sum, d) => sum + (d.devoluciones || 0), 0) : 0;
   const sellersReturnsSum = Array.isArray(returnsSellers)      ? returnsSellers.reduce((sum, s) => sum + (s.devoluciones || 0), 0) : 0;
+  const sellersRechazosSum = Array.isArray(returnsSellers)     ? returnsSellers.reduce((sum, s) => sum + (Number(s.rechazos) || 0), 0) : 0;
+  const sellersCambiosSum  = Array.isArray(returnsSellers)     ? returnsSellers.reduce((sum, s) => sum + (Number(s.cambios)  || 0), 0) : 0;
 
-  // FUENTE PRINCIPAL: bruto − neto de zonas (siempre correcto, viene directo de Supabase)
-  // Cierre de presentación solicitado:
-  // Ventas Netas: 4.385.530.865 | Rechazos: 64.066.872 | Ventas Brutas: 4.449.597.737
-  const netSales = 4385530865;
-  const totalReturns = 64066872;
-  totalSales = netSales + totalReturns;
+  // 4. Devoluciones totales — fuente de mayor confianza disponible:
+  //    a) rechazos + cambios separados en returnsSellers (nuevo — desde agosto 2026)
+  //    b) devoluciones de returnsSellers (campo total)
+  //    c) returns_daily (suma acumulada por día)
+  //    d) fallback a cero si no hay datos
+  let totalReturns;
+  if (sellersRechazosSum > 0 && sellersCambiosSum > 0) {
+    // Tenemos ambos campos separados: sumamos Rechazos + Cambios M.E.
+    totalReturns = sellersRechazosSum + sellersCambiosSum;
+  } else if (sellersRechazosSum > 0) {
+    // Solo rechazos disponibles (cambios aún no están en la DB), usamos el total de sellers
+    totalReturns = sellersReturnsSum > 0 ? sellersReturnsSum : sellersRechazosSum;
+  } else if (sellersReturnsSum > 0) {
+    // returnsSellers sin desglose
+    totalReturns = sellersReturnsSum;
+  } else if (dailyReturnsSum > 0) {
+    // returnsDaily como fuente secundaria
+    totalReturns = dailyReturnsSum + expiryDailySum;
+  } else {
+    // Sin datos en la DB — cero hasta que se cargue el cubo
+    totalReturns = 0;
+  }
+
+  // 4b. Ventas netas dinámicas
+  const netSales = totalSales - totalReturns;
 
   // 5. Cumplimiento %: netSales / budget
   const compliance = totalBudget > 0 ? netSales / totalBudget : 1.0815;
