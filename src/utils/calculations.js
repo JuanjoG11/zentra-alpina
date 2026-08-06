@@ -45,7 +45,7 @@ export const getDiasHabiles = (periodo) => {
 export const PRESUPUESTO_CANAL_POR_PERIODO = {
   '2026-06': 4210000000,
   '2026-07': 4210000000,
-  '2026-08': 4210000000,
+  '2026-08': 4129000000,  // Plan ROMA agosto — Robin Calderón
   '2026-09': 4210000000,
   '2026-10': 4210000000,
   '2026-11': 4210000000,
@@ -59,53 +59,52 @@ export const getPresupuestoCanalMes = (periodo) => {
 };
 
 // ─── Presupuesto por zona — FUENTE ÚNICA ─────────────────────────────────────
-// Los valores son el presupuesto mensual asignado a cada zona.
-// Si el presupuesto cambia por mes, agregar una clave por período aquí.
-// Por ahora el presupuesto es el mismo todos los meses.
+// Valores "Ppto Calibrado" Plan ROMA Agosto 2026 — Robin Calderón
+// Fuente: tabla de presupuesto agosto entregada por dirección comercial.
 export const BUDGET_MAP_ZONAS = {
-  // --- JUAN JOSE GUZMAN (Armenia/Pereira) ---
-  'M9601': 108000000,
-  'M9602': 115000000,
-  'M9603': 112000000,
-  'M9604': 107000000,
-  'M9605': 115000000,
-  'M9606':  89000000,
-  'M9600':  60000000,
-  'P7008':  79000000,
-  'P7009':  72000000,
-  'P7010':  65470534,
-  // --- BIBIANA MONTOYA (Manizales/Pereira) ---
-  'M9552': 104000000,
-  'M9553': 105000000,
-  'M9554': 119000000,
-  'M9555': 113000000,
-  'M9556': 112000000,
-  'M9557': 201000000,
-  'M9558': 126000000,
-  'M9559': 144000000,
-  'M9550':  69000000,
-  'M9560':  84000000,
-  'P7000':  59000000,
-  'P7001':  72000000,
-  'P7002': 106000000,
-  'E7000':  10454052,
-  // --- DIEGO GONZALEZ (Manizales/Pereira/Armenia) ---
-  'M9453': 114000000,
-  'M9454': 129000000,
-  'M9455': 120000000,
-  'M9456': 104000000,
-  'M9457': 119000000,
-  'M9458': 108000000,
-  'M9459': 134000000,
-  'M9460': 152000000,
-  'M9461': 128000000,
-  'P7004': 142000000,
-  'P7005': 122000000,
-  'P7006': 153000000,
-  'P7007': 175000000,
-  'M9450':  84000000,
-  'M9451':  70000000,
-  'E7001':   9075414,
+  // --- JUAN JOSE GUZMAN (Armenia/Quindío) — total $919.866.539 ---
+  'M9601': 108000000,  // Marcela
+  'M9602': 115000000,  // Daniel
+  'M9603': 112000000,  // Andrea
+  'M9604': 107000000,  // Olga
+  'M9605': 115000000,  // Anderson
+  'M9606':  91000000,  // Alejandra
+  'M9600':  58000000,  // Angela
+  'P7008':  79000000,  // Sandra
+  'P7009':  69000000,  // Yerina
+  'P7010':  65866539,  // Angela G
+  // --- BIBIANA MONTOYA (Manizales/Caldas) — total $1.378.614.107 ---
+  'M9552': 100000000,  // Viviana
+  'M9553': 102000000,  // Sindy
+  'M9554': 116000000,  // Santiago
+  'M9555': 109000000,  // Janneth
+  'M9556': 108000000,  // Diana
+  'M9557': 197000000,  // Sandra
+  'M9558': 120000000,  // Beatriz
+  'M9559': 141000000,  // Alejandro
+  'M9550':  68000000,  // Lina
+  'M9560':  80000000,  // Eliana/Angie
+  'P7000':  58000000,  // Karen
+  'P7001':  65000000,  // Yenni
+  'P7002': 106000000,  // Bladimir
+  'E7000':   8614107,  // Bibiana
+  // --- DIEGO GONZALEZ (Pereira/Risaralda) — total $1.830.519.355 ---
+  'M9453': 113000000,  // Marcela
+  'M9454': 129000000,  // Julian
+  'M9455': 118000000,  // Genni
+  'M9456': 103000000,  // Eliana
+  'M9457': 119000000,  // German
+  'M9458': 108000000,  // Natalia
+  'M9459': 133000000,  // Yudi
+  'M9460': 151000000,  // Alex
+  'M9461': 120000000,  // Yesica
+  'P7004': 142000000,  // Valentina
+  'P7005': 118000000,  // Jhonier A
+  'P7006': 153000000,  // Cristian
+  'P7007': 173000000,  // Oscar D
+  'M9450':  75000000,  // Estefania
+  'M9451':  65000000,  // Nini
+  'E7001':  10519355,  // (Servicio al Cliente)
 };
 
 /** Devuelve el presupuesto de una zona. Si no existe, estima desde ventas. */
