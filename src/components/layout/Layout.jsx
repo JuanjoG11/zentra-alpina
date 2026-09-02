@@ -16,6 +16,11 @@ const Layout = () => {
     onRegistered(r) {
       // Chequear updates cada 60 segundos
       if (r) setInterval(() => r.update(), 60 * 1000);
+      // Limpiar caché viejo de Supabase si existe (de versiones anteriores del SW)
+      // Garantiza que todos los dispositivos consulten siempre datos frescos.
+      if ('caches' in window) {
+        caches.delete('supabase-api').catch(() => {});
+      }
     },
   });
 

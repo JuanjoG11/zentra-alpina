@@ -248,7 +248,7 @@ const ReturnsAnalysis = () => {
       </div>
 
       {/* Returns KPIs */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {/* Rechazos Valor */}
         <GlassCard hoverable={false} className="flex justify-between items-center bg-orange-50/70 border-orange-200 shadow-xs">
           <div>
@@ -361,25 +361,25 @@ const ReturnsAnalysis = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto -mx-5 px-5 max-h-[500px] overflow-y-auto">
-          <table className="w-full min-w-[640px] text-left text-xs border-collapse">
+        <div className="overflow-x-auto -mx-5 px-5 max-h-[400px] sm:max-h-[500px] overflow-y-auto scrollbar-none">
+          <table className="w-full min-w-[540px] sm:min-w-[640px] text-left text-xs border-collapse">
             <thead className="sticky top-0 bg-slate-50 z-10">
               <tr className="border-b border-slate-200 text-slate-700 font-bold select-none">
                 <th className="pb-3 pt-2 pl-2 cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('ejecutivo')}>
-                  EJECUTIVO {sortField === 'ejecutivo' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  EJEC. {sortField === 'ejecutivo' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 pt-2 cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('nombre')}>
+                <th className="pb-3 pt-2 cursor-pointer hover:text-slate-900 transition-colors hidden sm:table-cell" onClick={() => handleSort('nombre')}>
                   NOMBRE {sortField === 'nombre' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="pb-3 pt-2 text-center">CANAL</th>
-                <th className="pb-3 pt-2 text-right cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('ventas')}>
+                <th className="pb-3 pt-2 text-center hidden md:table-cell">CANAL</th>
+                <th className="pb-3 pt-2 text-right cursor-pointer hover:text-slate-900 transition-colors hidden sm:table-cell" onClick={() => handleSort('ventas')}>
                   VENTA BRUTA $ {sortField === 'ventas' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 pt-2 text-right cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('rechazos')}>
                   RECHAZOS $ {sortField === 'rechazos' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="pb-3 pt-2 text-right pr-2 cursor-pointer hover:text-slate-900 transition-colors" onClick={() => handleSort('porcentaje')}>
-                  % RECHAZO {sortField === 'porcentaje' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  % {sortField === 'porcentaje' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </th>
               </tr>
             </thead>
@@ -392,8 +392,8 @@ const ReturnsAnalysis = () => {
                 return (
                   <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
                     <td className="py-2.5 pl-2 font-bold font-mono text-slate-900">{item.ejecutivo}</td>
-                    <td className="py-2.5 font-bold text-slate-900">{item.nombre}</td>
-                    <td className="py-2.5 text-center">
+                    <td className="py-2.5 font-bold text-slate-900 hidden sm:table-cell">{item.nombre}</td>
+                    <td className="py-2.5 text-center hidden md:table-cell">
                       <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full border ${
                         isTAT
                           ? 'text-sky-800 bg-sky-50 border-sky-200'
@@ -402,7 +402,7 @@ const ReturnsAnalysis = () => {
                         {isTAT ? 'TAT' : 'Super'}
                       </span>
                     </td>
-                    <td className="py-2.5 text-right text-slate-700 font-semibold">{formatCurrency(item.ventas)}</td>
+                    <td className="py-2.5 text-right text-slate-700 font-semibold hidden sm:table-cell">{formatCurrency(item.ventas)}</td>
                     <td className="py-2.5 text-right font-bold text-rose-700">{formatCurrency(item.rechazos)}</td>
                     <td className="py-2.5 text-right pr-2">
                       <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full border ${
@@ -420,9 +420,9 @@ const ReturnsAnalysis = () => {
             <tfoot className="sticky bottom-0 bg-slate-100 border-t-2 border-slate-300 font-black">
               <tr>
                 <td className="py-3 pl-2 text-blue-800 font-black uppercase">Total {canalFilter !== 'TODOS' ? canalFilter : 'general'}</td>
-                <td className="py-3 text-slate-600">—</td>
-                <td className="py-3"></td>
-                <td className="py-3 text-right font-black text-slate-900 text-xs md:text-sm">{formatCurrency(totalsExecs.ventas)}</td>
+                <td className="py-3 text-slate-600 hidden sm:table-cell">—</td>
+                <td className="py-3 hidden md:table-cell"></td>
+                <td className="py-3 text-right font-black text-slate-900 text-xs md:text-sm hidden sm:table-cell">{formatCurrency(totalsExecs.ventas)}</td>
                 <td className="py-3 text-right font-black text-rose-700 text-xs md:text-sm">{formatCurrency(totalsExecs.rechazos)}</td>
                 <td className="py-3 text-right pr-2">
                   <span className="inline-block text-xs font-black px-2.5 py-1 rounded-full text-rose-800 bg-rose-100 border border-rose-200">
@@ -436,7 +436,7 @@ const ReturnsAnalysis = () => {
       </GlassCard>
 
       {/* Radar Comparison and Concepts Pipeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <GlassCard hoverable={false}>
           <h3 className="text-base font-bold text-slate-900 mb-4">Radar de Desempeño y Calidad (Top Vendedores)</h3>
           <BIRadarChart returnsSellers={filteredData.returnsSellers} />
@@ -452,7 +452,7 @@ const ReturnsAnalysis = () => {
       </div>
 
       {/* Critical Clients & Concept Breakdown Table */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Critical Clients Table */}
         <GlassCard hoverable={false}>
           <div className="flex items-center gap-2 mb-4">
@@ -523,7 +523,7 @@ const ReturnsAnalysis = () => {
           </div>
 
           {/* Expiry Clients & Concepts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Critical Expiry Clients Table */}
             <GlassCard hoverable={false}>
               <div className="flex items-center gap-2 mb-4">

@@ -14,24 +14,16 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
 
-      // Cachear assets del build + llamadas a Supabase
+      // Cachear assets estáticos del build — NO cachear API de Supabase
+      // Los datos de negocio son tiempo real: cachearlos provoca que distintos
+      // dispositivos vean datos diferentes (inconsistencias entre sesiones).
       workbox: {
         // Aumentar límite a 4MB para el bundle principal
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        // Pre-cachear todo el build
+        // Pre-cachear solo assets estáticos del build
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Runtime cache: Supabase API — network first (siempre datos frescos)
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/torxgpnqiezpnqqdomik\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api',
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 }, // 5 min
-              networkTimeoutSeconds: 10,
-            },
-          },
-        ],
+        // Sin runtimeCaching para Supabase — todas las queries van siempre a la red
+        runtimeCaching: [],
         // Limpiar caché viejo automáticamente
         cleanupOutdatedCaches: true,
         skipWaiting: true,   // activar inmediatamente sin esperar

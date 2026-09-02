@@ -4,6 +4,29 @@ import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import { formatCurrency, formatPercent, formatShortCurrency } from '../../utils/formatters';
 
+// Hook para obtener height responsivo basado en el ancho del viewport
+const useResponsiveHeight = (heights = { sm: 240, md: 300, lg: 320 }) => {
+  const [height, setHeight] = React.useState(() => {
+    const w = window.innerWidth;
+    if (w < 640) return heights.sm;
+    if (w < 1024) return heights.md;
+    return heights.lg;
+  });
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      if (w < 640) setHeight(heights.sm);
+      else if (w < 1024) setHeight(heights.md);
+      else setHeight(heights.lg);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [heights.sm, heights.md, heights.lg]);
+
+  return height;
+};
+
 // Common ApexCharts configuration options for light theme
 const baseApexOptions = {
   theme: {
@@ -742,6 +765,7 @@ export const BIWaterfallChart = ({ sales = 0, returns = 0 }) => {
 // 9. RADAR CHART - Seller KPI distribution
 export const BIRadarChart = ({ returnsSellers = [] }) => {
   const topSellers = returnsSellers.slice(0, 5);
+  const chartHeight = useResponsiveHeight({ sm: 260, md: 290, lg: 320 });
   const series = topSellers.map(s => ({
     name: s.nombre,
     data: [
@@ -764,7 +788,7 @@ export const BIRadarChart = ({ returnsSellers = [] }) => {
     legend: { position: 'bottom' }
   };
 
-  return <Chart options={options} series={series} type="radar" height={320} />;
+  return <Chart options={options} series={series} type="radar" height={chartHeight} />;
 };
 
 // 10. SCATTER PLOT - Volume vs Returns % per client
@@ -813,8 +837,9 @@ export const BIScatterPlot = ({ clientReturns = [] }) => {
 
 // 11. FUNNEL CHART - Returns reasons ranking
 export const BIFunnelChart = ({ data = [] }) => {
+  const chartHeight = useResponsiveHeight({ sm: 260, md: 290, lg: 320 });
   if (!data || data.length === 0) return (
-    <div className="h-[320px] flex items-center justify-center text-slate-600 text-sm">Sin conceptos de devolución</div>
+    <div className="flex items-center justify-center text-slate-600 text-sm" style={{ height: chartHeight }}>Sin conceptos de devolución</div>
   );
   const sortedConcepts = [...data]
     .sort((a, b) => b.porcentaje - a.porcentaje)
@@ -838,7 +863,17 @@ export const BIFunnelChart = ({ data = [] }) => {
     },
     dataLabels: {
       enabled: true,
-      formatter: (val, opt) => `${opt.w.globals.labels[opt.dataPointIndex]}: ${val}%`,
+      formatter: (val, opt) => {
+        const label = opt.w.globals.labels[opt.dataPointIndex];
+        // En pantallas pequeñas abreviar la etiqueta para evitar solapamiento
+        const shortLabel = window.innerWidth < 640 && label.length > 10
+          ? label.slice(0, 10) + '…'
+          : label;
+        return `${shortLabel}: ${val}%`;
+      },
+      style: {
+        fontSize: window.innerWidth < 640 ? '9px' : '11px',
+      },
       dropShadow: { enabled: true }
     },
     xaxis: {
@@ -846,7 +881,7 @@ export const BIFunnelChart = ({ data = [] }) => {
     }
   };
 
-  return <Chart options={options} series={series} type="bar" height={320} />;
+  return <Chart options={options} series={series} type="bar" height={chartHeight} />;
 };
 
 // 12. ZONE RANKING CHART - Horizontal bars with compliance % and budget
