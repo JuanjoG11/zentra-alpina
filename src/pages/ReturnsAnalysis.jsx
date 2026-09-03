@@ -47,8 +47,10 @@ const ReturnsAnalysis = () => {
   const SUPER_ZONES_SET = new Set(['M9450','M9451','M9550','M9560','M9600','P7000','P7001','P7002','P7008','P7009','P7010']);
 
   // Total devolución y desglose de Rechazos vs Cambios (M.E.)
-  const OFFICIAL_RECHAZOS = 90481617;
-  const OFFICIAL_CAMBIOS  = 63548095;
+  // Rechazos = rechazos puros comerciales y de ruta (excluye: descuentos, bodega, calamidad, faltantes, mal estado)
+  // Cambios  = DEV. M.E. POR VENCIMIENTO
+  const OFFICIAL_RECHAZOS = 83539941;
+  const OFFICIAL_CAMBIOS  = 59257890;
   const OFFICIAL_TOTAL    = OFFICIAL_RECHAZOS + OFFICIAL_CAMBIOS;
   const OFFICIAL_RECHAZOS_RATIO = OFFICIAL_RECHAZOS / OFFICIAL_TOTAL;
 
@@ -320,7 +322,7 @@ const ReturnsAnalysis = () => {
           <div>
             <h3 className="text-base font-extrabold text-slate-900">Rechazos por Ejecutivo Comercial</h3>
             <p className="text-xs text-slate-800 mt-0.5 font-medium">
-              Solo rechazos (excluye cambios M.E. por vencimiento). Separado por canal TAT y Supermercados.
+              Solo rechazos puros (excluye cambios M.E., descuentos, bodega, calamidad y faltantes autorizados). Canal TAT y Supermercados.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

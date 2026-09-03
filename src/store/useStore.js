@@ -275,10 +275,12 @@ const useStore = create((set, get) => ({
       const returnsSellers = dbSellers.map(s => {
         const bruto = Number(s.ventas) || 0;       // DB 'ventas' stores ventaBruta since last upload fix
         const dev   = Number(s.devoluciones) || 0;
-        // rechazos: from dedicated DB column if available, else fallback to devoluciones
+        // Leer rechazos y cambios directamente desde la DB (subidos por el ETL del Excel)
+        // Solo calcular por diferencia como último recurso si ambos campos están ausentes
         const dbRechazos = Number(s.rechazos) || 0;
-        const rechazos = dbRechazos > 0 ? dbRechazos : dev;
-        const cambios = dbRechazos > 0 ? Math.max(0, dev - dbRechazos) : 0;
+        const dbCambios  = Number(s.cambios)  || 0;
+        const rechazos = dbRechazos > 0 ? dbRechazos : (dbCambios > 0 ? Math.max(0, dev - dbCambios) : dev);
+        const cambios  = dbCambios  > 0 ? dbCambios  : (dbRechazos > 0 ? Math.max(0, dev - dbRechazos) : 0);
         const canal = SUPER_ZONES_SET.has(s.ejecutivo) ? 'SUPER' : 'TAT';
         return {
           ejecutivo: s.ejecutivo,

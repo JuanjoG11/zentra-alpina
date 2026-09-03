@@ -85,14 +85,25 @@ const channelTicket = React.useMemo(() => {
   }, [filteredData.zones, totalZonesSales]);
 
   // Map of Cambios (vencimientos) by zone / executive (excluding rechazos)
+  // Fuente 1: expiryClientReturns (detalle por cliente) — se llena cuando el cubo tiene columna de motivo
+  // Fuente 2: returnsSellers.cambios — siempre disponible desde returns_sellers en Supabase
   const zoneCambiosMap = React.useMemo(() => {
     const map = {};
+    // Fuente 1: detalle por cliente (más preciso)
     (filteredData.expiryClientReturns || []).forEach(c => {
       const key = c.ejecutivo || '';
       if (key) map[key] = (map[key] || 0) + (Number(c.valor) || 0);
     });
+    // Fuente 2: si no hay detalle por cliente, usar campo cambios de returnsSellers
+    if (Object.keys(map).length === 0) {
+      (filteredData.returnsSellers || []).forEach(s => {
+        const key = s.ejecutivo || '';
+        const camb = Number(s.cambios) || 0;
+        if (key && camb > 0) map[key] = (map[key] || 0) + camb;
+      });
+    }
     return map;
-  }, [filteredData.expiryClientReturns]);
+  }, [filteredData.expiryClientReturns, filteredData.returnsSellers]);
 
   const getZoneCambioVal = React.useCallback((z) => {
     const valorCambio = (zoneCambiosMap[z.zona] || 0) || (zoneCambiosMap[z.vendedor] || 0);

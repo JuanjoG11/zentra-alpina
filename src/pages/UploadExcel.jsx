@@ -186,6 +186,20 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
   const clientReturnsAggr = {};
   const expiryClientReturnsAggr = {}; // Nueva: devoluciones por vencimiento de clientes
   const salesDailyDbAggr = {};
+
+  // Motivos excluidos del indicador RECHAZOS (no son rechazos comerciales puros):
+  //   - DEV. M.E. POR VENCIMIENTO → van a CAMBIOS (ya manejado por esVencimiento)
+  //   - Los demás van a un cubo aparte (no cuentan ni como Rechazos ni como Cambios)
+  const MOTIVOS_EXCLUIDOS_RECHAZOS = new Set([
+    'DESCUENTO FINANCIERO',
+    'DESCUENTO A CLIENTE (NC)',
+    'NO ENTREGADO POR CALAMIDAD',
+    'SIN MERCANCIA EN BODEGA',
+    'NO ENTREGADO POR BODEGA',
+    'FALTANTE AUTORIZADO',
+    'MAL ESTADO POR CALIDAD',
+    'MAL ESTADO POR MANEJO',
+  ]);
   const productDistribAggr = {}; // key: nbProducto — distribución por producto/marca/familia
   
   const clientsPerCity = {
@@ -440,7 +454,16 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
             };
           }
           if (esDevolucion) {
-            zonesAggr[zone].devoluciones += Math.abs(valTotal);
+            // Solo sumar devoluciones puras (rechazos comerciales + cambios M.E.)
+            // Excluir: descuentos, bodega, calamidad, faltantes, mal estado
+            const mNormZone = motivoStr.toLowerCase().normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '').replace(/\./g, '').replace(/\s+/g, ' ').trim();
+            const esVencimientoZone = mNormZone.includes('vencimiento') ||
+              mNormZone.includes('dev me por') ||
+              (mNormZone.startsWith('dev') && mNormZone.includes('me') && mNormZone.includes('venc'));
+            if (esVencimientoZone || !MOTIVOS_EXCLUIDOS_RECHAZOS.has(motivoStr)) {
+              zonesAggr[zone].devoluciones += Math.abs(valTotal);
+            }
           } else if (esVentaReal) {
             zonesAggr[zone].ventasNetas += valTotal;
           }
@@ -471,7 +494,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
           }
           if (esDevolucion) {
             sellersAggr[activeSeller].devoluciones += Math.abs(valTotal);
-            // Separar rechazos (motivos normales) de cambios M.E. (vencimiento)
+            // Separar rechazos (puros comerciales) de cambios M.E. (vencimiento)
+            // y de motivos excluidos (no computan en ninguna de las dos categorías)
             const mNorm = motivoStr
               .toLowerCase()
               .normalize('NFD')
@@ -485,9 +509,12 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
               (mNorm.startsWith('dev') && mNorm.includes('me') && mNorm.includes('venc'));
             if (mEsVencimiento) {
               sellersAggr[activeSeller].cambios += Math.abs(valTotal);
-            } else {
+            } else if (!MOTIVOS_EXCLUIDOS_RECHAZOS.has(motivoStr)) {
+              // Solo cuentan los rechazos puros comerciales y de ruta
               sellersAggr[activeSeller].rechazos += Math.abs(valTotal);
             }
+            // Si el motivo está en MOTIVOS_EXCLUIDOS_RECHAZOS y no es vencimiento,
+            // no suma ni a rechazos ni a cambios (descuentos, bodega, calamidad, etc.)
           } else if (esVentaReal) {
             sellersAggr[activeSeller].ventas += valTotal;
           }
@@ -512,14 +539,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
             motivoNormalizado.includes('dev me por') ||
             (motivoNormalizado.startsWith('dev') && motivoNormalizado.includes('me') && motivoNormalizado.includes('venc'));
           
-          // DEBUG: Log para verificar detección
-          if (motivoStr && motivoNormalizado.includes('venc')) {
-            console.log('🔍 Motivo detectado:', motivoStr, '| Normalizado:', motivoNormalizado, '| Es vencimiento:', esVencimiento);
-          }
-          
           const dayZoneKey = `${formattedDate}_${zone || 'OTRO'}`;
           if (esVencimiento) {
-            // Agrupar en categorías de cambios (usando variables expiry por compatibilidad de base de datos)
+            // CAMBIOS M.E. por vencimiento
             expiryConceptsAggr[motivoStr] = (expiryConceptsAggr[motivoStr] || 0) + absVal;
             if (!expiryDailyAggr[dayZoneKey]) {
               expiryDailyAggr[dayZoneKey] = { fecha: formattedDate, zona: zone || 'OTRO', devoluciones: 0 };
@@ -536,8 +558,9 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
               };
             }
             expiryClientReturnsAggr[clientKey].valor += absVal;
-          } else {
-            // Rechazos (todos los demás motivos de devolución)
+          } else if (!MOTIVOS_EXCLUIDOS_RECHAZOS.has(motivoStr)) {
+            // RECHAZOS Puros Comerciales y de Ruta
+            // (excluye: descuentos, bodega, calamidad, faltantes autorizados, mal estado)
             conceptsAggr[motivoStr] = (conceptsAggr[motivoStr] || 0) + absVal;
             if (!returnsDailyAggr[dayZoneKey]) {
               returnsDailyAggr[dayZoneKey] = { fecha: formattedDate, zona: zone || 'OTRO', devoluciones: 0 };
@@ -555,6 +578,8 @@ const processSheetsClientSide = (parsedFiles, selectedSheets, configuredWorkDay 
             }
             clientReturnsAggr[clientKey].valor += absVal;
           }
+          // Motivos excluidos (DESCUENTO FINANCIERO, SIN MERCANCIA EN BODEGA, etc.)
+          // no se registran en rechazos ni en cambios.
         }
 
         // 6. Clientes por ciudad
