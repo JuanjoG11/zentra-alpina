@@ -105,20 +105,39 @@ const channelTicket = React.useMemo(() => {
     return map;
   }, [filteredData.expiryClientReturns, filteredData.returnsSellers]);
 
+  // Map of Ventas Brutas by zone / executive (para calcular la tasa sobre ventas brutas, uniforme con Devoluciones)
+  const zoneGrossSalesMap = React.useMemo(() => {
+    const map = {};
+    (filteredData.returnsSellers || []).forEach(s => {
+      const key = s.ejecutivo || s.nombre || '';
+      const gross = Number(s.ventasBrutas) || Number(s.ventas) || 0;
+      if (key && gross > 0) map[key] = (map[key] || 0) + gross;
+    });
+    return map;
+  }, [filteredData.returnsSellers]);
+
+  const getZoneGrossSales = React.useCallback((z) => {
+    const fromMap = (zoneGrossSalesMap[z.zona] || 0) || (zoneGrossSalesMap[z.vendedor] || 0);
+    if (fromMap > 0) return fromMap;
+    return (Number(z.ventasNetas) || 0) + (Number(z.devoluciones) || 0) || (Number(z.ventasNetas) || 0);
+  }, [zoneGrossSalesMap]);
+
   const getZoneCambioVal = React.useCallback((z) => {
     const valorCambio = (zoneCambiosMap[z.zona] || 0) || (zoneCambiosMap[z.vendedor] || 0);
     if (valorCambio > 0) return valorCambio;
     const rate = Number(z.cambiosPorc) || ZONE_DEFAULT_CAMBIO_RATES[z.zona] || 0.015;
-    return (z.ventasNetas || 0) * rate;
-  }, [zoneCambiosMap]);
+    const grossSales = getZoneGrossSales(z);
+    return grossSales * rate;
+  }, [zoneCambiosMap, getZoneGrossSales]);
 
   const getZoneCambioRate = React.useCallback((z) => {
     const valorCambio = (zoneCambiosMap[z.zona] || 0) || (zoneCambiosMap[z.vendedor] || 0);
-    if (valorCambio > 0 && z.ventasNetas > 0) {
-      return valorCambio / z.ventasNetas;
+    const grossSales = getZoneGrossSales(z);
+    if (valorCambio > 0 && grossSales > 0) {
+      return valorCambio / grossSales;
     }
     return Number(z.cambiosPorc) || ZONE_DEFAULT_CAMBIO_RATES[z.zona] || 0.015;
-  }, [zoneCambiosMap]);
+  }, [zoneCambiosMap, getZoneGrossSales]);
 
   // Proyección % = Proyección (pesos) / Presupuesto
   const getProyPercent = React.useCallback((proyeccion, presupuesto) => {
@@ -195,14 +214,17 @@ const channelTicket = React.useMemo(() => {
     const totalPresupuesto = paretoData.reduce((sum, item) => sum + (item.presupuesto || 0), 0);
     const totalProyeccion = paretoData.reduce((sum, item) => sum + (item.proyeccion || 0), 0);
     const totalCambiosVal = paretoData.reduce((sum, item) => sum + getZoneCambioVal(item), 0);
-    const changeRate = totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015;
+    const totalVentasBrutas = paretoData.reduce((sum, item) => sum + getZoneGrossSales(item), 0);
+    const changeRate = totalVentasBrutas > 0
+      ? totalCambiosVal / totalVentasBrutas
+      : (totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015);
     return {
       totalVentas,
       totalPresupuesto,
       totalProyeccion,
       changeRate,
     };
-  }, [paretoData, getZoneCambioVal]);
+  }, [paretoData, getZoneCambioVal, getZoneGrossSales]);
 
   const groupedByCanal = React.useMemo(() => {
     const map = {};
@@ -222,7 +244,10 @@ const channelTicket = React.useMemo(() => {
        const totalPresupuesto = g.items.reduce((sum, i) => sum + (i.presupuesto || 0), 0);
        const totalProyeccion = g.items.reduce((sum, i) => sum + (i.proyeccion || 0), 0);
        const totalCambiosVal = g.items.reduce((sum, i) => sum + getZoneCambioVal(i), 0);
-       const changeRate = totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015;
+       const totalVentasBrutas = g.items.reduce((sum, i) => sum + getZoneGrossSales(i), 0);
+       const changeRate = totalVentasBrutas > 0
+         ? totalCambiosVal / totalVentasBrutas
+         : (totalVentas > 0 ? totalCambiosVal / totalVentas : 0.015);
        const lastItem = g.items[g.items.length - 1];
        const maxAccumShare = lastItem ? lastItem.accumShare : 0;
 
@@ -237,7 +262,7 @@ const channelTicket = React.useMemo(() => {
         }
       };
     });
-  }, [paretoData, getZoneCambioVal]);
+  }, [paretoData, getZoneCambioVal, getZoneGrossSales]);
 
   // Simple Linear Forecast for next 7 days based on daily trend
   const dailyTotal = filteredData.salesDaily.filter(d => d.fecha !== 'general');
